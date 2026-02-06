@@ -32,9 +32,11 @@
                 >
                     <div class="text-right hidden sm:block">
                         <p class="text-sm font-medium text-gray-900">{{ authStore.userName }}</p>
-                        <p class="text-xs text-gray-500">{{ roleLabel }}</p>
+                        <p class="text-xs" :class="authStore.offlineGuestMode ? 'text-orange-600' : 'text-gray-500'">
+                            {{ authStore.offlineGuestMode ? '🔒 Mode Hors ligne' : roleLabel }}
+                        </p>
                     </div>
-                    <div class="w-10 h-10 bg-secondary-400 rounded-full flex items-center justify-center">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="authStore.offlineGuestMode ? 'bg-orange-400' : 'bg-secondary-400'">
                         <span class="text-white font-semibold text-sm">{{ userInitials }}</span>
                     </div>
                 </button>

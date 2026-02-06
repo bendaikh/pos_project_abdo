@@ -44,13 +44,15 @@
                 <span v-if="!collapsed" class="ml-3">{{ item.label }}</span>
             </router-link>
 
-            <!-- Logout -->
+            <!-- Logout / Exit Offline Mode -->
             <button 
                 @click="handleLogout"
                 class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors w-full text-red-600 hover:bg-red-50"
             >
                 <ArrowRightOnRectangleIcon class="w-5 h-5 flex-shrink-0" />
-                <span v-if="!collapsed" class="ml-3">Déconnexion</span>
+                <span v-if="!collapsed" class="ml-3">
+                    {{ authStore.offlineGuestMode ? 'Quitter Mode Hors ligne' : 'Déconnexion' }}
+                </span>
             </button>
         </nav>
     </aside>

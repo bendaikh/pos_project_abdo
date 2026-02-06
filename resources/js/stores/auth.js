@@ -8,16 +8,31 @@ export const useAuthStore = defineStore('auth', () => {
     const user = ref(null)
     const token = ref(null)
     const loading = ref(false)
+    const offlineGuestMode = ref(false)
 
-    const isAuthenticated = computed(() => !!token.value)
-    const userName = computed(() => user.value?.name || '')
-    const userRole = computed(() => user.value?.role || '')
+    const isAuthenticated = computed(() => !!token.value || offlineGuestMode.value)
+    const userName = computed(() => {
+        if (offlineGuestMode.value) return 'Utilisateur Hors ligne'
+        return user.value?.name || ''
+    })
+    const userRole = computed(() => {
+        if (offlineGuestMode.value) return 'cashier'
+        return user.value?.role || ''
+    })
     const isSuperAdmin = computed(() => user.value?.role === 'superadmin')
     const isAdmin = computed(() => ['superadmin', 'admin'].includes(user.value?.role))
 
     async function initAuth() {
         const storedToken = localStorage.getItem('auth_token')
         const storedUser = localStorage.getItem('auth_user')
+        const storedOfflineMode = localStorage.getItem('offline_guest_mode')
+        
+        // Check for offline guest mode
+        if (storedOfflineMode === 'true') {
+            offlineGuestMode.value = true
+            console.log('Offline guest mode restored')
+            return
+        }
         
         if (storedToken && storedUser) {
             token.value = storedToken
@@ -140,12 +155,30 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
+    function setOfflineGuestMode() {
+        offlineGuestMode.value = true
+        token.value = 'offline_guest_' + Date.now()
+        user.value = {
+            id: 0,
+            name: 'Utilisateur Hors ligne',
+            email: 'offline@local',
+            role: 'cashier'
+        }
+        localStorage.setItem('offline_guest_mode', 'true')
+        console.log('Offline guest mode activated')
+    }
+    
+    function clearOfflineGuestMode() {
+        offlineGuestMode.value = false
+        localStorage.removeItem('offline_guest_mode')
+    }
+
     async function logout() {
         const offlineStore = useOfflineStore()
         
         try {
-            // Only call API if online
-            if (offlineStore.isOnline) {
+            // Only call API if online and not in guest mode
+            if (offlineStore.isOnline && !offlineGuestMode.value) {
                 await authApi.logout()
             }
         } catch (error) {
@@ -153,8 +186,10 @@ export const useAuthStore = defineStore('auth', () => {
         } finally {
             token.value = null
             user.value = null
+            offlineGuestMode.value = false
             localStorage.removeItem('auth_token')
             localStorage.removeItem('auth_user')
+            localStorage.removeItem('offline_guest_mode')
         }
     }
 
@@ -162,6 +197,7 @@ export const useAuthStore = defineStore('auth', () => {
         user,
         token,
         loading,
+        offlineGuestMode,
         isAuthenticated,
         userName,
         userRole,
@@ -169,6 +205,8 @@ export const useAuthStore = defineStore('auth', () => {
         isAdmin,
         initAuth,
         login,
-        logout
+        logout,
+        setOfflineGuestMode,
+        clearOfflineGuestMode
     }
 })

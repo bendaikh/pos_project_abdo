@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useOfflineStore } from '../stores/offline'
 
 // Layouts
 import MainLayout from '../components/layout/MainLayout.vue'
@@ -41,7 +42,8 @@ const routes = [
             {
                 path: 'pos',
                 name: 'pos',
-                component: PosView
+                component: PosView,
+                meta: { allowOfflineAccess: true }
             },
             {
                 path: 'articles',
@@ -100,6 +102,14 @@ const router = createRouter({
 // Navigation guards
 router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
+    const offlineStore = useOfflineStore()
+    
+    // Allow POS access when offline even without authentication
+    if (to.meta.allowOfflineAccess && !offlineStore.isOnline && !authStore.isAuthenticated) {
+        console.log('Allowing offline access to POS')
+        next()
+        return
+    }
     
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
         next('/login')

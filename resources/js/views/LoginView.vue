@@ -109,6 +109,37 @@
                     💡 Mode hors ligne: Connectez-vous une fois en ligne pour activer l'accès hors ligne
                 </p>
             </div>
+
+            <!-- Offline Quick Access -->
+            <div v-if="!isOnline" class="mt-6">
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-[#fafafa] text-gray-500">Ou</span>
+                    </div>
+                </div>
+                
+                <button
+                    @click="continueWithoutLogin"
+                    type="button"
+                    class="mt-4 w-full py-3 px-4 border-2 border-orange-500 text-orange-600 font-medium rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center space-x-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span>Accès rapide au POS (Hors ligne)</span>
+                </button>
+                <p class="mt-2 text-xs text-center" :class="hasCachedData ? 'text-gray-500' : 'text-orange-600'">
+                    <template v-if="hasCachedData">
+                        Continuer sans connexion pour traiter les ventes
+                    </template>
+                    <template v-else>
+                        ⚠️ Aucun produit en cache. Connectez-vous en ligne une fois pour activer cette fonctionnalité.
+                    </template>
+                </p>
+            </div>
         </div>
     </div>
 </template>
@@ -130,6 +161,7 @@ const form = reactive({
 const error = ref('')
 const loading = ref(false)
 const offlineLoginSuccess = ref(false)
+const hasCachedData = ref(false)
 
 const isOnline = computed(() => offlineStore.isOnline)
 
@@ -156,10 +188,37 @@ async function handleLogin() {
     }
 }
 
+async function continueWithoutLogin() {
+    if (!hasCachedData.value) {
+        // Show warning but still allow access
+        if (!confirm('Aucun produit en cache. Le POS pourrait être vide. Continuer quand même?')) {
+            return
+        }
+    }
+    
+    // Set offline guest mode
+    authStore.setOfflineGuestMode()
+    router.push('/pos')
+}
+
+async function checkCachedData() {
+    try {
+        const articles = await offlineStore.getCachedArticles()
+        hasCachedData.value = articles && articles.length > 0
+        console.log(`Cached articles found: ${articles?.length || 0}`)
+    } catch (error) {
+        console.error('Error checking cached data:', error)
+        hasCachedData.value = false
+    }
+}
+
 onMounted(async () => {
     // Initialize offline store if not already initialized
     if (!offlineStore.isOnline && !offlineStore.lastSyncTime) {
         await offlineStore.init()
     }
+    
+    // Check if we have cached data for offline access
+    await checkCachedData()
 })
 </script>
