@@ -10,13 +10,13 @@
             <!-- Today's Sales -->
             <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                 <div class="flex items-center justify-between">
-                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                        <BanknotesIcon class="w-6 h-6 text-green-600" />
+                    <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
+                        <BanknotesIcon class="w-6 h-6 text-gray-900" />
                     </div>
                     <span 
                         v-if="stats.today_sales?.change_percent !== 0"
                         class="text-sm font-medium px-2 py-1 rounded-full"
-                        :class="stats.today_sales?.change_percent > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'"
+                        :class="stats.today_sales?.change_percent > 0 ? 'bg-primary-100 text-gray-900' : 'bg-red-100 text-red-600'"
                     >
                         {{ stats.today_sales?.change_percent > 0 ? '+' : '' }}{{ stats.today_sales?.change_percent }}%
                     </span>
@@ -36,7 +36,7 @@
                         :class="{
                             'bg-red-100 text-red-600': stats.low_stock?.status === 'critical',
                             'bg-orange-100 text-orange-600': stats.low_stock?.status === 'warning',
-                            'bg-green-100 text-green-600': stats.low_stock?.status === 'ok'
+                            'bg-primary-100 text-gray-900': stats.low_stock?.status === 'ok'
                         }"
                     >
                         {{ stats.low_stock?.count || 0 }} articles
@@ -68,7 +68,7 @@
                     <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                         <UsersIcon class="w-6 h-6 text-purple-600" />
                     </div>
-                    <span class="text-sm font-medium px-2 py-1 rounded-full bg-green-100 text-green-600">
+                    <span class="text-sm font-medium px-2 py-1 rounded-full bg-primary-100 text-gray-900">
                         Nouveaux
                     </span>
                 </div>
@@ -89,7 +89,7 @@
                     <select 
                         v-model="chartDays"
                         @change="fetchChartData"
-                        class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                         <option :value="7">7 derniers jours</option>
                         <option :value="14">14 derniers jours</option>
@@ -122,7 +122,7 @@
                         <span class="text-sm font-semibold text-gray-900">{{ category.percentage }}%</span>
                     </div>
                 </div>
-                <button class="w-full mt-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <button class="w-full mt-4 py-2 text-sm font-medium text-gray-900 bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors">
                     Voir tous les détails
                 </button>
             </div>
@@ -132,7 +132,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100">
             <div class="p-6 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900">Transactions Récentes</h3>
-                <router-link to="/reports" class="text-sm text-green-600 hover:text-green-700 font-medium">
+                <router-link to="/reports" class="px-4 py-2 text-sm font-medium text-gray-900 bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors">
                     Voir tout
                 </router-link>
             </div>
@@ -164,7 +164,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ sale.date_formatted }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-secondary-600">
                                 {{ formatCurrency(sale.total) }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -277,7 +277,7 @@ function getCategoryIcon(icon) {
 
 function getStatusClass(status) {
     const classes = {
-        completed: 'bg-green-100 text-green-700',
+        completed: 'bg-primary-100 text-gray-900',
         pending: 'bg-yellow-100 text-yellow-700',
         cancelled: 'bg-red-100 text-red-700',
     }
@@ -313,8 +313,8 @@ async function fetchChartData() {
                 {
                     label: data.datasets[0].label,
                     data: data.datasets[0].data,
-                    borderColor: '#22c55e',
-                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderColor: '#ffb800',
+                    backgroundColor: 'rgba(255, 184, 0, 0.1)',
                     fill: true,
                     tension: 0.4,
                 },

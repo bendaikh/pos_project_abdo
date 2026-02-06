@@ -10,7 +10,7 @@
                 <router-link to="/categories" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                     Catégories
                 </router-link>
-                <router-link to="/articles/create" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center">
+                <router-link to="/articles/create" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
                     <PlusIcon class="w-5 h-5 mr-2" />
                     Nouvel Article
                 </router-link>
@@ -25,19 +25,19 @@
                         v-model="search"
                         type="text"
                         placeholder="Rechercher un article..."
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
                 </div>
                 <select 
                     v-model="selectedCategory"
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                     <option value="">Toutes les catégories</option>
                     <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                 </select>
                 <select 
                     v-model="stockFilter"
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                     <option value="">Tous les stocks</option>
                     <option value="low">Stock bas</option>
@@ -89,7 +89,7 @@
                         <td class="px-6 py-4">
                             <span 
                                 class="px-2 py-1 text-xs font-medium rounded-full"
-                                :class="article.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'"
+                                :class="article.is_active ? 'bg-primary-100 text-gray-900' : 'bg-gray-100 text-gray-700'"
                             >
                                 {{ article.is_active ? 'Actif' : 'Inactif' }}
                             </span>

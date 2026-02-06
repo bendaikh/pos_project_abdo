@@ -6,10 +6,10 @@
                 <p class="text-gray-500">Analysez les performances de votre point de vente</p>
             </div>
             <div class="flex items-center space-x-3">
-                <input v-model="fromDate" type="date" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                <input v-model="fromDate" type="date" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                 <span class="text-gray-400">à</span>
-                <input v-model="toDate" type="date" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
-                <button @click="fetchReports" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <input v-model="toDate" type="date" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <button @click="fetchReports" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600">
                     Appliquer
                 </button>
             </div>
@@ -23,7 +23,7 @@
             </div>
             <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <p class="text-sm text-gray-500">Chiffre d'affaires</p>
-                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(salesReport?.summary?.total_revenue || 0) }}</p>
+                <p class="text-2xl font-bold text-secondary-600">{{ formatCurrency(salesReport?.summary?.total_revenue || 0) }}</p>
             </div>
             <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <p class="text-sm text-gray-500">Taxes collectées</p>
@@ -101,11 +101,11 @@
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-500">{{ category.quantity_sold }}</td>
                         <td class="px-4 py-3 text-sm text-gray-500">{{ category.sale_count }}</td>
-                        <td class="px-4 py-3 text-sm font-medium text-green-600">{{ formatCurrency(category.revenue) }}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-secondary-600">{{ formatCurrency(category.revenue) }}</td>
                         <td class="px-4 py-3">
                             <div class="flex items-center space-x-2">
                                 <div class="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div class="h-full bg-green-500 rounded-full" :style="{ width: category.percentage + '%' }"></div>
+                                    <div class="h-full bg-primary-500 rounded-full" :style="{ width: category.percentage + '%' }"></div>
                                 </div>
                                 <span class="text-sm text-gray-500">{{ category.percentage }}%</span>
                             </div>
@@ -140,7 +140,7 @@ const paymentsReport = ref(null)
 
 function getPaymentColor(type) {
     const colors = {
-        cash: 'bg-green-500',
+        cash: 'bg-primary-500',
         card: 'bg-blue-500',
         mobile: 'bg-purple-500',
         check: 'bg-orange-500',

@@ -9,4 +9,57 @@
 @theme {
     --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    
+    /* Primary - Bright Yellow from your design */
+    --color-primary-50: #fffbeb;
+    --color-primary-100: #fff4c6;
+    --color-primary-200: #ffe788;
+    --color-primary-300: #ffd84a;
+    --color-primary-400: #ffc620;
+    --color-primary-500: #ffb800;
+    --color-primary-600: #e69500;
+    --color-primary-700: #cc7a00;
+    --color-primary-800: #a35f00;
+    --color-primary-900: #7a4700;
+    --color-primary-950: #4d2d00;
+
+    /* Secondary - Cyan for accents */
+    --color-secondary-50: #ecfeff;
+    --color-secondary-100: #cffafe;
+    --color-secondary-200: #a5f3fc;
+    --color-secondary-300: #67e8f9;
+    --color-secondary-400: #22d3ee;
+    --color-secondary-500: #06b6d4;
+    --color-secondary-600: #0891b2;
+    --color-secondary-700: #0e7490;
+    --color-secondary-800: #155e75;
+    --color-secondary-900: #164e63;
+    --color-secondary-950: #083344;
+
+    /* Backgrounds */
+    --color-bg-light: #f5f5f5;
+    --color-bg-card: #ffffff;
+    --color-bg-main: #fafafa;
+    
+    /* Text colors */
+    --color-text-primary: #1f2937;
+    --color-text-secondary: #6b7280;
+    --color-text-muted: #9ca3af;
+    
+    /* Status colors */
+    --color-success-light: #dcfce7;
+    --color-success: #16a34a;
+    --color-success-dark: #15803d;
+    
+    --color-warning-light: #fff7ed;
+    --color-warning: #f97316;
+    --color-warning-dark: #ea580c;
+    
+    --color-danger-light: #fef2f2;
+    --color-danger: #ef4444;
+    --color-danger-dark: #dc2626;
+    
+    --color-info-light: #eff6ff;
+    --color-info: #3b82f6;
+    --color-info-dark: #2563eb;
 }

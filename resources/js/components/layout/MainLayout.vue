@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen bg-gray-50 flex">
+    <div class="min-h-screen bg-[#fafafa] flex">
         <!-- Sidebar -->
         <Sidebar :collapsed="sidebarCollapsed" @toggle="toggleSidebar" />
         

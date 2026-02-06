@@ -34,8 +34,8 @@
                         <p class="text-sm font-medium text-gray-900">{{ authStore.userName }}</p>
                         <p class="text-xs text-gray-500">{{ roleLabel }}</p>
                     </div>
-                    <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <span class="text-green-600 font-semibold text-sm">{{ userInitials }}</span>
+                    <div class="w-10 h-10 bg-secondary-400 rounded-full flex items-center justify-center">
+                        <span class="text-white font-semibold text-sm">{{ userInitials }}</span>
                     </div>
                 </button>
 

@@ -11,20 +11,20 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nom du point de vente</label>
-                    <input v-model="settings.store_name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <input v-model="settings.store_name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-                    <input v-model="settings.store_address" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <input v-model="settings.store_address" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                        <input v-model="settings.store_phone" type="tel" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <input v-model="settings.store_phone" type="tel" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Pays</label>
-                        <input v-model="settings.store_country" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <input v-model="settings.store_country" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                     </div>
                 </div>
             </div>
@@ -36,15 +36,15 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Code de devise</label>
-                    <input v-model="settings.currency_code" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="DHS">
+                    <input v-model="settings.currency_code" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="DHS">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Symbole</label>
-                    <input v-model="settings.currency_symbol" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="DHS">
+                    <input v-model="settings.currency_symbol" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="DHS">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Position du symbole</label>
-                    <select v-model="settings.currency_position" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <select v-model="settings.currency_position" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                         <option value="before">Avant le montant</option>
                         <option value="after">Après le montant</option>
                     </select>
@@ -57,17 +57,17 @@
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Taxes</h2>
             <div class="space-y-4">
                 <div class="flex items-center space-x-3">
-                    <input v-model="settings.tax_enabled" type="checkbox" id="tax_enabled" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                    <input v-model="settings.tax_enabled" type="checkbox" id="tax_enabled" class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
                     <label for="tax_enabled" class="text-sm font-medium text-gray-700">Activer les taxes</label>
                 </div>
                 <div v-if="settings.tax_enabled" class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la taxe</label>
-                        <input v-model="settings.tax_name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="TVA">
+                        <input v-model="settings.tax_name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="TVA">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Taux (%)</label>
-                        <input v-model.number="settings.tax_rate" type="number" min="0" max="100" step="0.1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <input v-model.number="settings.tax_rate" type="number" min="0" max="100" step="0.1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                     </div>
                 </div>
             </div>
@@ -79,14 +79,14 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">En-tête du reçu</label>
-                    <input v-model="settings.receipt_header" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <input v-model="settings.receipt_header" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Pied de page du reçu</label>
-                    <input v-model="settings.receipt_footer" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <input v-model="settings.receipt_footer" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                 </div>
                 <div class="flex items-center space-x-3">
-                    <input v-model="settings.receipt_show_logo" type="checkbox" id="receipt_show_logo" class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                    <input v-model="settings.receipt_show_logo" type="checkbox" id="receipt_show_logo" class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
                     <label for="receipt_show_logo" class="text-sm font-medium text-gray-700">Afficher le logo sur le reçu</label>
                 </div>
             </div>
@@ -97,7 +97,7 @@
             <button 
                 @click="saveSettings"
                 :disabled="saving"
-                class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                class="px-6 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50"
             >
                 {{ saving ? 'Enregistrement...' : 'Enregistrer les modifications' }}
             </button>

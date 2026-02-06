@@ -6,13 +6,13 @@
         <!-- Logo -->
         <div class="flex items-center h-16 px-4 border-b border-gray-200">
             <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                             d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
                 </div>
-                <span v-if="!collapsed" class="text-xl font-bold text-green-600">GREENPOS</span>
+                <span v-if="!collapsed" class="text-xl font-bold text-gray-900">GREENPOS</span>
             </div>
         </div>
 
@@ -23,7 +23,7 @@
                 :key="item.to"
                 :to="item.to"
                 class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                :class="isActive(item.to) ? 'bg-green-50 text-green-600' : 'text-gray-600 hover:bg-gray-100'"
+                :class="isActive(item.to) ? 'bg-primary-500 text-gray-900' : 'text-gray-600 hover:bg-gray-100'"
             >
                 <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
                 <span v-if="!collapsed" class="ml-3">{{ item.label }}</span>
@@ -38,7 +38,7 @@
                 :key="item.to"
                 :to="item.to"
                 class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                :class="isActive(item.to) ? 'bg-green-50 text-green-600' : 'text-gray-600 hover:bg-gray-100'"
+                :class="isActive(item.to) ? 'bg-primary-500 text-gray-900' : 'text-gray-600 hover:bg-gray-100'"
             >
                 <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
                 <span v-if="!collapsed" class="ml-3">{{ item.label }}</span>

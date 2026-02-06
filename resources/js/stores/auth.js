@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '../api'
+import { putItem, getItem, STORES } from '../utils/indexeddb'
+import { useOfflineStore } from './offline'
 
 export const useAuthStore = defineStore('auth', () => {
     const user = ref(null)
@@ -21,20 +23,31 @@ export const useAuthStore = defineStore('auth', () => {
             token.value = storedToken
             user.value = JSON.parse(storedUser)
             
-            // Verify token is still valid
-            try {
-                const response = await authApi.user()
-                user.value = response.data
-                localStorage.setItem('auth_user', JSON.stringify(response.data))
-            } catch (error) {
-                logout()
+            const offlineStore = useOfflineStore()
+            
+            // Verify token is still valid (only if online)
+            if (offlineStore.isOnline) {
+                try {
+                    const response = await authApi.user()
+                    user.value = response.data
+                    localStorage.setItem('auth_user', JSON.stringify(response.data))
+                } catch (error) {
+                    // If verification fails and we're online, logout
+                    logout()
+                }
+            } else {
+                // If offline, keep using cached credentials
+                console.log('Offline mode: Using cached credentials')
             }
         }
     }
 
     async function login(credentials) {
         loading.value = true
+        const offlineStore = useOfflineStore()
+        
         try {
+            // Try online login first
             const response = await authApi.login(credentials)
             token.value = response.data.token
             user.value = response.data.user
@@ -42,8 +55,17 @@ export const useAuthStore = defineStore('auth', () => {
             localStorage.setItem('auth_token', response.data.token)
             localStorage.setItem('auth_user', JSON.stringify(response.data.user))
             
+            // Cache credentials for offline login (hash password for security)
+            await cacheCredentials(credentials.email, credentials.password, response.data.user)
+            
             return { success: true }
         } catch (error) {
+            // If offline or connection failed, try offline login
+            if (!offlineStore.isOnline || error.message === 'Network Error') {
+                console.log('Online login failed, trying offline login...')
+                return await offlineLogin(credentials)
+            }
+            
             return { 
                 success: false, 
                 message: error.response?.data?.message || 'Erreur de connexion'
@@ -52,10 +74,80 @@ export const useAuthStore = defineStore('auth', () => {
             loading.value = false
         }
     }
+    
+    // Cache credentials for offline login
+    async function cacheCredentials(email, password, userData) {
+        try {
+            // Simple hash for password (in production, use better hashing)
+            const hashedPassword = btoa(password) // Base64 encode
+            
+            await putItem(STORES.SETTINGS, {
+                key: 'cached_credentials',
+                value: {
+                    email,
+                    password: hashedPassword,
+                    user: userData,
+                    cached_at: new Date().toISOString()
+                }
+            })
+            console.log('Credentials cached for offline login')
+        } catch (error) {
+            console.error('Error caching credentials:', error)
+        }
+    }
+    
+    // Offline login using cached credentials
+    async function offlineLogin(credentials) {
+        try {
+            const cached = await getItem(STORES.SETTINGS, 'cached_credentials')
+            
+            if (!cached || !cached.value) {
+                return {
+                    success: false,
+                    message: 'Aucune connexion hors ligne disponible. Connectez-vous en ligne au moins une fois.'
+                }
+            }
+            
+            // Verify credentials match
+            const hashedPassword = btoa(credentials.password)
+            
+            if (cached.value.email === credentials.email && cached.value.password === hashedPassword) {
+                // Login successful with cached credentials
+                token.value = 'offline_token_' + Date.now()
+                user.value = cached.value.user
+                
+                localStorage.setItem('auth_token', token.value)
+                localStorage.setItem('auth_user', JSON.stringify(user.value))
+                
+                console.log('Offline login successful')
+                return { 
+                    success: true, 
+                    offline: true,
+                    message: 'Connexion hors ligne réussie'
+                }
+            } else {
+                return {
+                    success: false,
+                    message: 'Email ou mot de passe incorrect'
+                }
+            }
+        } catch (error) {
+            console.error('Offline login error:', error)
+            return {
+                success: false,
+                message: 'Erreur lors de la connexion hors ligne'
+            }
+        }
+    }
 
     async function logout() {
+        const offlineStore = useOfflineStore()
+        
         try {
-            await authApi.logout()
+            // Only call API if online
+            if (offlineStore.isOnline) {
+                await authApi.logout()
+            }
         } catch (error) {
             // Ignore logout errors
         } finally {

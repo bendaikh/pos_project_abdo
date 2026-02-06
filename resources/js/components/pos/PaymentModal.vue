@@ -30,8 +30,8 @@
                                 v-for="type in paymentTypes"
                                 :key="type.value"
                                 @click="selectedType = type.value"
-                                class="p-3 border rounded-lg flex flex-col items-center justify-center transition-colors"
-                                :class="selectedType === type.value ? 'border-green-500 bg-green-50 text-green-600' : 'border-gray-200 hover:border-gray-300'"
+                                class="p-3 border-2 rounded-lg flex flex-col items-center justify-center transition-colors"
+                                :class="selectedType === type.value ? 'border-primary-500 bg-primary-100 text-gray-900 font-medium' : 'border-gray-200 hover:border-gray-300'"
                             >
                                 <component :is="type.icon" class="w-6 h-6 mb-1" />
                                 <span class="text-xs">{{ type.label }}</span>
@@ -46,7 +46,7 @@
                             v-model.number="receivedAmount"
                             type="number"
                             step="0.01"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-green-500"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="0.00"
                         >
                         
@@ -63,9 +63,9 @@
                         </div>
 
                         <!-- Change -->
-                        <div v-if="change > 0" class="mt-4 p-3 bg-green-50 rounded-lg text-center">
-                            <p class="text-sm text-green-600">Monnaie à rendre</p>
-                            <p class="text-2xl font-bold text-green-700">{{ formatCurrency(change) }}</p>
+                        <div v-if="change > 0" class="mt-4 p-3 bg-primary-100 rounded-lg text-center">
+                            <p class="text-sm text-gray-600 font-medium">Monnaie à rendre</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(change) }}</p>
                         </div>
                     </div>
 
@@ -75,7 +75,7 @@
                         <input 
                             v-model="reference"
                             type="text"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="N° de transaction"
                         >
                     </div>
@@ -92,7 +92,7 @@
                     <button 
                         @click="confirmPayment"
                         :disabled="!canConfirm"
-                        class="flex-1 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="flex-1 py-3 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Confirmer
                     </button>

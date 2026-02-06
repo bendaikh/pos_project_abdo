@@ -6,7 +6,7 @@
                 <h1 class="text-2xl font-bold text-gray-900">Catégories</h1>
                 <p class="text-gray-500">Gérez les catégories de vos articles</p>
             </div>
-            <button @click="openForm()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center">
+            <button @click="openForm()" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
                 <PlusIcon class="w-5 h-5 mr-2" />
                 Nouvelle Catégorie
             </button>
@@ -67,7 +67,7 @@
                             v-model="form.name"
                             type="text"
                             required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
                     </div>
                     <div>
@@ -75,7 +75,7 @@
                         <textarea 
                             v-model="form.description"
                             rows="2"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                         ></textarea>
                     </div>
                     <div>
@@ -95,7 +95,7 @@
                                 type="button"
                                 @click="form.icon = key"
                                 class="p-2 text-xl rounded-lg border-2 transition-colors"
-                                :class="form.icon === key ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'"
+                                :class="form.icon === key ? 'border-primary-500 bg-primary-100' : 'border-gray-200 hover:border-gray-300'"
                             >
                                 {{ emoji }}
                             </button>
@@ -106,7 +106,7 @@
                         <button type="button" @click="showForm = false" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                             Annuler
                         </button>
-                        <button type="submit" :disabled="saving" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                        <button type="submit" :disabled="saving" class="flex-1 px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50">
                             {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
                         </button>
                     </div>
@@ -163,7 +163,7 @@ const iconOptions = {
 const form = reactive({
     name: '',
     description: '',
-    color: '#22c55e',
+    color: '#ffb800',
     icon: 'apple',
 })
 

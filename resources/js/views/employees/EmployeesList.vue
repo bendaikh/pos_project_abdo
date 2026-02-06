@@ -6,7 +6,7 @@
                 <h1 class="text-2xl font-bold text-gray-900">Gestion des Employés</h1>
                 <p class="text-gray-500">Gérez votre équipe et leurs accès</p>
             </div>
-            <button @click="openForm()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center">
+            <button @click="openForm()" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
                 <PlusIcon class="w-5 h-5 mr-2" />
                 Nouvel Employé
             </button>
@@ -21,8 +21,8 @@
             >
                 <div class="flex items-start justify-between">
                     <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <span class="text-green-600 font-semibold">{{ getInitials(employee.name) }}</span>
+                        <div class="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+                            <span class="text-gray-900 font-semibold">{{ getInitials(employee.name) }}</span>
                         </div>
                         <div>
                             <h3 class="font-semibold text-gray-900">{{ employee.name }}</h3>
@@ -71,19 +71,19 @@
                 <form @submit.prevent="saveEmployee" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
-                        <input v-model="form.name" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <input v-model="form.name" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input v-model="form.email" type="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <input v-model="form.email" type="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                        <input v-model="form.phone" type="tel" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <input v-model="form.phone" type="tel" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Rôle *</label>
-                        <select v-model="form.role" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <select v-model="form.role" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                             <option value="admin">Administrateur</option>
                             <option value="manager">Manager</option>
                             <option value="cashier">Caissier</option>
@@ -92,7 +92,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-                        <select v-model="form.status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <select v-model="form.status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                             <option value="active">Actif</option>
                             <option value="inactive">Inactif</option>
                             <option value="suspended">Suspendu</option>
@@ -101,7 +101,7 @@
                     
                     <div class="flex space-x-3 pt-4">
                         <button type="button" @click="showForm = false" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Annuler</button>
-                        <button type="submit" :disabled="saving" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">Enregistrer</button>
+                        <button type="submit" :disabled="saving" class="flex-1 px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50">Enregistrer</button>
                     </div>
                 </form>
             </div>
@@ -146,7 +146,7 @@ function getRoleLabel(role) {
 }
 
 function getStatusClass(status) {
-    const classes = { active: 'bg-green-100 text-green-700', inactive: 'bg-gray-100 text-gray-700', suspended: 'bg-red-100 text-red-700' }
+    const classes = { active: 'bg-primary-100 text-gray-900', inactive: 'bg-gray-100 text-gray-700', suspended: 'bg-red-100 text-red-700' }
     return classes[status] || 'bg-gray-100 text-gray-700'
 }
 

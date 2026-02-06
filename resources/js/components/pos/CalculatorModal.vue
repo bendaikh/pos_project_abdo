@@ -19,33 +19,33 @@
                     <button @click="clear" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-red-100 text-red-600 hover:bg-red-200">C</button>
                     <button @click="backspace" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-gray-100 hover:bg-gray-200">⌫</button>
                     <button @click="addOperator('%')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-gray-100 hover:bg-gray-200">%</button>
-                    <button @click="addOperator('/')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-green-100 text-green-600 hover:bg-green-200">÷</button>
+                    <button @click="addOperator('/')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-primary-100 text-gray-900 hover:bg-primary-200">÷</button>
 
                     <button @click="addDigit('7')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">7</button>
                     <button @click="addDigit('8')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">8</button>
                     <button @click="addDigit('9')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">9</button>
-                    <button @click="addOperator('*')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-green-100 text-green-600 hover:bg-green-200">×</button>
+                    <button @click="addOperator('*')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-primary-100 text-gray-900 hover:bg-primary-200">×</button>
 
                     <button @click="addDigit('4')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">4</button>
                     <button @click="addDigit('5')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">5</button>
                     <button @click="addDigit('6')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">6</button>
-                    <button @click="addOperator('-')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-green-100 text-green-600 hover:bg-green-200">−</button>
+                    <button @click="addOperator('-')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-primary-100 text-gray-900 hover:bg-primary-200">−</button>
 
                     <button @click="addDigit('1')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">1</button>
                     <button @click="addDigit('2')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">2</button>
                     <button @click="addDigit('3')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">3</button>
-                    <button @click="addOperator('+')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-green-100 text-green-600 hover:bg-green-200">+</button>
+                    <button @click="addOperator('+')" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-primary-100 text-gray-900 hover:bg-primary-200">+</button>
 
                     <button @click="addDigit('0')" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors col-span-2">0</button>
                     <button @click="addDecimal" class="py-4 text-xl font-semibold rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors">.</button>
-                    <button @click="calculate" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-green-600 text-white hover:bg-green-700">=</button>
+                    <button @click="calculate" class="py-4 text-xl font-semibold rounded-lg border border-gray-200 transition-colors bg-primary-500 text-gray-900 hover:bg-primary-600">=</button>
                 </div>
 
                 <!-- Use Result -->
                 <div class="p-4 border-t">
                     <button 
                         @click="useResult"
-                        class="w-full py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700"
+                        class="w-full py-3 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600"
                     >
                         Utiliser ce montant
                     </button>

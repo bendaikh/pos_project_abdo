@@ -1,23 +1,23 @@
 <template>
     <div class="h-[calc(100vh-7rem)] flex">
         <!-- Left Panel - Products -->
-        <div class="flex-1 flex flex-col bg-gray-100 -m-6 mr-0">
+        <div class="flex-1 flex flex-col bg-[#fafafa] -m-6 mr-0">
             <!-- Header -->
-            <div class="bg-green-600 text-white px-4 py-3 flex items-center justify-between">
+            <div class="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <button @click="showMenu = !showMenu" class="p-2 hover:bg-green-700 rounded-lg">
+                    <button @click="showMenu = !showMenu" class="p-2 hover:bg-gray-800 rounded-lg">
                         <Bars3Icon class="w-5 h-5" />
                     </button>
                     <span class="font-semibold">{{ selectedCategoryName }}</span>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button @click="showSearch = !showSearch" class="p-2 hover:bg-green-700 rounded-lg">
+                    <button @click="showSearch = !showSearch" class="p-2 hover:bg-gray-800 rounded-lg">
                         <MagnifyingGlassIcon class="w-5 h-5" />
                     </button>
-                    <button class="p-2 hover:bg-green-700 rounded-lg">
+                    <button class="p-2 hover:bg-gray-800 rounded-lg">
                         <QrCodeIcon class="w-5 h-5" />
                     </button>
-                    <button class="p-2 hover:bg-green-700 rounded-lg">
+                    <button class="p-2 hover:bg-gray-800 rounded-lg">
                         <MoonIcon class="w-5 h-5" />
                     </button>
                 </div>
@@ -29,7 +29,7 @@
                     v-model="searchQuery"
                     type="text"
                     placeholder="Rechercher un article..."
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
             </div>
 
@@ -53,7 +53,7 @@
                         </div>
                         <div class="p-3">
                             <h3 class="text-sm font-medium text-gray-900 truncate">{{ article.name }}</h3>
-                            <p class="text-sm font-semibold text-green-600">
+                            <p class="text-sm font-semibold text-secondary-600">
                                 {{ formatCurrency(article.sell_price) }}<span v-if="article.unit !== 'piece'">/{{ article.unit }}</span>
                             </p>
                         </div>
@@ -62,9 +62,9 @@
                     <!-- Special Items -->
                     <div 
                         @click="showCategoriesModal = true"
-                        class="bg-green-500 rounded-xl shadow-sm overflow-hidden cursor-pointer hover:bg-green-600 transition-colors"
+                        class="bg-primary-500 rounded-xl shadow-sm overflow-hidden cursor-pointer hover:bg-primary-600 transition-colors"
                     >
-                        <div class="aspect-square flex flex-col items-center justify-center text-white">
+                        <div class="aspect-square flex flex-col items-center justify-center text-gray-900">
                             <TagIcon class="w-8 h-8 mb-2" />
                             <span class="font-medium">Catégories</span>
                         </div>
@@ -78,7 +78,7 @@
                     <button 
                         @click="selectCategory(null)"
                         class="flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors min-w-[70px]"
-                        :class="!selectedCategoryId ? 'bg-green-50 text-green-600' : 'text-gray-500 hover:bg-gray-100'"
+                        :class="!selectedCategoryId ? 'bg-primary-500 text-gray-900' : 'text-gray-500 hover:bg-gray-100'"
                     >
                         <HeartIcon class="w-5 h-5" />
                         <span class="text-xs">FAVORIS</span>
@@ -88,7 +88,7 @@
                         :key="category.id"
                         @click="selectCategory(category.id)"
                         class="flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors min-w-[70px]"
-                        :class="selectedCategoryId === category.id ? 'bg-green-50 text-green-600' : 'text-gray-500 hover:bg-gray-100'"
+                        :class="selectedCategoryId === category.id ? 'bg-primary-500 text-gray-900' : 'text-gray-500 hover:bg-gray-100'"
                     >
                         <span class="text-lg">{{ getCategoryIcon(category.icon) }}</span>
                         <span class="text-xs uppercase">{{ category.name }}</span>
@@ -96,7 +96,7 @@
                     <button 
                         @click="selectCategory('all')"
                         class="flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors min-w-[70px]"
-                        :class="selectedCategoryId === 'all' ? 'bg-green-50 text-green-600' : 'text-gray-500 hover:bg-gray-100'"
+                        :class="selectedCategoryId === 'all' ? 'bg-primary-500 text-gray-900' : 'text-gray-500 hover:bg-gray-100'"
                     >
                         <Squares2X2Icon class="w-5 h-5" />
                         <span class="text-xs">TOUS</span>
@@ -142,7 +142,7 @@
                                     >
                                         <MinusIcon class="w-4 h-4" />
                                     </button>
-                                    <span class="text-sm text-green-600 font-medium">x {{ item.quantity }}</span>
+                                    <span class="text-sm text-gray-900 font-medium">x {{ item.quantity }}</span>
                                     <button 
                                         @click="updateQuantity(index, item.quantity + 1)"
                                         class="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-200 rounded"
@@ -190,14 +190,14 @@
                 <button 
                     @click="saveSale"
                     :disabled="cartStore.items.length === 0"
-                    class="py-3 px-4 border border-green-600 text-green-600 font-medium rounded-lg hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="py-3 px-4 border-2 border-primary-600 text-gray-900 font-medium rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     SAUVEGARDER
                 </button>
                 <button 
                     @click="showPaymentModal = true"
                     :disabled="cartStore.items.length === 0"
-                    class="py-3 px-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="py-3 px-4 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     PAYER
                 </button>
@@ -226,6 +226,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useCartStore } from '../stores/cart'
 import { useArticlesStore } from '../stores/articles'
 import { useSettingsStore } from '../stores/settings'
+import { useOfflineStore } from '../stores/offline'
 import { salesApi } from '../api'
 import PaymentModal from '../components/pos/PaymentModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
@@ -335,10 +336,31 @@ async function saveSale() {
 }
 
 async function completeSale(paymentData) {
+    const offlineStore = useOfflineStore()
+    
     try {
-        // Create sale if not already created
+        const data = cartStore.getCartData()
+        const saleData = {
+            ...data,
+            payment: paymentData,
+            status: 'completed',
+        }
+
+        // If offline, save to pending queue
+        if (!offlineStore.isOnline) {
+            const result = await offlineStore.savePendingSale(saleData)
+            if (result.success) {
+                cartStore.clearCart()
+                showPaymentModal.value = false
+                alert('Vente sauvegardée hors ligne! Elle sera synchronisée automatiquement.')
+            } else {
+                throw new Error('Erreur lors de la sauvegarde hors ligne')
+            }
+            return
+        }
+
+        // If online, process normally
         if (!cartStore.currentSaleId) {
-            const data = cartStore.getCartData()
             const response = await salesApi.create(data)
             cartStore.setSaleId(response.data.id)
         }

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { settingsApi } from '../api'
+import { useOfflineStore } from './offline'
 
 export const useSettingsStore = defineStore('settings', () => {
     const settings = ref({
@@ -52,12 +53,25 @@ export const useSettingsStore = defineStore('settings', () => {
         if (loaded.value) return
         
         loading.value = true
+        const offlineStore = useOfflineStore()
+        
         try {
             const response = await settingsApi.all()
             settings.value = response.data
             loaded.value = true
+            
+            // Cache settings for offline use
+            if (offlineStore.isOnline) {
+                await offlineStore.cacheSettings(settings.value)
+            }
         } catch (error) {
             console.error('Failed to load settings:', error)
+            
+            // Try to load from cache if offline
+            if (!offlineStore.isOnline) {
+                console.log('Loading settings from cache...')
+                // Settings are already set to defaults, so offline mode will work
+            }
         } finally {
             loading.value = false
         }

@@ -6,7 +6,7 @@
                 <h1 class="text-2xl font-bold text-gray-900">Gestion de Stock</h1>
                 <p class="text-gray-500">Suivez et gérez votre inventaire</p>
             </div>
-            <button @click="showMovementForm = true" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center">
+            <button @click="showMovementForm = true" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
                 <PlusIcon class="w-5 h-5 mr-2" />
                 Mouvement de Stock
             </button>
@@ -28,7 +28,7 @@
             </div>
             <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <p class="text-sm text-gray-500">Valeur du stock</p>
-                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalStockValue) }}</p>
+                <p class="text-2xl font-bold text-secondary-600">{{ formatCurrency(totalStockValue) }}</p>
             </div>
         </div>
 
@@ -39,7 +39,7 @@
                     v-model="search"
                     type="text"
                     placeholder="Rechercher un article..."
-                    class="w-full max-w-sm px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    class="w-full max-w-sm px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
             </div>
             <table class="w-full">
@@ -75,7 +75,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <button @click="openMovementForm(item)" class="text-green-600 hover:text-green-700 text-sm font-medium">
+                            <button @click="openMovementForm(item)" class="text-gray-900 hover:text-gray-700 text-sm font-medium">
                                 Ajuster
                             </button>
                         </td>
@@ -96,7 +96,7 @@
                         <select 
                             v-model="movementForm.article_id"
                             required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
                             <option v-for="item in stockItems" :key="item.id" :value="item.id">{{ item.name }}</option>
                         </select>
@@ -106,7 +106,7 @@
                         <select 
                             v-model="movementForm.type"
                             required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
                             <option value="in">Entrée</option>
                             <option value="out">Sortie</option>
@@ -120,7 +120,7 @@
                             type="number"
                             min="1"
                             required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
                     </div>
                     <div>
@@ -128,7 +128,7 @@
                         <input 
                             v-model="movementForm.reason"
                             type="text"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                             placeholder="Ex: Réapprovisionnement"
                         >
                     </div>
@@ -137,7 +137,7 @@
                         <button type="button" @click="showMovementForm = false" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                             Annuler
                         </button>
-                        <button type="submit" :disabled="saving" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                        <button type="submit" :disabled="saving" class="flex-1 px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50">
                             Enregistrer
                         </button>
                     </div>
@@ -198,7 +198,7 @@ function getStockClass(item) {
 function getStatusClass(item) {
     if (item.stock_quantity === 0) return 'bg-red-100 text-red-700'
     if (item.stock_quantity <= item.stock_alert_threshold) return 'bg-orange-100 text-orange-700'
-    return 'bg-green-100 text-green-700'
+    return 'bg-primary-100 text-gray-900'
 }
 
 function getStatusLabel(item) {
