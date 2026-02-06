@@ -41,61 +41,53 @@ export const useArticlesStore = defineStore('articles', () => {
         const offlineStore = useOfflineStore()
         const isOfflineGuestMode = localStorage.getItem('offline_guest_mode') === 'true'
         
-        // Force offline loading if in guest mode or offline
-        if (!offlineStore.isOnline || isOfflineGuestMode) {
-            console.log('Guest mode or Offline: Loading articles from cache...')
-            articles.value = await offlineStore.getCachedArticles()
-            loading.value = false
-            return
+        // Try to load from cache first to ensure something is always visible
+        const cachedArticles = await offlineStore.getCachedArticles()
+        if (cachedArticles && cachedArticles.length > 0) {
+            console.log('Pre-loading articles from cache...')
+            articles.value = cachedArticles
+        }
+
+        // Only fetch from API if online AND NOT in guest mode
+        if (offlineStore.isOnline && !isOfflineGuestMode) {
+            try {
+                const response = await articlesApi.list({ active: true, in_stock: true, ...params })
+                const freshArticles = Array.isArray(response.data) ? response.data : response.data.data || []
+                
+                if (freshArticles.length > 0) {
+                    articles.value = freshArticles
+                    await offlineStore.cacheArticles(freshArticles)
+                }
+            } catch (error) {
+                console.error('Failed to fetch articles from API:', error)
+            }
+        } else {
+            console.log('Offline or Guest Mode: Using cached articles only')
         }
         
-        try {
-            const response = await articlesApi.list({ active: true, in_stock: true, ...params })
-            articles.value = Array.isArray(response.data) ? response.data : response.data.data || []
-            
-            // Cache for offline use
-            if (offlineStore.isOnline) {
-                await offlineStore.cacheArticles(articles.value)
-            }
-        } catch (error) {
-            console.error('Failed to fetch articles:', error)
-            
-            // Try to load from cache if offline
-            if (!offlineStore.isOnline || isOfflineGuestMode) {
-                console.log('Loading articles from cache after error...')
-                articles.value = await offlineStore.getCachedArticles()
-            }
-        } finally {
-            loading.value = false
-        }
+        loading.value = false
     }
 
     async function fetchCategories() {
         const offlineStore = useOfflineStore()
         const isOfflineGuestMode = localStorage.getItem('offline_guest_mode') === 'true'
         
-        // Force offline loading if in guest mode or offline
-        if (!offlineStore.isOnline || isOfflineGuestMode) {
-            console.log('Guest mode or Offline: Loading categories from cache...')
-            categories.value = await offlineStore.getCachedCategories()
-            return
+        // Pre-load from cache
+        const cachedCategories = await offlineStore.getCachedCategories()
+        if (cachedCategories && cachedCategories.length > 0) {
+            console.log('Pre-loading categories from cache...')
+            categories.value = cachedCategories
         }
-        
-        try {
-            const response = await categoriesApi.list({ active: true, with_count: true })
-            categories.value = response.data
-            
-            // Cache for offline use
-            if (offlineStore.isOnline) {
-                await offlineStore.cacheCategories(categories.value)
-            }
-        } catch (error) {
-            console.error('Failed to fetch categories:', error)
-            
-            // Try to load from cache if offline
-            if (!offlineStore.isOnline || isOfflineGuestMode) {
-                console.log('Loading categories from cache after error...')
-                categories.value = await offlineStore.getCachedCategories()
+
+        if (offlineStore.isOnline && !isOfflineGuestMode) {
+            try {
+                const response = await categoriesApi.list({ active: true, with_count: true })
+                if (response.data && response.data.length > 0) {
+                    categories.value = response.data
+                    await offlineStore.cacheCategories(categories.value)
+                }
+            } catch (error) {
+                console.error('Failed to fetch categories from API:', error)
             }
         }
     }

@@ -264,9 +264,16 @@ const categories = computed(() => articlesStore.categories)
 const filteredArticles = computed(() => {
     let articles = articlesStore.articles
 
-    // Filter by favorites if no category selected
+    // If no category selected (Favoris), filter by is_favorite
+    // BUT if there are no favorites at all, show all articles so the screen isn't empty
     if (selectedCategoryId.value === null) {
-        articles = articles.filter(a => a.is_favorite)
+        const favorites = articles.filter(a => a.is_favorite)
+        if (favorites.length > 0) {
+            articles = favorites
+        } else {
+            // If no favorites, default to showing all articles
+            // so the user doesn't see an empty screen
+        }
     } else if (selectedCategoryId.value !== 'all') {
         articles = articles.filter(a => a.category_id === selectedCategoryId.value)
     }
