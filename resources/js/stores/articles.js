@@ -39,6 +39,15 @@ export const useArticlesStore = defineStore('articles', () => {
     async function fetchArticles(params = {}) {
         loading.value = true
         const offlineStore = useOfflineStore()
+        const isOfflineGuestMode = localStorage.getItem('offline_guest_mode') === 'true'
+        
+        // Force offline loading if in guest mode or offline
+        if (!offlineStore.isOnline || isOfflineGuestMode) {
+            console.log('Guest mode or Offline: Loading articles from cache...')
+            articles.value = await offlineStore.getCachedArticles()
+            loading.value = false
+            return
+        }
         
         try {
             const response = await articlesApi.list({ active: true, in_stock: true, ...params })
@@ -52,8 +61,8 @@ export const useArticlesStore = defineStore('articles', () => {
             console.error('Failed to fetch articles:', error)
             
             // Try to load from cache if offline
-            if (!offlineStore.isOnline) {
-                console.log('Loading articles from cache...')
+            if (!offlineStore.isOnline || isOfflineGuestMode) {
+                console.log('Loading articles from cache after error...')
                 articles.value = await offlineStore.getCachedArticles()
             }
         } finally {
@@ -63,6 +72,14 @@ export const useArticlesStore = defineStore('articles', () => {
 
     async function fetchCategories() {
         const offlineStore = useOfflineStore()
+        const isOfflineGuestMode = localStorage.getItem('offline_guest_mode') === 'true'
+        
+        // Force offline loading if in guest mode or offline
+        if (!offlineStore.isOnline || isOfflineGuestMode) {
+            console.log('Guest mode or Offline: Loading categories from cache...')
+            categories.value = await offlineStore.getCachedCategories()
+            return
+        }
         
         try {
             const response = await categoriesApi.list({ active: true, with_count: true })
@@ -76,8 +93,8 @@ export const useArticlesStore = defineStore('articles', () => {
             console.error('Failed to fetch categories:', error)
             
             // Try to load from cache if offline
-            if (!offlineStore.isOnline) {
-                console.log('Loading categories from cache...')
+            if (!offlineStore.isOnline || isOfflineGuestMode) {
+                console.log('Loading categories from cache after error...')
                 categories.value = await offlineStore.getCachedCategories()
             }
         }

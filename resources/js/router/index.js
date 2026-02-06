@@ -102,18 +102,27 @@ const router = createRouter({
 // Navigation guards
 router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
-    const offlineStore = useOfflineStore()
     
-    // Allow POS access when offline even without authentication
-    if (to.meta.allowOfflineAccess && !offlineStore.isOnline && !authStore.isAuthenticated) {
-        console.log('Allowing offline access to POS')
+    // Check if user is in offline guest mode (from localStorage directly for reliability)
+    const isOfflineGuestMode = localStorage.getItem('offline_guest_mode') === 'true'
+    
+    // Allow POS access for offline guest mode
+    if (to.meta.allowOfflineAccess && isOfflineGuestMode) {
+        console.log('Allowing offline guest access to POS')
+        // Ensure offline guest mode is set in store
+        if (!authStore.offlineGuestMode) {
+            authStore.setOfflineGuestMode()
+        }
         next()
         return
     }
     
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    // Check authentication
+    const isAuth = authStore.isAuthenticated || isOfflineGuestMode
+    
+    if (to.meta.requiresAuth && !isAuth) {
         next('/login')
-    } else if (to.meta.guest && authStore.isAuthenticated) {
+    } else if (to.meta.guest && isAuth) {
         next('/dashboard')
     } else {
         next()

@@ -52,9 +52,16 @@ export const useSettingsStore = defineStore('settings', () => {
     async function fetchSettings() {
         if (loaded.value) return
         
-        loading.value = true
         const offlineStore = useOfflineStore()
+        const isOfflineGuestMode = localStorage.getItem('offline_guest_mode') === 'true'
         
+        // Don't fetch if offline or in offline guest mode
+        if (!offlineStore.isOnline || isOfflineGuestMode) {
+            console.log('Skipping settings fetch (offline or guest mode)')
+            return
+        }
+        
+        loading.value = true
         try {
             const response = await settingsApi.all()
             settings.value = response.data

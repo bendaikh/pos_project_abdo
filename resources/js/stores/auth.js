@@ -27,9 +27,16 @@ export const useAuthStore = defineStore('auth', () => {
         const storedUser = localStorage.getItem('auth_user')
         const storedOfflineMode = localStorage.getItem('offline_guest_mode')
         
-        // Check for offline guest mode
+        // Check for offline guest mode FIRST - this takes priority
         if (storedOfflineMode === 'true') {
             offlineGuestMode.value = true
+            token.value = storedToken || 'offline_guest_' + Date.now()
+            user.value = storedUser ? JSON.parse(storedUser) : {
+                id: 0,
+                name: 'Utilisateur Hors ligne',
+                email: 'offline@local',
+                role: 'cashier'
+            }
             console.log('Offline guest mode restored')
             return
         }
@@ -37,6 +44,12 @@ export const useAuthStore = defineStore('auth', () => {
         if (storedToken && storedUser) {
             token.value = storedToken
             user.value = JSON.parse(storedUser)
+            
+            // Skip verification for offline tokens
+            if (storedToken.startsWith('offline_')) {
+                console.log('Offline token detected, skipping verification')
+                return
+            }
             
             const offlineStore = useOfflineStore()
             

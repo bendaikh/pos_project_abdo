@@ -110,8 +110,8 @@
                 </p>
             </div>
 
-            <!-- Offline Quick Access -->
-            <div v-if="!isOnline" class="mt-6">
+            <!-- Offline Quick Access - Always show for quick POS access -->
+            <div class="mt-6">
                 <div class="relative">
                     <div class="absolute inset-0 flex items-center">
                         <div class="w-full border-t border-gray-300"></div>
@@ -124,20 +124,16 @@
                 <button
                     @click="continueWithoutLogin"
                     type="button"
-                    class="mt-4 w-full py-3 px-4 border-2 border-orange-500 text-orange-600 font-medium rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center space-x-2"
+                    class="mt-4 w-full py-3 px-4 border-2 font-medium rounded-lg transition-colors flex items-center justify-center space-x-2"
+                    :class="isOnline ? 'border-primary-500 text-gray-900 hover:bg-primary-50' : 'border-orange-500 text-orange-600 hover:bg-orange-50'"
                 >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
-                    <span>Accès rapide au POS (Hors ligne)</span>
+                    <span>{{ isOnline ? 'Accès rapide au POS' : 'Accès rapide au POS (Hors ligne)' }}</span>
                 </button>
-                <p class="mt-2 text-xs text-center" :class="hasCachedData ? 'text-gray-500' : 'text-orange-600'">
-                    <template v-if="hasCachedData">
-                        Continuer sans connexion pour traiter les ventes
-                    </template>
-                    <template v-else>
-                        ⚠️ Aucun produit en cache. Connectez-vous en ligne une fois pour activer cette fonctionnalité.
-                    </template>
+                <p class="mt-2 text-xs text-center text-gray-500">
+                    Continuer sans connexion pour traiter les ventes
                 </p>
             </div>
         </div>
@@ -145,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useOfflineStore } from '../stores/offline'
@@ -163,7 +159,14 @@ const loading = ref(false)
 const offlineLoginSuccess = ref(false)
 const hasCachedData = ref(false)
 
-const isOnline = computed(() => offlineStore.isOnline)
+// Use navigator.onLine directly for more reliable detection
+const isOnline = ref(navigator.onLine)
+
+// Update online status when it changes
+function updateOnlineStatus() {
+    isOnline.value = navigator.onLine
+    console.log('Online status changed:', isOnline.value)
+}
 
 async function handleLogin() {
     error.value = ''
@@ -189,14 +192,7 @@ async function handleLogin() {
 }
 
 async function continueWithoutLogin() {
-    if (!hasCachedData.value) {
-        // Show warning but still allow access
-        if (!confirm('Aucun produit en cache. Le POS pourrait être vide. Continuer quand même?')) {
-            return
-        }
-    }
-    
-    // Set offline guest mode
+    // Set offline guest mode (works both online and offline)
     authStore.setOfflineGuestMode()
     router.push('/pos')
 }
@@ -213,12 +209,27 @@ async function checkCachedData() {
 }
 
 onMounted(async () => {
-    // Initialize offline store if not already initialized
-    if (!offlineStore.isOnline && !offlineStore.lastSyncTime) {
+    // Set up online/offline event listeners
+    window.addEventListener('online', updateOnlineStatus)
+    window.addEventListener('offline', updateOnlineStatus)
+    
+    // Update initial status
+    isOnline.value = navigator.onLine
+    console.log('Initial online status:', isOnline.value)
+    
+    // Initialize offline store
+    try {
         await offlineStore.init()
+    } catch (e) {
+        console.error('Error initializing offline store:', e)
     }
     
     // Check if we have cached data for offline access
     await checkCachedData()
+})
+
+onUnmounted(() => {
+    window.removeEventListener('online', updateOnlineStatus)
+    window.removeEventListener('offline', updateOnlineStatus)
 })
 </script>

@@ -26,7 +26,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        const isOfflineGuestMode = localStorage.getItem('offline_guest_mode') === 'true'
+        
         if (error.response?.status === 401) {
+            // Don't redirect if in offline guest mode and it's a 401 from a background call
+            if (isOfflineGuestMode) {
+                console.warn('401 error ignored in offline guest mode')
+                return Promise.reject(error)
+            }
+            
             localStorage.removeItem('auth_token')
             localStorage.removeItem('auth_user')
             window.location.href = '/login'
