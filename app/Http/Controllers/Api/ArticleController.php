@@ -12,7 +12,7 @@ class ArticleController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Article::with(['category', 'subcategory', 'options']);
+        $query = Article::with(['category', 'subcategory', 'options', 'photos']);
 
         // Filter by category
         if ($request->has('category_id')) {
@@ -37,6 +37,11 @@ class ArticleController extends Controller
         // Filter in stock
         if ($request->has('in_stock')) {
             $query->inStock();
+        }
+
+        // Filter on sale
+        if ($request->has('on_sale')) {
+            $query->where('is_on_sale', true);
         }
 
         // Search
@@ -103,12 +108,19 @@ class ArticleController extends Controller
             'photo' => 'nullable|string',
             'is_favorite' => 'boolean',
             'is_active' => 'boolean',
+            'has_options' => 'boolean',
+            'is_on_sale' => 'boolean',
             'options' => 'nullable|array',
             'options.*' => 'exists:options,id',
+            'photos' => 'nullable|array',
+            'photos.*.photo_url' => 'required|string',
+            'photos.*.sort_order' => 'nullable|integer',
+            'photos.*.is_primary' => 'nullable|boolean',
         ]);
 
         $optionIds = $validated['options'] ?? [];
-        unset($validated['options']);
+        $photos = $validated['photos'] ?? [];
+        unset($validated['options'], $validated['photos']);
 
         $article = Article::create($validated);
 
@@ -116,12 +128,22 @@ class ArticleController extends Controller
             $article->options()->sync($optionIds);
         }
 
-        return response()->json($article->load(['category', 'subcategory', 'options']), 201);
+        if (!empty($photos)) {
+            foreach ($photos as $index => $photo) {
+                $article->photos()->create([
+                    'photo_url' => $photo['photo_url'],
+                    'sort_order' => $photo['sort_order'] ?? $index,
+                    'is_primary' => $photo['is_primary'] ?? ($index === 0),
+                ]);
+            }
+        }
+
+        return response()->json($article->load(['category', 'subcategory', 'options', 'photos']), 201);
     }
 
     public function show(Article $article): JsonResponse
     {
-        return response()->json($article->load(['category', 'subcategory', 'options']));
+        return response()->json($article->load(['category', 'subcategory', 'options', 'photos']));
     }
 
     public function update(Request $request, Article $article): JsonResponse
@@ -141,8 +163,15 @@ class ArticleController extends Controller
             'photo' => 'nullable|string',
             'is_favorite' => 'boolean',
             'is_active' => 'boolean',
+            'has_options' => 'boolean',
+            'is_on_sale' => 'boolean',
             'options' => 'nullable|array',
             'options.*' => 'exists:options,id',
+            'photos' => 'nullable|array',
+            'photos.*.id' => 'nullable|exists:article_photos,id',
+            'photos.*.photo_url' => 'required|string',
+            'photos.*.sort_order' => 'nullable|integer',
+            'photos.*.is_primary' => 'nullable|boolean',
         ]);
 
         if (isset($validated['options'])) {
@@ -150,9 +179,24 @@ class ArticleController extends Controller
             unset($validated['options']);
         }
 
+        if (isset($validated['photos'])) {
+            // Delete existing photos
+            $article->photos()->delete();
+            
+            // Create new photos
+            foreach ($validated['photos'] as $index => $photo) {
+                $article->photos()->create([
+                    'photo_url' => $photo['photo_url'],
+                    'sort_order' => $photo['sort_order'] ?? $index,
+                    'is_primary' => $photo['is_primary'] ?? ($index === 0),
+                ]);
+            }
+            unset($validated['photos']);
+        }
+
         $article->update($validated);
 
-        return response()->json($article->load(['category', 'subcategory', 'options']));
+        return response()->json($article->load(['category', 'subcategory', 'options', 'photos']));
     }
 
     public function destroy(Article $article): JsonResponse

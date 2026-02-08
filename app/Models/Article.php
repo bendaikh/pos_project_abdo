@@ -27,6 +27,8 @@ class Article extends Model
         'photo',
         'is_favorite',
         'is_active',
+        'has_options',
+        'is_on_sale',
     ];
 
     protected $casts = [
@@ -35,6 +37,8 @@ class Article extends Model
         'manage_stock' => 'boolean',
         'is_favorite' => 'boolean',
         'is_active' => 'boolean',
+        'has_options' => 'boolean',
+        'is_on_sale' => 'boolean',
     ];
 
     public function category(): BelongsTo
@@ -60,6 +64,11 @@ class Article extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(ArticlePhoto::class)->orderBy('sort_order');
     }
 
     public function scopeActive($query)

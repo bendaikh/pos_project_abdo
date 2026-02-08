@@ -12,11 +12,32 @@ import PosView from '../views/PosView.vue'
 import ArticlesList from '../views/articles/ArticlesList.vue'
 import ArticleForm from '../views/articles/ArticleForm.vue'
 import CategoriesList from '../views/categories/CategoriesList.vue'
+import OptionsList from '../views/options/OptionsList.vue'
+import OptionForm from '../views/options/OptionForm.vue'
 import StockView from '../views/stock/StockView.vue'
 import CustomersList from '../views/customers/CustomersList.vue'
 import EmployeesList from '../views/employees/EmployeesList.vue'
 import ReportsView from '../views/reports/ReportsView.vue'
 import SettingsView from '../views/settings/SettingsView.vue'
+
+// VENTE Views
+import DevisList from '../views/vente/DevisList.vue'
+import BonLivraisonList from '../views/vente/BonLivraisonList.vue'
+import FactureList from '../views/vente/FactureList.vue'
+
+// ACHAT Views
+import BonCommandeList from '../views/achat/BonCommandeList.vue'
+
+// FINANCE Views
+import JournalCaisseList from '../views/finance/JournalCaisseList.vue'
+import DepensesList from '../views/finance/DepensesList.vue'
+import BilanView from '../views/finance/BilanView.vue'
+
+// FOURNISSEURS Views
+import FournisseursList from '../views/fournisseurs/FournisseursList.vue'
+
+// UTILISATEURS Views
+import UtilisateursList from '../views/utilisateurs/UtilisateursList.vue'
 
 const routes = [
     {
@@ -66,6 +87,21 @@ const routes = [
                 component: CategoriesList
             },
             {
+                path: 'options',
+                name: 'options',
+                component: OptionsList
+            },
+            {
+                path: 'options/create',
+                name: 'options.create',
+                component: OptionForm
+            },
+            {
+                path: 'options/:id/edit',
+                name: 'options.edit',
+                component: OptionForm
+            },
+            {
                 path: 'stock',
                 name: 'stock',
                 component: StockView
@@ -89,6 +125,56 @@ const routes = [
                 path: 'settings',
                 name: 'settings',
                 component: SettingsView
+            },
+            // VENTE Routes
+            {
+                path: 'devis',
+                name: 'devis',
+                component: DevisList
+            },
+            {
+                path: 'bon-livraison',
+                name: 'bon-livraison',
+                component: BonLivraisonList
+            },
+            {
+                path: 'facture',
+                name: 'facture',
+                component: FactureList
+            },
+            // ACHAT Routes
+            {
+                path: 'bon-commande',
+                name: 'bon-commande',
+                component: BonCommandeList
+            },
+            // FINANCE Routes
+            {
+                path: 'journal-caisse',
+                name: 'journal-caisse',
+                component: JournalCaisseList
+            },
+            {
+                path: 'depenses',
+                name: 'depenses',
+                component: DepensesList
+            },
+            {
+                path: 'bilan',
+                name: 'bilan',
+                component: BilanView
+            },
+            // FOURNISSEURS Routes
+            {
+                path: 'fournisseurs',
+                name: 'fournisseurs',
+                component: FournisseursList
+            },
+            // UTILISATEURS Routes
+            {
+                path: 'utilisateurs',
+                name: 'utilisateurs',
+                component: UtilisateursList
             }
         ]
     }
