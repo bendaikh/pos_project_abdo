@@ -16,7 +16,9 @@ import OptionsList from '../views/options/OptionsList.vue'
 import OptionForm from '../views/options/OptionForm.vue'
 import StockView from '../views/stock/StockView.vue'
 import CustomersList from '../views/customers/CustomersList.vue'
+import CustomerDetail from '../views/customers/CustomerDetail.vue'
 import EmployeesList from '../views/employees/EmployeesList.vue'
+import EmployeeDetail from '../views/employees/EmployeeDetail.vue'
 import ReportsView from '../views/reports/ReportsView.vue'
 import SettingsView from '../views/settings/SettingsView.vue'
 
@@ -27,6 +29,10 @@ import FactureList from '../views/vente/FactureList.vue'
 
 // ACHAT Views
 import BonCommandeList from '../views/achat/BonCommandeList.vue'
+import BonCommandeDetail from '../views/achat/BonCommandeDetail.vue'
+import ReceptionMarchandiseList from '../views/achat/ReceptionMarchandiseList.vue'
+import FactureFournisseurList from '../views/achat/FactureFournisseurList.vue'
+import HistoriqueAchatsList from '../views/achat/HistoriqueAchatsList.vue'
 
 // FINANCE Views
 import JournalCaisseList from '../views/finance/JournalCaisseList.vue'
@@ -35,6 +41,7 @@ import BilanView from '../views/finance/BilanView.vue'
 
 // FOURNISSEURS Views
 import FournisseursList from '../views/fournisseurs/FournisseursList.vue'
+import FournisseurDetail from '../views/fournisseurs/FournisseurDetail.vue'
 
 // UTILISATEURS Views
 import UtilisateursList from '../views/utilisateurs/UtilisateursList.vue'
@@ -112,9 +119,19 @@ const routes = [
                 component: CustomersList
             },
             {
+                path: 'customers/:id',
+                name: 'customers.detail',
+                component: CustomerDetail
+            },
+            {
                 path: 'employees',
                 name: 'employees',
                 component: EmployeesList
+            },
+            {
+                path: 'employees/:id',
+                name: 'employees.detail',
+                component: EmployeeDetail
             },
             {
                 path: 'reports',
@@ -148,6 +165,26 @@ const routes = [
                 name: 'bon-commande',
                 component: BonCommandeList
             },
+            {
+                path: 'bon-commande/:id',
+                name: 'bon-commande.detail',
+                component: BonCommandeDetail
+            },
+            {
+                path: 'reception-marchandise',
+                name: 'reception-marchandise',
+                component: ReceptionMarchandiseList
+            },
+            {
+                path: 'facture-fournisseur',
+                name: 'facture-fournisseur',
+                component: FactureFournisseurList
+            },
+            {
+                path: 'historique-achats',
+                name: 'historique-achats',
+                component: HistoriqueAchatsList
+            },
             // FINANCE Routes
             {
                 path: 'journal-caisse',
@@ -169,6 +206,11 @@ const routes = [
                 path: 'fournisseurs',
                 name: 'fournisseurs',
                 component: FournisseursList
+            },
+            {
+                path: 'fournisseurs/:id',
+                name: 'fournisseurs.detail',
+                component: FournisseurDetail
             },
             // UTILISATEURS Routes
             {

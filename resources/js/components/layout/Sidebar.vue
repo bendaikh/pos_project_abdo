@@ -116,6 +116,16 @@
                     v-show="expandedSections.achat && !collapsed"
                     class="mt-1 space-y-1 overflow-hidden"
                 >
+                    <!-- Fournisseur -->
+                    <router-link 
+                        to="/fournisseurs"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/fournisseurs') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
+                    >
+                        <BuildingOfficeIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Fournisseur</span>
+                    </router-link>
+
                     <!-- Bon de commande -->
                     <router-link 
                         to="/bon-commande"
@@ -124,6 +134,36 @@
                     >
                         <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Bon de commande</span>
+                    </router-link>
+
+                    <!-- Réception de Marchandise -->
+                    <router-link 
+                        to="/reception-marchandise"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/reception-marchandise') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
+                    >
+                        <TruckIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Réception de Marchandise</span>
+                    </router-link>
+
+                    <!-- Facture fournisseur -->
+                    <router-link 
+                        to="/facture-fournisseur"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/facture-fournisseur') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
+                    >
+                        <DocumentIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Facture fournisseur</span>
+                    </router-link>
+
+                    <!-- Historique d'achats -->
+                    <router-link 
+                        to="/historique-achats"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/historique-achats') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
+                    >
+                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Historique d'achats</span>
                     </router-link>
                 </div>
             </div>
@@ -224,16 +264,6 @@
             >
                 <UserGroupIcon class="w-5 h-5 flex-shrink-0" />
                 <span v-if="!collapsed" class="ml-3">Clients</span>
-            </router-link>
-
-            <!-- Fournisseurs -->
-            <router-link 
-                to="/fournisseurs"
-                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                :class="isActive('/fournisseurs') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
-            >
-                <BuildingOfficeIcon class="w-5 h-5 flex-shrink-0" />
-                <span v-if="!collapsed" class="ml-3">Fournisseurs</span>
             </router-link>
 
             <!-- Employés -->

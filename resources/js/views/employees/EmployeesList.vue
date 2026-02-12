@@ -106,7 +106,10 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end space-x-2">
-                                <button @click="viewHistory(employee)" class="p-2 text-blue-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" title="Historique des ventes">
+                                <router-link :to="`/employees/${employee.id}`" class="p-2 text-blue-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" title="Voir détails">
+                                    <EyeIcon class="w-5 h-5" />
+                                </router-link>
+                                <button @click="viewHistory(employee)" class="p-2 text-purple-400 hover:text-purple-600 rounded-lg hover:bg-purple-50" title="Historique des ventes">
                                     <ClockIcon class="w-5 h-5" />
                                 </button>
                                 <button @click="openForm(employee)" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title="Modifier">
@@ -197,6 +200,17 @@
                                 <option value="inactive">Inactif</option>
                                 <option value="suspended">Suspendu</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date d'entrée</label>
+                            <input v-model="form.date_entree" type="datetime-local" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date de sortie</label>
+                            <input v-model="form.date_sortie" type="datetime-local" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                         </div>
                     </div>
 
@@ -296,7 +310,8 @@ import {
     TrashIcon, 
     UsersIcon, 
     ClockIcon,
-    XMarkIcon
+    XMarkIcon,
+    EyeIcon
 } from '@heroicons/vue/24/outline'
 
 const settingsStore = useSettingsStore()
@@ -324,6 +339,8 @@ const form = reactive({
     address: '',
     role: 'cashier', 
     status: 'active',
+    date_entree: '',
+    date_sortie: '',
     observations: ''
 })
 
@@ -397,6 +414,8 @@ function openForm(employee = null) {
         form.address = employee.address || ''
         form.role = employee.role || 'cashier'
         form.status = employee.status || 'active'
+        form.date_entree = employee.date_entree || ''
+        form.date_sortie = employee.date_sortie || ''
         form.observations = employee.observations || ''
     } else {
         form.nom = ''
@@ -407,6 +426,8 @@ function openForm(employee = null) {
         form.address = ''
         form.role = 'cashier'
         form.status = 'active'
+        form.date_entree = ''
+        form.date_sortie = ''
         form.observations = ''
     }
     showForm.value = true

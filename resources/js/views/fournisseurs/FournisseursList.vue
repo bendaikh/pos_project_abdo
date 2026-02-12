@@ -88,7 +88,10 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end space-x-2">
-                                <button @click="viewHistory(fournisseur)" class="p-2 text-blue-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" title="Historique">
+                                <router-link :to="`/fournisseurs/${fournisseur.id}`" class="p-2 text-blue-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" title="Voir détails">
+                                    <EyeIcon class="w-5 h-5" />
+                                </router-link>
+                                <button @click="viewHistory(fournisseur)" class="p-2 text-purple-400 hover:text-purple-600 rounded-lg hover:bg-purple-50" title="Historique">
                                     <ClockIcon class="w-5 h-5" />
                                 </button>
                                 <button @click="openForm(fournisseur)" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title="Modifier">
@@ -277,7 +280,8 @@ import {
     TrashIcon, 
     ClockIcon, 
     BuildingOfficeIcon,
-    XMarkIcon
+    XMarkIcon,
+    EyeIcon
 } from '@heroicons/vue/24/outline'
 
 const settingsStore = useSettingsStore()
