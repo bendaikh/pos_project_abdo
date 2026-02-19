@@ -31,12 +31,16 @@ class OptionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:fixed,multiple',
-            'values' => 'required|array|min:1',
+            'values' => 'nullable|array',
             'values.*' => 'string',
             'extra_price' => 'nullable|numeric|min:0',
             'is_required' => 'boolean',
             'is_active' => 'boolean',
         ]);
+
+        if (!array_key_exists('values', $validated)) {
+            $validated['values'] = [];
+        }
 
         $option = Option::create($validated);
 
@@ -53,7 +57,7 @@ class OptionController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'type' => 'sometimes|required|in:fixed,multiple',
-            'values' => 'sometimes|required|array|min:1',
+            'values' => 'sometimes|array',
             'values.*' => 'string',
             'extra_price' => 'nullable|numeric|min:0',
             'is_required' => 'boolean',

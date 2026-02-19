@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\OptionController;
+use App\Http\Controllers\Api\OptionVariantController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
@@ -39,6 +40,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Options
     Route::apiResource('options', OptionController::class);
+    Route::get('/options/{option}/variants', [OptionVariantController::class, 'index']);
+    Route::post('/options/{option}/variants', [OptionVariantController::class, 'store']);
+    Route::get('/options/{option}/variants/{variant}', [OptionVariantController::class, 'show']);
+    Route::put('/options/{option}/variants/{variant}', [OptionVariantController::class, 'update']);
+    Route::delete('/options/{option}/variants/{variant}', [OptionVariantController::class, 'destroy']);
 
     // Articles
     Route::get('/articles/favorites', [ArticleController::class, 'favorites']);

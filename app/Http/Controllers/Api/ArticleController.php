@@ -12,7 +12,7 @@ class ArticleController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Article::with(['category', 'subcategory', 'options', 'photos']);
+        $query = Article::with(['category', 'subcategory', 'options.variants', 'photos']);
 
         // Filter by category
         if ($request->has('category_id')) {
@@ -138,12 +138,12 @@ class ArticleController extends Controller
             }
         }
 
-        return response()->json($article->load(['category', 'subcategory', 'options', 'photos']), 201);
+        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'photos']), 201);
     }
 
     public function show(Article $article): JsonResponse
     {
-        return response()->json($article->load(['category', 'subcategory', 'options', 'photos']));
+        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'photos']));
     }
 
     public function update(Request $request, Article $article): JsonResponse
@@ -196,7 +196,7 @@ class ArticleController extends Controller
 
         $article->update($validated);
 
-        return response()->json($article->load(['category', 'subcategory', 'options', 'photos']));
+        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'photos']));
     }
 
     public function destroy(Article $article): JsonResponse

@@ -29,6 +29,10 @@ class Article extends Model
         'is_active',
         'has_options',
         'is_on_sale',
+        'color',
+        'price_type',
+        'is_composite',
+        'has_tax',
     ];
 
     protected $casts = [
@@ -39,6 +43,8 @@ class Article extends Model
         'is_active' => 'boolean',
         'has_options' => 'boolean',
         'is_on_sale' => 'boolean',
+        'is_composite' => 'boolean',
+        'has_tax' => 'boolean',
     ];
 
     public function category(): BelongsTo

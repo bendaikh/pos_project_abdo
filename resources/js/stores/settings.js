@@ -58,6 +58,7 @@ export const useSettingsStore = defineStore('settings', () => {
         // Don't fetch if offline or in offline guest mode
         if (!offlineStore.isOnline || isOfflineGuestMode) {
             console.log('Skipping settings fetch (offline or guest mode)')
+            loaded.value = true
             return
         }
         
@@ -67,17 +68,19 @@ export const useSettingsStore = defineStore('settings', () => {
             settings.value = response.data
             loaded.value = true
             
-            // Cache settings for offline use
+            // Cache settings for offline use (with error handling)
             if (offlineStore.isOnline) {
-                await offlineStore.cacheSettings(settings.value)
+                await offlineStore.cacheSettings(settings.value).catch(err => {
+                    console.warn('Settings caching failed but continuing:', err)
+                })
             }
         } catch (error) {
             console.error('Failed to load settings:', error)
+            loaded.value = true  // Mark as loaded even on error so app continues
             
             // Try to load from cache if offline
             if (!offlineStore.isOnline) {
                 console.log('Loading settings from cache...')
-                // Settings are already set to defaults, so offline mode will work
             }
         } finally {
             loading.value = false

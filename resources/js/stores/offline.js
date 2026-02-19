@@ -87,12 +87,13 @@ export const useOfflineStore = defineStore('offline', () => {
 
     async function cacheSettings(settings) {
         try {
-            for (const [key, value] of Object.entries(settings)) {
-                await putItem(STORES.SETTINGS, { key, value })
-            }
+            // Serialize settings as a single JSON string to avoid cloning issues
+            const serialized = JSON.parse(JSON.stringify(settings))
+            await putItem(STORES.SETTINGS, { key: 'all', value: serialized })
             console.log('Settings cached')
         } catch (error) {
             console.error('Error caching settings:', error)
+            // Don't re-throw - settings caching should not block the app
         }
     }
 

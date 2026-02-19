@@ -14,10 +14,10 @@
                     <button @click="showSearch = !showSearch" class="p-2 hover:bg-gray-800 rounded-lg">
                         <MagnifyingGlassIcon class="w-5 h-5" />
                     </button>
-                    <button class="p-2 hover:bg-gray-800 rounded-lg">
+                    <button @click="openQRScanner" class="p-2 hover:bg-gray-800 rounded-lg" title="Scanner code QR">
                         <QrCodeIcon class="w-5 h-5" />
                     </button>
-                    <button class="p-2 hover:bg-gray-800 rounded-lg">
+                    <button @click="toggleDarkMode" class="p-2 hover:bg-gray-800 rounded-lg" title="Mode sombre">
                         <MoonIcon class="w-5 h-5" />
                     </button>
                 </div>
@@ -108,14 +108,64 @@
         <!-- Right Panel - Cart/Ticket -->
         <div class="w-80 bg-white border-l border-gray-200 flex flex-col">
             <!-- Ticket Header -->
-            <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-gray-900">Ticket</h2>
-                <div class="flex items-center space-x-2">
-                    <button class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
+                <h2 class="text-lg font-bold text-gray-900">Ticket</h2>
+                <div class="flex items-center space-x-1">
+                    <button 
+                        @click="showCustomerSelector = !showCustomerSelector" 
+                        class="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="Sélectionner client"
+                    >
                         <UserIcon class="w-5 h-5" />
                     </button>
-                    <button @click="showOptionsMenu = !showOptionsMenu" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                    <button 
+                        @click="showOptionsMenu = !showOptionsMenu" 
+                        class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Options du ticket"
+                    >
                         <Bars3BottomRightIcon class="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+
+            <!-- Options Menu Dropdown -->
+            <div v-if="showOptionsMenu" class="bg-gray-50 border-b border-gray-200 p-3 space-y-2">
+                <button 
+                    @click="showNotesModal = true; showOptionsMenu = false"
+                    class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white rounded-lg transition-colors"
+                >
+                    📝 Notes
+                </button>
+                <button 
+                    @click="showDiscountModal = true; showOptionsMenu = false"
+                    class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white rounded-lg transition-colors"
+                >
+                    🏷️ Appliquer remise
+                </button>
+                <button 
+                    @click="resetCart; showOptionsMenu = false"
+                    class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white hover:text-red-600 rounded-lg transition-colors"
+                >
+                    🔄 Réinitialiser
+                </button>
+            </div>
+
+            <!-- Customer Selector -->
+            <div v-if="showCustomerSelector" class="bg-blue-50 border-b border-blue-200 p-3">
+                <input 
+                    v-model="customerSearch"
+                    type="text"
+                    placeholder="Chercher ou créer client..."
+                    class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                >
+                <div class="mt-2 max-h-32 overflow-y-auto space-y-1">
+                    <button 
+                        v-for="customer in filteredCustomers"
+                        :key="customer.id"
+                        @click="selectCustomer(customer)"
+                        class="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-blue-100 transition-colors"
+                    >
+                        {{ customer.name }}
                     </button>
                 </div>
             </div>
@@ -130,34 +180,58 @@
                     <div 
                         v-for="(item, index) in cartStore.items" 
                         :key="index"
-                        class="p-4 hover:bg-gray-50"
+                        class="p-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
                     >
                         <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <h4 class="text-sm font-medium text-gray-900">{{ item.article_name }}</h4>
-                                <div class="flex items-center space-x-2 mt-1">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-sm font-bold text-gray-900 truncate">{{ item.article_name }}</h4>
+                                <button
+                                    v-if="item.article?.has_options"
+                                    type="button"
+                                    @click="editItemOptions(index, item)"
+                                    class="mt-1 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                                >
+                                    ✏️ Modifier les options
+                                </button>
+                                <div v-if="item.selected_options && item.selected_options.length" class="mt-2 space-y-0.5 bg-gray-50 p-2 rounded">
+                                    <div
+                                        v-for="option in item.selected_options"
+                                        :key="option.option_id"
+                                        class="text-xs text-gray-600"
+                                    >
+                                        <span class="font-semibold text-gray-700">{{ option.option_name }}:</span>
+                                        <span class="ml-1 text-gray-800">
+                                            {{ option.variants.map(v => v.name).join(', ') }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2 mt-2">
                                     <button 
                                         @click="updateQuantity(index, item.quantity - 1)"
-                                        class="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-200 rounded"
+                                        class="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-300 rounded font-bold"
                                     >
-                                        <MinusIcon class="w-4 h-4" />
+                                        −
                                     </button>
-                                    <span class="text-sm text-gray-900 font-medium">x {{ item.quantity }}</span>
+                                    <span class="text-sm text-gray-900 font-bold w-6 text-center">{{ item.quantity }}</span>
                                     <button 
                                         @click="updateQuantity(index, item.quantity + 1)"
-                                        class="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-200 rounded"
+                                        class="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-300 rounded font-bold"
                                     >
-                                        <PlusIcon class="w-4 h-4" />
+                                        +
                                     </button>
                                 </div>
+                                <p v-if="item.options_price" class="text-xs text-primary-600 font-semibold mt-1">
+                                    + Options: {{ formatCurrency(item.options_price) }}
+                                </p>
                             </div>
-                            <div class="text-right">
-                                <p class="text-sm font-semibold text-gray-900">{{ formatCurrency(item.total) }}</p>
+                            <div class="text-right ml-2">
+                                <p class="text-sm font-bold text-gray-900 bg-primary-100 px-2 py-1 rounded">{{ formatCurrency(item.total) }}</p>
                                 <button 
                                     @click="removeItem(index)"
-                                    class="text-red-500 hover:text-red-700 mt-1"
+                                    class="text-red-500 hover:text-red-700 mt-1 text-lg"
+                                    title="Supprimer"
                                 >
-                                    <TrashIcon class="w-4 h-4" />
+                                    ✕
                                 </button>
                             </div>
                         </div>
@@ -166,40 +240,40 @@
             </div>
 
             <!-- Cart Summary -->
-            <div class="border-t border-gray-200 p-4 space-y-2">
-                <div class="flex justify-between text-sm text-gray-500">
-                    <span>Sous-total:</span>
-                    <span>{{ formatCurrency(cartStore.subtotal) }}</span>
+            <div class="border-t border-gray-200 p-4 bg-gradient-to-b from-white to-gray-50 space-y-2">
+                <div class="flex justify-between text-sm text-gray-600">
+                    <span class="font-medium">Sous-total:</span>
+                    <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.subtotal) }}</span>
                 </div>
-                <div class="flex justify-between text-sm text-gray-500">
-                    <span>Remise:</span>
-                    <span>{{ formatCurrency(cartStore.discountTotal) }}</span>
+                <div v-if="cartStore.discountTotal > 0" class="flex justify-between text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                    <span class="font-medium">🏷️ Remise:</span>
+                    <span class="font-semibold">-{{ formatCurrency(cartStore.discountTotal) }}</span>
                 </div>
-                <div class="flex justify-between text-sm text-gray-500">
-                    <span>{{ settingsStore.taxName }} ({{ settingsStore.taxRate }}%):</span>
-                    <span>{{ formatCurrency(cartStore.taxAmount) }}</span>
+                <div class="flex justify-between text-sm text-gray-600">
+                    <span class="font-medium">{{ settingsStore.taxName }} ({{ settingsStore.taxRate }}%):</span>
+                    <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.taxAmount) }}</span>
                 </div>
-                <div class="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
+                <div class="border-t border-gray-300 pt-2 flex justify-between text-lg font-bold text-gray-900 bg-primary-100 px-2 py-2 rounded-lg">
                     <span>Total:</span>
-                    <span>{{ formatCurrency(cartStore.total) }}</span>
+                    <span class="text-primary-600">{{ formatCurrency(cartStore.total) }}</span>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="p-4 border-t border-gray-200 grid grid-cols-2 gap-3">
+            <div class="p-4 border-t border-gray-200 space-y-2">
                 <button 
                     @click="saveSale"
                     :disabled="cartStore.items.length === 0"
-                    class="py-3 px-4 border-2 border-primary-600 text-gray-900 font-medium rounded-lg hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="w-full py-3 px-4 border-2 border-gray-400 text-gray-900 font-bold rounded-lg hover:bg-gray-100 hover:border-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-400"
                 >
-                    SAUVEGARDER
+                    💾 SAUVEGARDER
                 </button>
                 <button 
                     @click="showPaymentModal = true"
                     :disabled="cartStore.items.length === 0"
-                    class="py-3 px-4 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="w-full py-3 px-4 bg-gradient-to-r from-primary-500 to-primary-600 text-gray-900 font-bold rounded-lg hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-primary-500 disabled:hover:to-primary-600 disabled:hover:shadow-lg"
                 >
-                    PAYER
+                    💳 PAYER
                 </button>
             </div>
         </div>
@@ -218,6 +292,131 @@
             @close="showCalculator = false"
             @result="handleCalculatorResult"
         />
+
+        <OptionsModal
+            v-if="showOptionsModal && optionsArticle"
+            :article="optionsArticle"
+            :initial-selections="optionsInitialSelections"
+            @close="closeOptionsModal"
+            @confirm="handleOptionsConfirm"
+        />
+
+        <!-- Notes Modal -->
+        <div v-if="showNotesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">📝 Ajouter des notes</h3>
+                <textarea 
+                    v-model="ticketNotes"
+                    placeholder="Notes sur la commande..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
+                    rows="4"
+                />
+                <div class="flex gap-2 justify-end">
+                    <button 
+                        @click="showNotesModal = false"
+                        class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    >
+                        Annuler
+                    </button>
+                    <button 
+                        @click="applyNotes"
+                        class="px-4 py-2 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600"
+                    >
+                        Appliquer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discount Modal -->
+        <div v-if="showDiscountModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">🏷️ Appliquer une remise</h3>
+                <div class="space-y-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Montant fixe (DHS)</label>
+                        <input 
+                            v-model.number="discountAmount"
+                            type="number"
+                            min="0"
+                            placeholder="0.00"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Pourcentage (%)</label>
+                        <input 
+                            v-model.number="discountPercent"
+                            type="number"
+                            min="0"
+                            max="100"
+                            placeholder="0"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                    </div>
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button 
+                        @click="showDiscountModal = false"
+                        class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    >
+                        Annuler
+                    </button>
+                    <button 
+                        @click="applyDiscount"
+                        class="px-4 py-2 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600"
+                    >
+                        Appliquer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Option Modal -->
+        <div v-if="showCreateOptionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+                <h3 class="text-lg font-bold text-gray-900 mb-2">⚙️ Créer une nouvelle option</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    Cet article n'a pas d'options. Créez-en une maintenant pour ajouter des variantes (ex: taille, couleur).
+                </p>
+                <div class="space-y-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom de l'option *</label>
+                        <input 
+                            v-model="newOptionName"
+                            type="text"
+                            placeholder="Ex: Taille, Couleur, Sauce"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <select 
+                            v-model="newOptionType"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                            <option value="fixed">Choix unique</option>
+                            <option value="multiple">Choix multiple</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button 
+                        @click="showCreateOptionModal = false; editingCartIndex.value = null; optionsArticle.value = null"
+                        class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    >
+                        Annuler
+                    </button>
+                    <button 
+                        @click="createQuickOption"
+                        :disabled="!newOptionName.trim()"
+                        class="px-4 py-2 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Créer
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -226,10 +425,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useCartStore } from '../stores/cart'
 import { useArticlesStore } from '../stores/articles'
 import { useSettingsStore } from '../stores/settings'
+import { useCustomersStore } from '../stores/customers'
 import { useOfflineStore } from '../stores/offline'
-import { salesApi } from '../api'
+import { salesApi, optionsApi } from '../api'
 import PaymentModal from '../components/pos/PaymentModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
+import OptionsModal from '../components/pos/OptionsModal.vue'
 import {
     Bars3Icon,
     MagnifyingGlassIcon,
@@ -249,6 +450,7 @@ import {
 const cartStore = useCartStore()
 const articlesStore = useArticlesStore()
 const settingsStore = useSettingsStore()
+const customersStore = useCustomersStore()
 
 const showMenu = ref(false)
 const showSearch = ref(false)
@@ -256,10 +458,34 @@ const showPaymentModal = ref(false)
 const showCalculator = ref(false)
 const showCategoriesModal = ref(false)
 const showOptionsMenu = ref(false)
+const showOptionsModal = ref(false)
+const showCustomerSelector = ref(false)
+const showNotesModal = ref(false)
+const showDiscountModal = ref(false)
+const showCreateOptionModal = ref(false)
+const optionsArticle = ref(null)
+const optionsInitialSelections = ref([])
+const optionsMode = ref('add')
+const editingCartIndex = ref(null)
 const searchQuery = ref('')
 const selectedCategoryId = ref(null)
+const customerSearch = ref('')
+const selectedCustomer = ref(null)
+const ticketNotes = ref('')
+const discountAmount = ref(0)
+const discountPercent = ref(0)
+const newOptionName = ref('')
+const newOptionType = ref('fixed')
 
 const categories = computed(() => articlesStore.categories)
+
+const filteredCustomers = computed(() => {
+    const query = customerSearch.value.toLowerCase()
+    if (!query) return customersStore.customers
+    return customersStore.customers.filter(c => 
+        c.name.toLowerCase().includes(query)
+    )
+})
 
 const filteredArticles = computed(() => {
     let articles = articlesStore.articles
@@ -314,11 +540,26 @@ function formatCurrency(amount) {
     return settingsStore.formatCurrency(amount)
 }
 
+function formatOptionsPrice(amount) {
+    const numeric = Number(amount || 0)
+    if (numeric > 0) {
+        return `+${formatCurrency(numeric)}`
+    }
+    return formatCurrency(numeric)
+}
+
 function selectCategory(categoryId) {
     selectedCategoryId.value = categoryId
 }
 
 function addToCart(article) {
+    const activeOptions = getActiveOptions(article)
+
+    if (article.has_options && activeOptions.length > 0) {
+        openOptionsModal(article, activeOptions, [], 'add', null)
+        return
+    }
+
     cartStore.addItem(article)
 }
 
@@ -394,8 +635,141 @@ function handleCalculatorResult(result) {
     showCalculator.value = false
 }
 
+function closeOptionsModal() {
+    showOptionsModal.value = false
+    optionsArticle.value = null
+    optionsInitialSelections.value = []
+    optionsMode.value = 'add'
+    editingCartIndex.value = null
+}
+
+function handleOptionsConfirm({ selectedOptions, optionsPrice }) {
+    if (!optionsArticle.value) return
+    const normalized = normalizeSelectedOptions(selectedOptions)
+    if (optionsMode.value === 'edit' && editingCartIndex.value !== null) {
+        cartStore.updateItemOptions(editingCartIndex.value, normalized, optionsPrice)
+    } else {
+        cartStore.addItem(optionsArticle.value, 1, normalized, optionsPrice)
+    }
+    closeOptionsModal()
+}
+
+function normalizeSelectedOptions(selectedOptions) {
+    if (!Array.isArray(selectedOptions)) return selectedOptions
+    return selectedOptions
+        .map((option) => ({
+            ...option,
+            variants: [...(option.variants || [])].sort((a, b) => a.id - b.id),
+        }))
+        .sort((a, b) => a.option_id - b.option_id)
+}
+
+function getActiveOptions(article) {
+    return (article.options || [])
+        .filter((option) => option.is_active)
+        .map((option) => ({
+            ...option,
+            variants: (option.variants || []).filter((variant) => variant.is_active),
+        }))
+        .filter((option) => option.variants.length > 0)
+}
+
+function openOptionsModal(article, activeOptions, initialSelections, mode, index) {
+    optionsArticle.value = {
+        ...article,
+        options: activeOptions,
+    }
+    optionsInitialSelections.value = initialSelections || []
+    optionsMode.value = mode
+    editingCartIndex.value = index
+    showOptionsModal.value = true
+}
+
+function editItemOptions(index, item) {
+    if (!item.article) return
+    const activeOptions = getActiveOptions(item.article)
+    if (activeOptions.length === 0) {
+        // Show modal to create option since there are none
+        showCreateOptionModal.value = true
+        editingCartIndex.value = index
+        optionsArticle.value = item.article
+        return
+    }
+    openOptionsModal(item.article, activeOptions, item.selected_options || [], 'edit', index)
+}
+
+function openQRScanner() {
+    console.log('QR Scanner opened')
+    // TODO: Implement QR code scanner using camera
+    // Could use a library like jsQR or zxing-js
+    alert('Fonctionnalité QR Code à implémenter')
+}
+
+function toggleDarkMode() {
+    console.log('Dark mode toggle')
+    // TODO: Implement dark mode toggle
+    alert('Mode sombre à implémenter')
+}
+
+function selectCustomer(customer) {
+    selectedCustomer.value = customer
+    cartStore.setCustomer(customer.id, customer.name)
+    showCustomerSelector.value = false
+    customerSearch.value = ''
+}
+
+function applyNotes() {
+    cartStore.setNotes(ticketNotes.value)
+    showNotesModal.value = false
+}
+
+function applyDiscount() {
+    cartStore.setDiscount(discountAmount.value, discountPercent.value)
+    showDiscountModal.value = false
+}
+
+function resetCart() {
+    if (confirm('Êtes-vous sûr de vouloir réinitialiser le ticket?')) {
+        cartStore.clearCart()
+        selectedCustomer.value = null
+        ticketNotes.value = ''
+        discountAmount.value = 0
+        discountPercent.value = 0
+    }
+}
+
+async function createQuickOption() {
+    if (!newOptionName.value.trim()) return
+    
+    try {
+        // Create option with empty values array
+        const optionData = {
+            name: newOptionName.value.trim(),
+            type: newOptionType.value,
+            values: [],
+            is_active: true,
+            is_required: false,
+            extra_price: 0
+        }
+        
+        const response = await optionsApi.create(optionData)
+        console.log('Option créée:', response.data)
+        
+        // Reset modal
+        newOptionName.value = ''
+        newOptionType.value = 'fixed'
+        showCreateOptionModal.value = false
+        
+        // Show success message
+        alert(`Option "${response.data.name}" créée avec succès! Vous pouvez maintenant y ajouter des variantes.`)
+    } catch (error) {
+        console.error('Erreur création option:', error)
+        alert('Erreur lors de la création de l\'option')
+    }
+}
+
 onMounted(async () => {
     await articlesStore.refresh()
+    await customersStore.fetchCustomers()
 })
 </script>
-

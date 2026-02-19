@@ -97,6 +97,11 @@ export const optionsApi = {
     create: (data) => api.post('/options', data),
     update: (id, data) => api.put(`/options/${id}`, data),
     delete: (id) => api.delete(`/options/${id}`),
+    variants: (optionId, params = {}) => api.get(`/options/${optionId}/variants`, { params }),
+    getVariant: (optionId, variantId) => api.get(`/options/${optionId}/variants/${variantId}`),
+    createVariant: (optionId, data) => api.post(`/options/${optionId}/variants`, data),
+    updateVariant: (optionId, variantId, data) => api.put(`/options/${optionId}/variants/${variantId}`, data),
+    deleteVariant: (optionId, variantId) => api.delete(`/options/${optionId}/variants/${variantId}`),
 }
 
 // Sales API

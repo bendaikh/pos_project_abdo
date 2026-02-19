@@ -87,6 +87,13 @@ export const useCartStore = defineStore('cart', () => {
         item.total = baseTotal - item.discount_amount
     }
 
+    function updateItemOptions(index, selectedOptions = null, optionsPrice = 0) {
+        if (!items.value[index]) return
+        items.value[index].selected_options = selectedOptions
+        items.value[index].options_price = optionsPrice
+        recalculateItemTotal(index)
+    }
+
     function setCustomer(id, name) {
         customerId.value = id
         customerName.value = name || 'Client Anonyme'
@@ -156,6 +163,7 @@ export const useCartStore = defineStore('cart', () => {
         addItem,
         updateItemQuantity,
         removeItem,
+        updateItemOptions,
         setCustomer,
         setDiscount,
         setDeliveryMode,

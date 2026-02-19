@@ -86,20 +86,68 @@
                             class="w-full h-10 rounded-lg cursor-pointer"
                         >
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Icône</label>
+
+                    <!-- Tabs for Icon/Image selection -->
+                    <div class="border-b border-gray-200">
+                        <div class="flex space-x-4">
+                            <button
+                                type="button"
+                                @click="displayMode = 'icon'"
+                                class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+                                :class="displayMode === 'icon' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            >
+                                🎨 Icône
+                            </button>
+                            <button
+                                type="button"
+                                @click="displayMode = 'image'"
+                                class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+                                :class="displayMode === 'image' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            >
+                                🖼️ Image
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Icon Section -->
+                    <div v-if="displayMode === 'icon'" class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Sélectionner une icône</label>
                         <div class="grid grid-cols-6 gap-2">
                             <button
                                 v-for="(emoji, key) in iconOptions"
                                 :key="key"
                                 type="button"
-                                @click="form.icon = key"
+                                @click="form.icon = key; form.photo = null"
                                 class="p-2 text-xl rounded-lg border-2 transition-colors"
-                                :class="form.icon === key ? 'border-primary-500 bg-primary-100' : 'border-gray-200 hover:border-gray-300'"
+                                :class="form.icon === key && !form.photo ? 'border-primary-500 bg-primary-100' : 'border-gray-200 hover:border-gray-300'"
                             >
                                 {{ emoji }}
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Image Section -->
+                    <div v-if="displayMode === 'image'" class="space-y-3">
+                        <label class="block text-sm font-medium text-gray-700">Télécharger une image</label>
+                        <div v-if="form.photo" class="mb-3">
+                            <img :src="form.photo" alt="Category" class="w-16 h-16 rounded-lg object-cover border border-gray-200">
+                        </div>
+                        <input 
+                            ref="photoInput"
+                            type="file"
+                            accept="image/*"
+                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                            @change="handlePhotoUpload"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">JPG, PNG ou GIF (max 5MB)</p>
+                        <button 
+                            v-if="form.photo"
+                            type="button"
+                            @click="form.photo = null; form.icon = null"
+                            class="text-sm text-red-600 hover:text-red-700"
+                        >
+                            Supprimer l'image
+                        </button>
                     </div>
                     
                     <div class="flex space-x-3 pt-4">
@@ -144,6 +192,8 @@ const showDeleteModal = ref(false)
 const editingCategory = ref(null)
 const categoryToDelete = ref(null)
 const saving = ref(false)
+const displayMode = ref('icon')
+const photoInput = ref(null)
 
 const iconOptions = {
     apple: '🍎',
@@ -165,24 +215,56 @@ const form = reactive({
     description: '',
     color: '#ffb800',
     icon: 'apple',
+    photo: null,
 })
 
 function getCategoryIcon(icon) {
     return iconOptions[icon] || '📦'
 }
 
+function handlePhotoUpload(event) {
+    const file = event.target.files?.[0]
+    if (file) {
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Fichier trop volumineux (max 5MB)')
+            return
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Veuillez sélectionner une image')
+            return
+        }
+
+        // Convert to data URL
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            form.photo = e.target?.result
+        }
+        reader.readAsDataURL(file)
+    }
+}
+
 function openForm(category = null) {
     editingCategory.value = category
+    displayMode.value = 'icon'
     if (category) {
         form.name = category.name
         form.description = category.description || ''
         form.color = category.color || '#22c55e'
         form.icon = category.icon || 'apple'
+        form.photo = category.photo || null
+        // If photo exists, show image mode
+        if (form.photo) {
+            displayMode.value = 'image'
+        }
     } else {
         form.name = ''
         form.description = ''
         form.color = '#22c55e'
         form.icon = 'apple'
+        form.photo = null
     }
     showForm.value = true
 }

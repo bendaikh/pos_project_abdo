@@ -14,6 +14,7 @@ import ArticleForm from '../views/articles/ArticleForm.vue'
 import CategoriesList from '../views/categories/CategoriesList.vue'
 import OptionsList from '../views/options/OptionsList.vue'
 import OptionForm from '../views/options/OptionForm.vue'
+import OptionVariants from '../views/optionsVariants/OptionVariants.vue'
 import StockView from '../views/stock/StockView.vue'
 import CustomersList from '../views/customers/CustomersList.vue'
 import CustomerDetail from '../views/customers/CustomerDetail.vue'
@@ -107,6 +108,11 @@ const routes = [
                 path: 'options/:id/edit',
                 name: 'options.edit',
                 component: OptionForm
+            },
+            {
+                path: 'options-variants',
+                name: 'options-variants',
+                component: OptionVariants
             },
             {
                 path: 'stock',

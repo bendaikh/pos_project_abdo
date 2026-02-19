@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Option extends Model
 {
@@ -29,6 +30,11 @@ class Option extends Model
     public function articles(): BelongsToMany
     {
         return $this->belongsToMany(Article::class, 'article_options');
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(OptionVariant::class);
     }
 
     public function scopeActive($query)

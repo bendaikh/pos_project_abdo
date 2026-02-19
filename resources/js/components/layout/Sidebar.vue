@@ -223,17 +223,73 @@
                 </div>
             </div>
 
+            <!-- Gestion des Articles Section (Collapsible) -->
+            <div class="mt-4">
+                <!-- Section Header - Clickable to expand/collapse -->
+                <button 
+                    @click="toggleSection('articles')"
+                    class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                    <div class="flex items-center min-w-0">
+                        <ClipboardDocumentListIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-3 whitespace-nowrap">Gestion des articles</span>
+                    </div>
+                    <ChevronDownIcon 
+                        v-if="!collapsed"
+                        class="w-4 h-4 transition-transform duration-200 flex-shrink-0 ml-2"
+                        :class="{ 'rotate-180': expandedSections.articles }"
+                    />
+                </button>
+                
+                <!-- Sub-sections (Collapsible content) -->
+                <div 
+                    v-show="expandedSections.articles && !collapsed"
+                    class="mt-1 space-y-1 overflow-hidden"
+                >
+                    <!-- Articles -->
+                    <router-link 
+                        to="/articles"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/articles') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
+                    >
+                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Articles</span>
+                    </router-link>
+
+                    <!-- Catégories -->
+                    <router-link 
+                        to="/categories"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/categories') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
+                    >
+                        <FolderIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Catégories</span>
+                    </router-link>
+
+                    <!-- Options -->
+                    <router-link 
+                        to="/options"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/options') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
+                    >
+                        <AdjustmentsHorizontalIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3 whitespace-nowrap">Options</span>
+                    </router-link>
+
+                    <!-- Options & Variantes -->
+                    <router-link 
+                        to="/options-variants"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/options-variants') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
+                    >
+                        <Squares2X2Icon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3 whitespace-nowrap">Options & Variantes</span>
+                    </router-link>
+                </div>
+            </div>
+
             <!-- Other menu items -->
             <div class="mt-4 space-y-1">
-                <router-link 
-                    to="/articles"
-                    class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                    :class="isActive('/articles') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
-                >
-                    <ClipboardDocumentListIcon class="w-5 h-5 flex-shrink-0" />
-                    <span v-if="!collapsed" class="ml-3">Gestion des articles</span>
-                </router-link>
-
                 <router-link 
                     to="/stock"
                     class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
@@ -339,7 +395,9 @@ import {
     PresentationChartLineIcon,
     BuildingOfficeIcon,
     BuildingStorefrontIcon,
-    KeyIcon
+    KeyIcon,
+    AdjustmentsHorizontalIcon,
+    FolderIcon
 } from '@heroicons/vue/24/outline'
 
 defineProps({
@@ -357,6 +415,7 @@ const expandedSections = reactive({
     vente: false,
     achat: false,
     finance: false,
+    articles: false,
     clients: false,
     fournisseurs: false
 })
@@ -375,4 +434,3 @@ async function handleLogout() {
     router.push('/login')
 }
 </script>
-
