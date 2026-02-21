@@ -1,0 +1,321 @@
+<template>
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="relative bg-white rounded-2xl shadow-xl max-w-4xl w-full mx-auto z-10 max-h-[85vh] overflow-y-auto">
+            <!-- Header -->
+            <div class="sticky top-0 bg-gradient-to-r from-primary-50 to-cyan-50 px-6 py-5 border-b border-gray-200 flex items-center justify-between rounded-t-2xl">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">{{ article?.name }}</h3>
+                    <p class="text-sm text-gray-600 mt-1">✓ Sélectionnez les options et variantes disponibles</p>
+                </div>
+                <button @click="emit('close')" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 space-y-6">
+                <!-- No Options Available -->
+                <div v-if="selectableOptions.length === 0" class="text-center py-12">
+                    <div class="text-6xl mb-4">📭</div>
+                    <p class="text-xl font-bold text-gray-900 mb-2">Aucune option disponible</p>
+                    <p class="text-gray-600 mb-6">Cet article n'a pas encore d'options configurées</p>
+                    <button
+                        @click="$emit('create-option')"
+                        class="px-6 py-3 bg-primary-500 text-gray-900 font-bold rounded-xl hover:bg-primary-600 transition-colors"
+                    >
+                        ⚙️ Créer une option
+                    </button>
+                </div>
+
+                <!-- Options Available -->
+                <div v-else class="space-y-6">
+                    <!-- Option Cards -->
+                    <div v-for="option in selectableOptions" :key="option.id" class="bg-gray-50 rounded-2xl p-5 border border-gray-200">
+                        <!-- Option Header -->
+                        <div class="mb-4">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-lg font-bold text-gray-900">{{ option.name }}</h4>
+                                <div class="flex items-center gap-3">
+                                    <span 
+                                        class="px-3 py-1 text-xs font-semibold rounded-full"
+                                        :class="option.type === 'fixed' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
+                                    >
+                                        {{ option.type === 'fixed' ? '★ Un choix' : '✦ Plusieurs' }}
+                                    </span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            class="sr-only peer"
+                                            :checked="isOptionEnabled(option.id)"
+                                            :disabled="option.is_required"
+                                            @change="toggleOption(option.id, $event.target.checked)"
+                                        >
+                                        <div class="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">
+                                <span v-if="option.is_required" class="text-orange-600 font-medium">✱ Obligatoire</span>
+                                <span v-else class="text-gray-500">Optionnel</span>
+                            </p>
+                        </div>
+
+                        <!-- Variants Grid -->
+                        <div v-if="activeVariants(option).length === 0" class="text-sm text-gray-500 py-4">
+                            Aucune variante disponible pour cette option
+                        </div>
+
+                        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <label
+                                v-for="variant in activeVariants(option)"
+                                :key="variant.id"
+                                class="flex items-center gap-4 p-4 bg-white border-2 rounded-xl transition-all"
+                                :class="[
+                                    isVariantSelected(option, variant) ? 'border-primary-500 shadow-md bg-primary-50' : 'border-gray-200',
+                                    isOptionEnabled(option.id) ? 'cursor-pointer hover:border-primary-400' : 'opacity-50 cursor-not-allowed'
+                                ]"
+                            >
+                                <div class="flex-shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        :name="`option-${option.id}`"
+                                        :value="variant.id"
+                                        class="w-5 h-5 text-primary-600 border-gray-300 cursor-pointer"
+                                        :checked="isVariantSelected(option, variant)"
+                                        :disabled="!isOptionEnabled(option.id)"
+                                        @change="selectVariant(option, variant.id)"
+                                    >
+                                </div>
+
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-semibold text-gray-900 text-base">{{ variant.name }}</p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Prix: {{ formatVariantPrice(variant) }}
+                                    </p>
+                                    <p v-if="Number(variant.price_impact) !== 0" class="text-sm font-bold text-primary-600 mt-1">
+                                        {{ formatPriceImpact(variant.price_impact) }}
+                                    </p>
+                                </div>
+
+                                <!-- Color & Image Preview -->
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span v-if="variant.color" class="w-6 h-6 rounded-lg border-2 border-gray-200" :style="{ backgroundColor: variant.color }" :title="variant.color"></span>
+                                    <img v-if="variant.image" :src="variant.image" alt="" class="w-10 h-10 rounded-lg object-cover border border-gray-200">
+                                </div>
+                            </label>
+                        </div>
+                        <p v-if="isOptionEnabled(option.id) && !hasSelection(option.id)" class="text-xs text-orange-600 mt-3">
+                            Choisissez une variante pour continuer.
+                        </p>
+                    </div>
+
+                    <!-- Options Total -->
+                    <div class="bg-gradient-to-r from-primary-50 to-cyan-50 rounded-2xl p-4 border border-primary-100 flex items-center justify-between">
+                        <span class="text-gray-700 font-semibold">💰 Coût des options</span>
+                        <span class="text-2xl font-bold text-primary-600">
+                            {{ formatPriceImpact(optionsPrice) }}
+                        </span>
+                    </div>
+
+                    <!-- Create New Option Link -->
+                    <button
+                        @click="$emit('create-option')"
+                        class="w-full py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                    >
+                        <span>⚙️ Créer une nouvelle option</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3 rounded-b-2xl">
+                <button
+                    type="button"
+                    @click="emit('close')"
+                    class="flex-1 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors text-lg"
+                >
+                    Annuler
+                </button>
+                <button
+                    type="button"
+                    @click="handleConfirm"
+                    :disabled="!canConfirm"
+                    class="flex-1 py-3 bg-primary-500 text-gray-900 font-bold rounded-xl hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-lg"
+                >
+                    ✓ Ajouter au ticket
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, watch } from 'vue'
+
+const props = defineProps({
+    article: {
+        type: Object,
+        required: true,
+    },
+    initialSelections: {
+        type: Array,
+        default: () => [],
+    },
+})
+
+const emit = defineEmits(['close', 'confirm', 'create-option'])
+
+// Reactive state for selections
+const selectedOptions = ref(Array.isArray(props.initialSelections) ? [...props.initialSelections] : [])
+const enabledOptions = ref(
+    Array.isArray(props.initialSelections)
+        ? props.initialSelections.map((selection) => selection.option_id)
+        : []
+)
+const optionsPrice = ref(0)
+
+// Computed properties
+const selectableOptions = computed(() => {
+    return (props.article?.options || [])
+        .filter((option) => option.is_active)
+        .map((option) => {
+            const activeVariants = (option.variants || []).filter((variant) => variant.is_active)
+            const fallbackVariants = !activeVariants.length && Array.isArray(option.values)
+                ? option.values.map((value, index) => ({
+                    id: `value-${option.id}-${index}`,
+                    name: value,
+                    price_impact: Number(option.extra_price) || 0,
+                    is_active: true,
+                }))
+                : []
+
+            return {
+                ...option,
+                variants: activeVariants.length > 0 ? activeVariants : fallbackVariants,
+            }
+        })
+        .filter((option) => option.variants && option.variants.length > 0)
+})
+
+// Methods
+function activeVariants(option) {
+    return (option.variants || []).filter((variant) => variant.is_active)
+}
+
+function isOptionEnabled(optionId) {
+    return enabledOptions.value.includes(optionId)
+}
+
+function toggleOption(optionId, enabled) {
+    if (enabled) {
+        if (!enabledOptions.value.includes(optionId)) {
+            enabledOptions.value.push(optionId)
+        }
+        return
+    }
+
+    enabledOptions.value = enabledOptions.value.filter((id) => id !== optionId)
+    selectedOptions.value = selectedOptions.value.filter((sel) => sel.option_id !== optionId)
+    updateOptionsPrice()
+}
+
+const currencyFormatter = new Intl.NumberFormat('fr-DZ', {
+    style: 'currency',
+    currency: 'DZD',
+    minimumFractionDigits: 2,
+})
+
+function formatPriceImpact(price) {
+    const amount = Number(price) || 0
+    if (amount === 0) return 'Gratuit'
+    return amount > 0 ? `+ ${currencyFormatter.format(amount)}` : `- ${currencyFormatter.format(Math.abs(amount))}`
+}
+
+function formatVariantPrice(variant) {
+    const base = Number(props.article?.sell_price) || 0
+    const impact = Number(variant.price_impact) || 0
+    return currencyFormatter.format(base + impact)
+}
+
+function isVariantSelected(option, variant) {
+    return selectedOptions.value.some(
+        (sel) => sel.option_id === option.id && sel.variants.some((v) => v.id === variant.id)
+    )
+}
+
+function selectVariant(option, variantId) {
+    if (!isOptionEnabled(option.id)) {
+        toggleOption(option.id, true)
+    }
+
+    const variant = option.variants.find((v) => v.id === variantId)
+    if (!variant) return
+
+    selectedOptions.value = selectedOptions.value.filter((sel) => sel.option_id !== option.id)
+    selectedOptions.value.push({
+        option_id: option.id,
+        option_name: option.name,
+        type: option.type,
+        variants: [{ id: variant.id, name: variant.name, price_impact: variant.price_impact }],
+    })
+
+    updateOptionsPrice()
+}
+
+function hasSelection(optionId) {
+    return selectedOptions.value.some((sel) => sel.option_id === optionId && sel.variants.length > 0)
+}
+
+function updateOptionsPrice() {
+    optionsPrice.value = selectedOptions.value.reduce((total, option) => {
+        const optionObj = (props.article.options || []).find((o) => o.id === option.option_id)
+        const variantsTotal = option.variants.reduce((sum, variant) => {
+            const matchedVariant = optionObj?.variants?.find((v) => v.id === variant.id)
+            const impact = matchedVariant
+                ? Number(matchedVariant.price_impact) || 0
+                : Number(variant.price_impact) || 0
+            return sum + impact
+        }, 0)
+        return total + variantsTotal
+    }, 0)
+}
+
+const canConfirm = computed(() => {
+    return selectableOptions.value.every((option) => {
+        if (!option.is_required) return true
+        return isOptionEnabled(option.id) && hasSelection(option.id)
+    })
+})
+
+function ensureRequiredOptions() {
+    const requiredIds = selectableOptions.value
+        .filter((option) => option.is_required)
+        .map((option) => option.id)
+
+    requiredIds.forEach((optionId) => {
+        if (!enabledOptions.value.includes(optionId)) {
+            enabledOptions.value.push(optionId)
+        }
+    })
+}
+
+onMounted(() => {
+    ensureRequiredOptions()
+    if (selectedOptions.value.length > 0) {
+        updateOptionsPrice()
+    }
+})
+
+watch(selectableOptions, () => {
+    ensureRequiredOptions()
+})
+
+function handleConfirm() {
+    emit('confirm', {
+        selectedOptions: selectedOptions.value,
+        optionsPrice: optionsPrice.value,
+    })
+}
+</script>

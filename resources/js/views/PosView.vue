@@ -301,6 +301,44 @@
             @confirm="handleOptionsConfirm"
         />
 
+        <!-- Selection-First Options Modal -->
+        <SelectOptionsModal
+            v-if="showSelectOptionsModal && optionsArticle"
+            :article="optionsArticle"
+            :initial-selections="optionsInitialSelections"
+            @close="closeSelectOptionsModal"
+            @confirm="handleSelectOptionsConfirm"
+            @create-option="showCreateOptionForArticle"
+        />
+
+        <!-- Need Options Prompt -->
+        <div v-if="showNeedOptionsPrompt" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full space-y-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Options manquantes</h3>
+                    <p class="text-sm text-gray-600 mt-1">
+                        Cet article n'a pas encore d'options configurées. Souhaitez-vous en créer une maintenant ?
+                    </p>
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <button
+                        type="button"
+                        @click="cancelNeedOptionsPrompt"
+                        class="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50"
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        type="button"
+                        @click="promptCreateOptions"
+                        class="px-4 py-2 bg-primary-500 text-gray-900 font-semibold rounded-xl hover:bg-primary-600"
+                    >
+                        Créer une option
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Notes Modal -->
         <div v-if="showNotesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
@@ -372,47 +410,50 @@
             </div>
         </div>
 
-        <!-- Create Option Modal -->
-        <div v-if="showCreateOptionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
-                <h3 class="text-lg font-bold text-gray-900 mb-2">⚙️ Créer une nouvelle option</h3>
-                <p class="text-sm text-gray-600 mb-4">
-                    Cet article n'a pas d'options. Créez-en une maintenant pour ajouter des variantes (ex: taille, couleur).
-                </p>
-                <div class="space-y-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom de l'option *</label>
-                        <input 
-                            v-model="newOptionName"
-                            type="text"
-                            placeholder="Ex: Taille, Couleur, Sauce"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                        <select 
-                            v-model="newOptionType"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        >
-                            <option value="fixed">Choix unique</option>
-                            <option value="multiple">Choix multiple</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="flex gap-2 justify-end">
+        <!-- Create Option Modal (Comprehensive) -->
+        <div v-if="showCreateOptionModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <!-- Modal Header -->
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">⚙️ Créer une nouvelle option</h3>
                     <button 
-                        @click="showCreateOptionModal = false; editingCartIndex.value = null; optionsArticle.value = null"
-                        class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100"
+                        type="button"
+                        @click="closeCreateOptionModal"
+                        class="text-gray-400 hover:text-gray-600"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body - Reusable Form Content -->
+                <div class="p-6">
+                    <OptionFormContent 
+                        :form="newOptionForm"
+                        :showPriceField="false"
+                        :showSettings="true"
+                        :showTypeField="false"
+                        :currencyCode="settingsStore.currencyCode"
+                    />
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
+                    <button 
+                        type="button"
+                        @click="closeCreateOptionModal"
+                        class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
                     >
                         Annuler
                     </button>
                     <button 
+                        type="button"
                         @click="createQuickOption"
-                        :disabled="!newOptionName.trim()"
-                        class="px-4 py-2 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="creatingOption || !isNewOptionValid"
+                        class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Créer
+                        {{ creatingOption ? 'Création...' : 'Créer l\'option' }}
                     </button>
                 </div>
             </div>
@@ -427,10 +468,12 @@ import { useArticlesStore } from '../stores/articles'
 import { useSettingsStore } from '../stores/settings'
 import { useCustomersStore } from '../stores/customers'
 import { useOfflineStore } from '../stores/offline'
-import { salesApi, optionsApi } from '../api'
+import { salesApi, optionsApi, articlesApi } from '../api'
 import PaymentModal from '../components/pos/PaymentModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
 import OptionsModal from '../components/pos/OptionsModal.vue'
+import SelectOptionsModal from '../components/pos/SelectOptionsModal.vue'
+import OptionFormContent from '../components/forms/OptionFormContent.vue'
 import {
     Bars3Icon,
     MagnifyingGlassIcon,
@@ -462,7 +505,9 @@ const showOptionsModal = ref(false)
 const showCustomerSelector = ref(false)
 const showNotesModal = ref(false)
 const showDiscountModal = ref(false)
+const showSelectOptionsModal = ref(false)
 const showCreateOptionModal = ref(false)
+const showNeedOptionsPrompt = ref(false)
 const optionsArticle = ref(null)
 const optionsInitialSelections = ref([])
 const optionsMode = ref('add')
@@ -474,8 +519,16 @@ const selectedCustomer = ref(null)
 const ticketNotes = ref('')
 const discountAmount = ref(0)
 const discountPercent = ref(0)
-const newOptionName = ref('')
-const newOptionType = ref('fixed')
+const creatingOption = ref(false)
+const newOptionForm = ref({
+    name: '',
+    type: 'fixed',
+    values: [''],
+    variantPrices: [0],
+    extra_price: 0,
+    is_required: false,
+    is_active: true,
+})
 
 const categories = computed(() => articlesStore.categories)
 
@@ -552,15 +605,40 @@ function selectCategory(categoryId) {
     selectedCategoryId.value = categoryId
 }
 
-function addToCart(article) {
-    const activeOptions = getActiveOptions(article)
+async function addToCart(article) {
+    const hasDeclaredOptions = Array.isArray(article.options) && article.options.length > 0
+    const hasLoadedVariants = hasDeclaredOptions && article.options.some((option) => Array.isArray(option.variants) && option.variants.length > 0)
+    const needsOptionSelection = hasDeclaredOptions || article?.has_options
 
-    if (article.has_options && activeOptions.length > 0) {
-        openOptionsModal(article, activeOptions, [], 'add', null)
+    if (!needsOptionSelection) {
+        cartStore.addItem(article)
         return
     }
 
-    cartStore.addItem(article)
+    let fullArticle = article
+    if (!hasLoadedVariants) {
+        try {
+            const response = await articlesApi.get(article.id)
+            fullArticle = response.data || article
+        } catch (error) {
+            console.error('Failed to load article options:', error)
+        }
+    }
+
+    const hasOptions = Array.isArray(fullArticle.options) && fullArticle.options.length > 0
+
+    if (!hasOptions) {
+        optionsArticle.value = fullArticle
+        showNeedOptionsPrompt.value = true
+        optionsMode.value = 'add'
+        editingCartIndex.value = null
+        return
+    }
+
+    showSelectOptionsModal.value = true
+    optionsArticle.value = fullArticle
+    optionsMode.value = 'add'
+    editingCartIndex.value = null
 }
 
 function updateQuantity(index, quantity) {
@@ -643,6 +721,40 @@ function closeOptionsModal() {
     editingCartIndex.value = null
 }
 
+function closeSelectOptionsModal() {
+    showSelectOptionsModal.value = false
+    optionsArticle.value = null
+    optionsMode.value = 'add'
+    editingCartIndex.value = null
+}
+
+function cancelNeedOptionsPrompt() {
+    showNeedOptionsPrompt.value = false
+    optionsArticle.value = null
+}
+
+function promptCreateOptions() {
+    showNeedOptionsPrompt.value = false
+    showCreateOptionModal.value = true
+}
+
+function handleSelectOptionsConfirm({ selectedOptions, optionsPrice }) {
+    if (!optionsArticle.value) return
+    
+    if (optionsMode.value === 'edit' && editingCartIndex.value !== null) {
+        cartStore.updateItemOptions(editingCartIndex.value, selectedOptions, optionsPrice)
+    } else {
+        cartStore.addItem(optionsArticle.value, 1, selectedOptions, optionsPrice)
+    }
+    
+    closeSelectOptionsModal()
+}
+
+function showCreateOptionForArticle() {
+    showSelectOptionsModal.value = false
+    showCreateOptionModal.value = true
+}
+
 function handleOptionsConfirm({ selectedOptions, optionsPrice }) {
     if (!optionsArticle.value) return
     const normalized = normalizeSelectedOptions(selectedOptions)
@@ -687,15 +799,22 @@ function openOptionsModal(article, activeOptions, initialSelections, mode, index
 
 function editItemOptions(index, item) {
     if (!item.article) return
-    const activeOptions = getActiveOptions(item.article)
-    if (activeOptions.length === 0) {
-        // Show modal to create option since there are none
-        showCreateOptionModal.value = true
-        editingCartIndex.value = index
+    
+    // Check if article has options
+    const hasOptions = item.article.options && item.article.options.length > 0
+    
+    if (hasOptions) {
+        // Show selection modal for editing
+        showSelectOptionsModal.value = true
         optionsArticle.value = item.article
+        optionsMode.value = 'edit'
+        editingCartIndex.value = index
+        optionsInitialSelections.value = item.selected_options || []
         return
     }
-    openOptionsModal(item.article, activeOptions, item.selected_options || [], 'edit', index)
+    
+    // No options to edit
+    console.warn('This article has no options')
 }
 
 function openQRScanner() {
@@ -738,33 +857,102 @@ function resetCart() {
     }
 }
 
+const isNewOptionValid = computed(() => {
+    return newOptionForm.value.name.trim() && 
+           newOptionForm.value.values.length > 0 && 
+           newOptionForm.value.values.some(v => v.trim())
+})
+
+function closeCreateOptionModal() {
+    showCreateOptionModal.value = false
+    editingCartIndex.value = null
+    optionsArticle.value = null
+    // Reset form
+    newOptionForm.value = {
+        name: '',
+        type: 'fixed',
+        values: [''],
+        variantPrices: [0],
+        extra_price: 0,
+        is_required: false,
+        is_active: true,
+    }
+}
+
 async function createQuickOption() {
-    if (!newOptionName.value.trim()) return
+    if (!isNewOptionValid.value) return
     
+    creatingOption.value = true
+    const articleContext = optionsArticle.value
     try {
-        // Create option with empty values array
+        // Build value/price pairs and filter empty values
+        const valuesWithPrices = newOptionForm.value.values.map((value, index) => ({
+            value: value.trim(),
+            price: Number(newOptionForm.value.variantPrices?.[index]) || 0,
+        })).filter((item) => item.value)
+
+        const validValues = valuesWithPrices.map((item) => item.value)
         const optionData = {
-            name: newOptionName.value.trim(),
-            type: newOptionType.value,
-            values: [],
-            is_active: true,
-            is_required: false,
-            extra_price: 0
+            name: newOptionForm.value.name.trim(),
+            type: newOptionForm.value.type,
+            values: validValues,
+            extra_price: newOptionForm.value.extra_price,
+            is_required: newOptionForm.value.is_required,
+            is_active: newOptionForm.value.is_active,
         }
         
         const response = await optionsApi.create(optionData)
         console.log('Option créée:', response.data)
         
-        // Reset modal
-        newOptionName.value = ''
-        newOptionType.value = 'fixed'
-        showCreateOptionModal.value = false
+        // Create variants for each value with corresponding prices
+        for (let i = 0; i < valuesWithPrices.length; i++) {
+            const variantData = {
+                name: valuesWithPrices[i].value,
+                price_impact: valuesWithPrices[i].price,
+                is_active: true,
+            }
+            try {
+                await optionsApi.createVariant(response.data.id, variantData)
+            } catch (error) {
+                console.error(`Failed to create variant ${i + 1}:`, error)
+            }
+        }
+        
+        // Close modal and reset
+        closeCreateOptionModal()
+        
+        // Refresh article data if we're creating for a specific article
+        if (articleContext) {
+            try {
+                const existingOptionIds = Array.isArray(articleContext.options)
+                    ? articleContext.options.map((option) => option.id)
+                    : []
+
+                const updatedOptionIds = Array.from(new Set([
+                    ...existingOptionIds,
+                    response.data.id,
+                ]))
+
+                await articlesApi.update(articleContext.id, {
+                    options: updatedOptionIds,
+                    has_options: true,
+                })
+
+                const articleResponse = await articlesApi.get(articleContext.id)
+                optionsArticle.value = articleResponse.data
+                showSelectOptionsModal.value = true
+            } catch (error) {
+                console.error('Failed to refresh article:', error)
+            }
+        }
         
         // Show success message
-        alert(`Option "${response.data.name}" créée avec succès! Vous pouvez maintenant y ajouter des variantes.`)
+        alert(`Option "${response.data.name}" créée avec succès!`)
     } catch (error) {
         console.error('Erreur création option:', error)
-        alert('Erreur lors de la création de l\'option')
+        alert('Erreur lors de la création de l\'option: ' + (error.response?.data?.message || error.message))
+    } finally {
+        creatingOption.value = false
     }
 }
 

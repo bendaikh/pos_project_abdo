@@ -266,23 +266,13 @@
                         <span class="ml-3">Catégories</span>
                     </router-link>
 
-                    <!-- Options -->
+                    <!-- Options & Variantes -->
                     <router-link 
                         to="/options"
                         class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
                         :class="isActive('/options') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
                     >
                         <AdjustmentsHorizontalIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3 whitespace-nowrap">Options</span>
-                    </router-link>
-
-                    <!-- Options & Variantes -->
-                    <router-link 
-                        to="/options-variants"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/options-variants') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
-                    >
-                        <Squares2X2Icon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3 whitespace-nowrap">Options & Variantes</span>
                     </router-link>
                 </div>

@@ -13,6 +13,150 @@
 
         <!-- Form -->
         <form @submit.prevent="handleSubmit" class="space-y-6">
+            <!-- Image & Color Section (TOP) -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">🖼️ Image & Couleur</h2>
+                
+                <div class="space-y-6">
+                    <!-- Main Image Upload -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Image de l'article</label>
+                        
+                        <!-- Hidden file input -->
+                        <input 
+                            ref="imageInput"
+                            type="file"
+                            accept="image/*"
+                            class="hidden"
+                            @change="handleImageUpload"
+                        >
+                        
+                        <!-- No Image - Upload Area -->
+                        <div v-if="form.photos.length === 0" 
+                             @click="$refs.imageInput.click()"
+                             class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50 hover:bg-blue-50 hover:border-primary-400 transition-colors cursor-pointer">
+                            <svg class="mx-auto h-12 w-12 text-gray-400 mb-2" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <p class="text-gray-700 font-medium">Cliquez pour ajouter une image</p>
+                            <p class="text-sm text-gray-500 mt-1">ou glissez une image ici</p>
+                        </div>
+                        
+                        <!-- Image Display -->
+                        <div v-else-if="form.photos.length > 0 && form.photos.find(p => p.is_primary)" class="space-y-3">
+                            <div class="flex gap-4 items-start">
+                                <div class="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden border-2 border-primary-500 flex-shrink-0">
+                                    <img 
+                                        :src="form.photos.find(p => p.is_primary).photo_url" 
+                                        class="w-full h-full object-cover cursor-pointer hover:opacity-80"
+                                        @click="$refs.imageInput.click()"
+                                        @error="$event.target.src='https://via.placeholder.com/128'"
+                                    >
+                                </div>
+                                <div class="flex-1 space-y-2">
+                                    <button 
+                                        type="button"
+                                        @click="$refs.imageInput.click()"
+                                        class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        📁 Modifier l'image
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        @click="removePhoto(form.photos.findIndex(p => p.is_primary))"
+                                        class="w-full px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                    >
+                                        🗑️ Supprimer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Color Selector -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Couleur de l'article</label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <input 
+                                    v-model="form.color"
+                                    type="text"
+                                    placeholder="Ex: Rouge, Bleu, #FF5733"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
+                            </div>
+                            <button 
+                                type="button"
+                                @click="showColorPicker = !showColorPicker"
+                                class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center"
+                                :style="form.color && isHexColor(form.color) ? { backgroundColor: form.color, borderColor: form.color } : {}"
+                            >
+                                🎨
+                            </button>
+                        </div>
+                        
+                        <!-- Color Picker Dropdown -->
+                        <div v-if="showColorPicker" class="mt-3 p-4 border border-gray-300 rounded-lg bg-white">
+                            <!-- Standard Colors -->
+                            <div class="mb-4">
+                                <p class="text-sm font-medium text-gray-700 mb-2">Couleurs standard</p>
+                                <div class="grid grid-cols-6 gap-2">
+                                    <button 
+                                        v-for="color in standardColors"
+                                        :key="color"
+                                        type="button"
+                                        @click="form.color = color; showColorPicker = false"
+                                        class="w-10 h-10 rounded-lg border-2 hover:border-gray-900 transition-all"
+                                        :style="{ backgroundColor: color, borderColor: form.color === color ? '#000' : '#ddd' }"
+                                        :title="color"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <!-- Custom Color Picker -->
+                            <div>
+                                <p class="text-sm font-medium text-gray-700 mb-2">Couleur personnalisée</p>
+                                <input 
+                                    v-model="form.color"
+                                    type="color"
+                                    class="w-full h-10 rounded-lg cursor-pointer border border-gray-300"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barcode / Identification Section (SECOND) -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">📱 Code Barre / Identification</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ID Article *</label>
+                        <input 
+                            v-model="form.sku"
+                            type="text"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            placeholder="Ex: ART-001"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">Identifiant unique de l'article</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Code Barre / QR Code</label>
+                        <input 
+                            ref="barcodeScanner"
+                            v-model="form.barcode"
+                            type="text"
+                            placeholder="Scannez le code barre ici"
+                            @keyup.enter="focusNextField"
+                            class="w-full px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-primary-50 font-mono"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">💡 Lecteur USB</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Basic Information Section -->
             <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">📋 Informations de base</h2>
@@ -29,19 +173,10 @@
                         >
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Code Barre / ID Article</label>
-                        <input 
-                            v-model="form.sku"
-                            type="text"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            placeholder="Ex: ART-001 ou scan code barre"
-                        >
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center justify-between">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
                             <span>Catégorie</span>
-                            <router-link to="/categories" class="text-xs text-primary-600 hover:text-primary-700">
-                                Gérer les catégories
+                            <router-link to="/categories" class="ml-2 text-xs text-primary-600 hover:text-primary-700">
+                                Gérer
                             </router-link>
                         </label>
                         <select 
@@ -51,6 +186,15 @@
                             <option :value="null">Sélectionner une catégorie</option>
                             <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                         </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea 
+                            v-model="form.description"
+                            rows="2"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            placeholder="Description détaillée de l'article..."
+                        ></textarea>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Unité de mesure</label>
@@ -65,39 +209,6 @@
                             <option value="ml">Millilitre (ml)</option>
                             <option value="m">Mètre (M)</option>
                         </select>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea 
-                            v-model="form.description"
-                            rows="3"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            placeholder="Description détaillée de l'article..."
-                        ></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Couleur de l'article</label>
-                        <input 
-                            v-model="form.color"
-                            type="text"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            placeholder="Ex: Rouge, Bleu, #FF5733"
-                        >
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            📱 Scan Code Barre / QR Code
-                            <span class="text-xs text-gray-500">(optionnel)</span>
-                        </label>
-                        <input 
-                            ref="barcodeScanner"
-                            v-model="form.sku"
-                            type="text"
-                            placeholder="Cliquez ici et scannez ou entrez un code"
-                            @keyup.enter="focusNextField"
-                            class="w-full px-4 py-2 border-2 border-primary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-primary-50"
-                        >
-                        <p class="text-xs text-gray-500 mt-1">💡 Conseil: Scannez le code barre avec un lecteur USB connecté</p>
                     </div>
                 </div>
             </div>
@@ -418,9 +529,9 @@
                                                 {{ option.type === 'fixed' ? 'Unique' : 'Multiple' }}
                                             </span>
                                         </div>
-                                        <p class="text-sm text-gray-500 mt-1">{{ option.values?.join(', ') || 'Aucune valeur' }}</p>
-                                        <p v-if="option.extra_price > 0" class="text-xs text-gray-600 mt-1 font-medium">
-                                            Prix supplémentaire: +{{ formatCurrency(option.extra_price) }}
+                                        <p class="text-sm text-gray-500 mt-1">{{ formatOptionVariants(option) }}</p>
+                                        <p v-if="optionExtraPriceLabel(option)" class="text-xs text-gray-600 mt-1 font-medium">
+                                            Prix supplémentaire: {{ optionExtraPriceLabel(option) }}
                                         </p>
                                     </div>
                                 </label>
@@ -433,94 +544,6 @@
                             </div>
                         </div>
                     </transition>
-                </div>
-            </div>
-
-            <!-- Photos Section -->
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">📸 Images de l'article</h2>
-                
-                <div class="space-y-4">
-                    <div v-if="form.photos.length === 0" class="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        <p class="mt-2 text-sm text-gray-500">Aucune image ajoutée</p>
-                    </div>
-
-                    <div v-for="(photo, index) in form.photos" :key="index" class="flex items-center space-x-3 p-4 border-2 rounded-lg transition-all" :class="photo.is_primary ? 'border-primary-500 bg-primary-50' : 'border-gray-200 bg-white'">
-                        <div class="flex-shrink-0">
-                            <div class="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                                <img v-if="photo.photo_url" :src="photo.photo_url" class="w-full h-full object-cover" @error="$event.target.src='https://via.placeholder.com/64'">
-                                <div v-else class="w-full h-full flex items-center justify-center text-gray-400">
-                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex-1">
-                            <div class="space-y-2">
-                                <textarea 
-                                    v-model="form.photos[index].photo_url"
-                                    placeholder="URL de l'image (https://...)"
-                                    rows="2"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                                ></textarea>
-                                <div class="text-xs text-gray-500">
-                                    💡 Entrez une URL d'image ou cliquez sur "Télécharger depuis dossier"
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex flex-col items-center space-y-2">
-                            <label class="flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-colors" :class="photo.is_primary ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
-                                <input 
-                                    v-model="form.photos[index].is_primary"
-                                    type="radio"
-                                    :name="'primary_photo'"
-                                    :value="true"
-                                    @change="setPrimaryPhoto(index)"
-                                    class="sr-only"
-                                >
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                                <span>{{ photo.is_primary ? 'Principale' : 'Définir' }}</span>
-                            </label>
-                            <input 
-                                :ref="`fileInput${index}`"
-                                type="file"
-                                accept="image/*"
-                                class="sr-only"
-                                @change="handleFileUpload(index, $event)"
-                            >
-                            <button 
-                                type="button"
-                                @click="$refs[`fileInput${index}`][0]?.click()"
-                                class="px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                            >
-                                📁 Dossier
-                            </button>
-                            <button 
-                                type="button"
-                                @click="removePhoto(index)"
-                                v-if="form.photos.length > 1"
-                                class="p-2 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                            >
-                                <TrashIcon class="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <button 
-                        type="button"
-                        @click="addPhoto"
-                        class="w-full px-4 py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-primary-400 hover:bg-primary-50 hover:text-primary-600 flex items-center justify-center transition-all font-medium"
-                    >
-                        <PlusIcon class="w-5 h-5 mr-2" />
-                        Ajouter une image
-                    </button>
-                    <p class="text-xs text-gray-500">💡 Astuce: La première image marquée comme principale sera affichée par défaut dans la liste des articles et le POS. Vous pouvez entrer une URL ou télécharger depuis votre dossier.</p>
                 </div>
             </div>
 
@@ -557,12 +580,36 @@
 
                     <!-- Modal Body - Reusable Form Content -->
                     <div class="p-6 space-y-6">
-                        <OptionFormContent 
-                            :form="newOption"
-                            :showPriceField="true"
-                            :showSettings="true"
-                            :currencyCode="settingsStore.currencyCode"
-                        />
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Nom *</label>
+                            <input
+                                v-model="newOption.optionName"
+                                type="text"
+                                placeholder="Supplément"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">1ère Valeur *</label>
+                            <input
+                                v-model="newOption.variantName"
+                                type="text"
+                                placeholder="Sauce piquante"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Prix ({{ settingsStore.currencyCode }}) *</label>
+                            <input
+                                v-model.number="newOption.variantPrice"
+                                type="number"
+                                step="0.01"
+                                placeholder="30.00"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-bold text-lg"
+                            >
+                        </div>
                     </div>
 
                     <!-- Modal Footer -->
@@ -577,7 +624,7 @@
                         <button 
                             type="button"
                             @click="createNewOption"
-                            :disabled="creatingOption || !newOption.name || newOption.values.filter(v => v.trim()).length === 0"
+                            :disabled="creatingOption || !newOption.optionName.trim() || !newOption.variantName.trim() || newOption.variantPrice === null"
                             class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {{ creatingOption ? 'Création...' : 'Créer l\'option' }}
@@ -595,7 +642,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { articlesApi, categoriesApi, optionsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 import { XMarkIcon, PlusIcon } from '@heroicons/vue/24/outline'
-import OptionFormContent from '../../components/forms/OptionFormContent.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -607,22 +653,47 @@ const options = ref([])
 const selectedOptions = ref([])
 const saving = ref(false)
 const showOptionModal = ref(false)
+const showColorPicker = ref(false)
 const creatingOption = ref(false)
+const standardColors = ['#FF0000', '#00A854', '#0050B3', '#FAAD14', '#F5222D', '#722ED1']
 
 const newOption = reactive({
-    name: '',
-    type: 'fixed',
-    values: [''],
-    extra_price: 0,
-    is_required: false,
-    is_active: true
+    optionName: '',
+    variantName: '',
+    variantPrice: null,
 })
 
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
+function formatOptionVariants(option) {
+    if (option.variants && option.variants.length > 0) {
+        return option.variants.map((variant) => variant.name).join(', ')
+    }
+    if (option.values && option.values.length > 0) {
+        return option.values.join(', ')
+    }
+    return 'Aucune valeur'
+}
+
+function optionExtraPriceLabel(option) {
+    if (!option.variants || option.variants.length === 0) return null
+    const prices = option.variants
+        .map((variant) => Number(variant.price_impact) || 0)
+        .filter((price) => price > 0)
+
+    if (prices.length === 0) return null
+    const minPrice = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    if (minPrice === maxPrice) {
+        return `+${formatCurrency(minPrice)}`
+    }
+    return `+${formatCurrency(minPrice)} → ${formatCurrency(maxPrice)}`
+}
+
 const form = reactive({
     name: '',
     sku: '',
+    barcode: '',
     description: '',
     category_id: null,
     subcategory_id: null,
@@ -652,6 +723,11 @@ const marginPercentage = computed(() => {
     const margin = ((form.sell_price - form.buy_price) / form.buy_price) * 100
     return margin.toFixed(2)
 })
+
+// Validate hex color format
+function isHexColor(color) {
+    return /^#[0-9A-F]{6}$/i.test(color)
+}
 
 // Calculate margin when prices change
 function calculateMargin() {
@@ -749,18 +825,17 @@ function addPhoto() {
 }
 
 function removePhoto(index) {
-    if (form.photos.length > 1) {
-        const wasMain = form.photos[index].is_primary
-        form.photos.splice(index, 1)
-        
-        // If we removed the main photo, make the first one main
-        if (wasMain && form.photos.length > 0) {
-            form.photos[0].is_primary = true
-        }
-        
-        // Update sort order
-        form.photos.forEach((p, i) => p.sort_order = i)
+    // Allow removing any photo, even if it's the last one
+    const wasMain = form.photos[index].is_primary
+    form.photos.splice(index, 1)
+    
+    // If we removed the main photo and there are still photos, make the first one main
+    if (wasMain && form.photos.length > 0) {
+        form.photos[0].is_primary = true
     }
+    
+    // Update sort order
+    form.photos.forEach((p, i) => p.sort_order = i)
 }
 
 function setPrimaryPhoto(index) {
@@ -770,6 +845,37 @@ function setPrimaryPhoto(index) {
 }
 
 // File upload handler - converts file to data URL
+// Image upload handler - converts file to data URL
+function handleImageUpload(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Fichier trop volumineux. Taille maximale: 5MB')
+        return
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+        alert('Veuillez sélectionner une image valide')
+        return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        // Clear old photos and add new one as primary
+        form.photos = [{
+            photo_url: e.target?.result || '',
+            is_primary: true,
+            sort_order: 0
+        }]
+        // Reset file input
+        event.target.value = ''
+    }
+    reader.readAsDataURL(file)
+}
+
 function handleFileUpload(index, event) {
     const file = event.target.files?.[0]
     if (!file) return
@@ -880,39 +986,39 @@ async function handleSubmit() {
 }
 
 async function createNewOption() {
-    if (!newOption.name || newOption.values.filter(v => v.trim()).length === 0) {
-        alert('Veuillez remplir le nom et au moins une valeur')
+    if (!newOption.optionName.trim() || !newOption.variantName.trim() || newOption.variantPrice === null) {
+        alert('Veuillez remplir le nom, la première valeur et le prix')
         return
     }
 
     creatingOption.value = true
     try {
-        const data = {
-            name: newOption.name,
-            type: newOption.type,
-            values: newOption.values.filter(v => v.trim()),
-            extra_price: newOption.extra_price || 0,
-            is_required: newOption.is_required || false,
-            is_active: newOption.is_active !== undefined ? newOption.is_active : true
-        }
-        
-        const response = await optionsApi.create(data)
-        
-        // Add the new option to the list
-        options.value.push(response.data)
-        
-        // Select it automatically
-        selectedOptions.value.push(response.data.id)
-        
-        // Reset form
-        newOption.name = ''
-        newOption.type = 'fixed'
-        newOption.values = ['']
-        newOption.extra_price = 0
-        newOption.is_required = false
-        newOption.is_active = true
+        const response = await optionsApi.create({
+            name: newOption.optionName.trim(),
+            type: 'fixed',
+            values: [newOption.variantName.trim()],
+            extra_price: Number(newOption.variantPrice) || 0,
+            is_active: true,
+            is_required: false
+        })
+
+        const created = response.data
+        created.variants = [
+            {
+                id: Date.now(),
+                name: newOption.variantName.trim(),
+                price_impact: Number(newOption.variantPrice) || 0
+            }
+        ]
+
+        options.value.push(created)
+        selectedOptions.value.push(created.id)
+
+        newOption.optionName = ''
+        newOption.variantName = ''
+        newOption.variantPrice = null
         showOptionModal.value = false
-        
+
         alert('Option créée avec succès!')
     } catch (error) {
         console.error('Failed to create option:', error)

@@ -11,7 +11,7 @@ class OptionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Option::query();
+        $query = Option::with('variants');
 
         if ($request->has('type')) {
             $query->where('type', $request->type);
@@ -49,7 +49,7 @@ class OptionController extends Controller
 
     public function show(Option $option): JsonResponse
     {
-        return response()->json($option->load('articles'));
+        return response()->json($option->load(['articles', 'variants']));
     }
 
     public function update(Request $request, Option $option): JsonResponse
