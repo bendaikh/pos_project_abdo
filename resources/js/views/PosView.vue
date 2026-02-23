@@ -192,6 +192,9 @@
                                     <span class="ml-2 text-gray-500">=</span>
                                     <span class="ml-2 font-bold text-gray-900">{{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs</span>
                                 </div>
+                                <div v-if="item.selected_variant?.template_name" class="text-xs text-gray-600 mt-1">
+                                    {{ item.selected_variant.template_name }} · {{ item.selected_variant.template_value }}
+                                </div>
                                 <button
                                     v-if="item.article?.has_options"
                                     type="button"
@@ -536,8 +539,6 @@ const showSelectVariantsModal = ref(false)
 const optionsArticle = ref(null)
 const selectedArticleForVariants = ref(null)
 const selectedVariantId = ref(null)
-const selectedVariantPrice = ref(0)
-const selectedVariantObject = ref(null)
 const optionsInitialSelections = ref([])
 const optionsMode = ref('add')
 const variantSelectionMode = ref('add')
@@ -769,36 +770,23 @@ function closeSelectVariantsModal() {
     showSelectVariantsModal.value = false
     selectedArticleForVariants.value = null
     selectedVariantId.value = null
-    selectedVariantObject.value = null
-    selectedVariantPrice.value = 0
 }
 
-function handleSelectVariantsConfirm(variantId) {
+function handleSelectVariantsConfirm({ variantId, selectedOptions = [], optionsPrice = 0 }) {
     if (!selectedArticleForVariants.value) return
-    
-    // Store the selected variant
+
     const selectedVariant = selectedArticleForVariants.value.variants?.find(v => v.id === variantId)
     if (!selectedVariant) return
-    
-    const article = selectedArticleForVariants.value
-    
-    // Store variant info for later use
-    selectedVariantObject.value = selectedVariant
-    selectedVariantPrice.value = Number(selectedVariant.price_impact) || 0
-    
-    // Check if article also has options
-    if (article.has_options || (Array.isArray(article.options) && article.options.length > 0)) {
-        // Close variants modal and show options modal
-        showSelectVariantsModal.value = false
-        showSelectOptionsModal.value = true
-        optionsArticle.value = article
-        optionsMode.value = 'add'
-        editingCartIndex.value = null
-    } else {
-        // No options, add directly with the selected variant
-        cartStore.addItem(article, 1, [], 0, selectedVariant)
-        closeSelectVariantsModal()
-    }
+
+    const normalizedOptions = normalizeSelectedOptions(selectedOptions)
+    cartStore.addItem(
+        selectedArticleForVariants.value,
+        1,
+        normalizedOptions,
+        optionsPrice,
+        selectedVariant
+    )
+    closeSelectVariantsModal()
 }
 
 function closeSelectOptionsModal() {
@@ -820,23 +808,14 @@ function promptCreateOptions() {
 
 function handleSelectOptionsConfirm({ selectedOptions, optionsPrice }) {
     if (!optionsArticle.value) return
-    
-    console.log('handleSelectOptionsConfirm:', {
-        optionsPrice,
-        selectedOptions,
-        variant: selectedVariantObject.value
-    })
-    
+
     if (optionsMode.value === 'edit' && editingCartIndex.value !== null) {
         cartStore.updateItemOptions(editingCartIndex.value, selectedOptions, optionsPrice)
     } else {
-        // Use the stored variant object
-        cartStore.addItem(optionsArticle.value, 1, selectedOptions, optionsPrice, selectedVariantObject.value)
+        cartStore.addItem(optionsArticle.value, 1, selectedOptions, optionsPrice)
     }
-    
+
     closeSelectOptionsModal()
-    selectedVariantObject.value = null
-    selectedVariantPrice.value = 0
 }
 
 function showCreateOptionForArticle() {

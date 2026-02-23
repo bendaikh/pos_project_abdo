@@ -116,6 +116,11 @@ class ArticleController extends Controller
             'variants' => 'nullable|array',
             'variants.*.name' => 'required|string|max:255',
             'variants.*.price_impact' => 'nullable|numeric|min:0',
+            'variants.*.cost_price' => 'nullable|numeric|min:0',
+            'variants.*.sku' => 'nullable|string|max:100',
+            'variants.*.barcode' => 'nullable|string|max:100',
+            'variants.*.template_name' => 'nullable|string|max:100',
+            'variants.*.template_value' => 'nullable|string|max:100',
             'variants.*.is_active' => 'nullable|boolean',
             'variants.*.sort_order' => 'nullable|integer|min:0',
             'photos' => 'nullable|array',
@@ -139,7 +144,12 @@ class ArticleController extends Controller
             foreach ($variantsData as $index => $variant) {
                 $article->variants()->create([
                     'name' => $variant['name'],
-                    'price_impact' => $variant['price_impact'] ?? 0,
+                        'price_impact' => $variant['price_impact'] ?? 0,
+                        'cost_price' => $variant['cost_price'] ?? 0,
+                        'sku' => $variant['sku'] ?? null,
+                        'barcode' => $variant['barcode'] ?? null,
+                        'template_name' => $variant['template_name'] ?? null,
+                        'template_value' => $variant['template_value'] ?? null,
                     'is_active' => $variant['is_active'] ?? true,
                     'sort_order' => $variant['sort_order'] ?? $index,
                 ]);
@@ -190,6 +200,11 @@ class ArticleController extends Controller
             'variants.*.id' => 'nullable|exists:variants,id',
             'variants.*.name' => 'required|string|max:255',
             'variants.*.price_impact' => 'nullable|numeric|min:0',
+            'variants.*.cost_price' => 'nullable|numeric|min:0',
+            'variants.*.sku' => 'nullable|string|max:100',
+            'variants.*.barcode' => 'nullable|string|max:100',
+            'variants.*.template_name' => 'nullable|string|max:100',
+            'variants.*.template_value' => 'nullable|string|max:100',
             'variants.*.is_active' => 'nullable|boolean',
             'variants.*.sort_order' => 'nullable|integer|min:0',
             'photos' => 'nullable|array',
@@ -211,6 +226,11 @@ class ArticleController extends Controller
                 $article->variants()->create([
                     'name' => $variant['name'],
                     'price_impact' => $variant['price_impact'] ?? 0,
+                    'cost_price' => $variant['cost_price'] ?? 0,
+                    'sku' => $variant['sku'] ?? null,
+                    'barcode' => $variant['barcode'] ?? null,
+                    'template_name' => $variant['template_name'] ?? null,
+                    'template_value' => $variant['template_value'] ?? null,
                     'is_active' => $variant['is_active'] ?? true,
                     'sort_order' => $variant['sort_order'] ?? $index,
                 ]);
@@ -262,11 +282,26 @@ class ArticleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price_impact' => 'nullable|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'sku' => 'nullable|string|max:100',
+            'barcode' => 'nullable|string|max:100',
+            'template_name' => 'nullable|string|max:100',
+            'template_value' => 'nullable|string|max:100',
             'is_active' => 'nullable|boolean',
             'sort_order' => 'nullable|integer|min:0',
         ]);
 
-        $variant = $article->variants()->create($validated);
+        $variant = $article->variants()->create([
+            'name' => $validated['name'],
+            'price_impact' => $validated['price_impact'] ?? 0,
+            'cost_price' => $validated['cost_price'] ?? 0,
+            'sku' => $validated['sku'] ?? null,
+            'barcode' => $validated['barcode'] ?? null,
+            'template_name' => $validated['template_name'] ?? null,
+            'template_value' => $validated['template_value'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
+            'sort_order' => $validated['sort_order'] ?? 0,
+        ]);
 
         return response()->json($variant, 201);
     }
@@ -278,11 +313,26 @@ class ArticleController extends Controller
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'price_impact' => 'nullable|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
+            'sku' => 'nullable|string|max:100',
+            'barcode' => 'nullable|string|max:100',
+            'template_name' => 'nullable|string|max:100',
+            'template_value' => 'nullable|string|max:100',
             'is_active' => 'nullable|boolean',
             'sort_order' => 'nullable|integer|min:0',
         ]);
 
-        $variant->update($validated);
+        $variant->update([
+            'name' => $validated['name'] ?? $variant->name,
+            'price_impact' => $validated['price_impact'] ?? $variant->price_impact,
+            'cost_price' => $validated['cost_price'] ?? $variant->cost_price,
+            'sku' => $validated['sku'] ?? $variant->sku,
+            'barcode' => $validated['barcode'] ?? $variant->barcode,
+            'template_name' => $validated['template_name'] ?? $variant->template_name,
+            'template_value' => $validated['template_value'] ?? $variant->template_value,
+            'is_active' => $validated['is_active'] ?? $variant->is_active,
+            'sort_order' => $validated['sort_order'] ?? $variant->sort_order,
+        ]);
 
         return response()->json($variant);
     }

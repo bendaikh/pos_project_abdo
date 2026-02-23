@@ -511,10 +511,21 @@
                                     class="flex items-start justify-between p-4 border rounded-lg hover:bg-gray-50 transition-all bg-gray-50 border-gray-200"
                                 >
                                     <div class="flex-1">
-                                        <p class="font-medium text-gray-900">{{ variant.name }}</p>
-                                        <div class="flex items-center gap-3 mt-1">
+                                        <p class="font-medium text-gray-900">
+                                            {{ variant.template_name ? `${variant.template_name} · ${variant.template_value}` : variant.name }}
+                                        </p>
+                                        <div class="flex flex-wrap items-center gap-3 mt-1 text-xs">
                                             <span v-if="variant.price_impact > 0" class="text-xs text-green-600 font-medium">
                                                 +{{ formatCurrency(variant.price_impact) }}
+                                            </span>
+                                            <span v-if="variant.cost_price > 0" class="text-xs text-orange-600 font-medium">
+                                                Coût: {{ formatCurrency(variant.cost_price) }}
+                                            </span>
+                                            <span v-if="variant.sku" class="text-xs text-gray-600 font-medium">
+                                                SKU: {{ variant.sku }}
+                                            </span>
+                                            <span v-if="variant.barcode" class="text-xs text-gray-600 font-medium">
+                                                Code-barres: {{ variant.barcode }}
                                             </span>
                                             <span v-if="variant.is_active" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
                                                 Actif
@@ -661,7 +672,7 @@
                         </h3>
                         <button 
                             type="button"
-                            @click="showVariantModal = false; editingVariantIndex = null"
+                            @click="showVariantModal = false; editingVariantIndex = null; resetVariantForm()"
                             class="text-gray-400 hover:text-gray-600"
                         >
                             <XMarkIcon class="w-6 h-6" />
@@ -670,27 +681,86 @@
 
                     <!-- Modal Body -->
                     <div class="p-6 space-y-6">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Nom *</label>
-                            <input
-                                v-model="newVariant.name"
-                                type="text"
-                                placeholder="Exemple: Petit, Moyen, Grand, Rouge, Bleu..."
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
-                            >
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Nom de la variante *</label>
+                                <select
+                                    v-model="newVariant.templateId"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                                >
+                                    <option value="" disabled>Choisir une variante enregistrée</option>
+                                    <option v-for="template in variantTemplates" :key="template.id" :value="template.id">
+                                        {{ template.name }}
+                                    </option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Ces variantes sont définies depuis <strong>/options</strong>.
+                                </p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Valeur *</label>
+                                <input
+                                    v-model="newVariant.value"
+                                    type="text"
+                                    placeholder="Ex: Petit, Moyen, Grand..."
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
+                                >
+                                <p v-if="selectedTemplateValues.length" class="text-xs text-gray-500 mt-1">
+                                    Valeurs existantes :
+                                    <span v-for="value in selectedTemplateValues" :key="value" class="inline-flex items-center py-0.5 px-2 rounded-full bg-gray-100 text-xs text-gray-600 mr-1">
+                                        {{ value }}
+                                    </span>
+                                </p>
+                                <p v-else-if="variantTemplates.length === 0" class="text-xs text-red-600 mt-1">
+                                    Définissez vos variantes d'abord depuis la page options.
+                                </p>
+                            </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Impact sur le prix ({{ settingsStore.currencyCode }})</label>
-                            <input
-                                v-model.number="newVariant.price_impact"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="0.00"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-bold text-lg"
-                            >
-                            <p class="text-xs text-gray-500 mt-1">Prix supplémentaire pour cette variante (optionnel)</p>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Impact sur le prix ({{ settingsStore.currencyCode }})</label>
+                                <input
+                                    v-model.number="newVariant.price_impact"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-bold text-lg"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Coût ({{ settingsStore.currencyCode }})</label>
+                                <input
+                                    v-model.number="newVariant.cost_price"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-bold text-lg"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">ID variante</label>
+                                <input
+                                    v-model="newVariant.sku"
+                                    type="text"
+                                    placeholder="Ex: VAR-XL"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Code-barres</label>
+                                <input
+                                    v-model="newVariant.barcode"
+                                    type="text"
+                                    placeholder="1234567890123"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                                >
+                            </div>
                         </div>
 
                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -713,7 +783,7 @@
                     <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
                         <button 
                             type="button"
-                            @click="showVariantModal = false; editingVariantIndex = null"
+                            @click="showVariantModal = false; editingVariantIndex = null; resetVariantForm()"
                             class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
                         >
                             Annuler
@@ -721,7 +791,7 @@
                         <button 
                             v-if="editingVariantIndex !== null"
                             type="button"
-                            @click="deleteArticleVariant(editingVariantIndex); showVariantModal = false; editingVariantIndex = null"
+                            @click="deleteArticleVariant(editingVariantIndex); showVariantModal = false; editingVariantIndex = null; resetVariantForm()"
                             class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
                         >
                             Supprimer
@@ -729,7 +799,7 @@
                         <button 
                             type="button"
                             @click="editingVariantIndex !== null ? updateArticleVariant() : addArticleVariant()"
-                            :disabled="!newVariant.name.trim()"
+                            :disabled="!newVariant.templateId || !newVariant.value.trim()"
                             class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {{ editingVariantIndex !== null ? 'Mettre à jour' : 'Ajouter' }}
@@ -814,11 +884,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { articlesApi, categoriesApi, optionsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 import { XMarkIcon, PlusIcon } from '@heroicons/vue/24/outline'
+import { useVariantTemplatesStore } from '../../stores/variantTemplates'
 
 const route = useRoute()
 const router = useRouter()
@@ -827,6 +898,12 @@ const settingsStore = useSettingsStore()
 const isEdit = computed(() => !!route.params.id)
 const categories = ref([])
 const options = ref([])
+const variantTemplatesStore = useVariantTemplatesStore()
+const variantTemplates = computed(() => variantTemplatesStore.templates)
+const selectedTemplateValues = computed(() => {
+    const template = variantTemplates.value.find(t => t.id === newVariant.templateId)
+    return template?.values || []
+})
 const selectedOptions = ref([])
 const articleVariants = ref([])
 const saving = ref(false)
@@ -844,10 +921,13 @@ const newOption = reactive({
 })
 
 const newVariant = reactive({
-    name: '',
+    templateId: '',
+    value: '',
     price_impact: 0,
+    cost_price: 0,
+    sku: '',
+    barcode: '',
     is_active: true,
-    sort_order: 0,
 })
 
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
@@ -986,13 +1066,24 @@ async function fetchArticle() {
         
         // Set variants
         if (article.variants) {
-            articleVariants.value = article.variants.map(v => ({
-                id: v.id,
-                name: v.name,
-                price_impact: Number(v.price_impact) || 0,
-                is_active: v.is_active !== false,
-                sort_order: v.sort_order || 0,
-            }))
+            articleVariants.value = article.variants.map((v, idx) => {
+                const templateMatch = variantTemplates.value.find(
+                    (template) => template.name === v.template_name
+                )
+                return {
+                    id: v.id,
+                    name: v.name,
+                    template_id: templateMatch?.id || '',
+                    template_name: v.template_name || null,
+                    template_value: v.template_value || null,
+                    price_impact: Number(v.price_impact) || 0,
+                    cost_price: Number(v.cost_price) || 0,
+                    sku: v.sku || '',
+                    barcode: v.barcode || '',
+                    is_active: v.is_active !== false,
+                    sort_order: v.sort_order ?? idx,
+                }
+            })
         }
         
         // Set photos
@@ -1133,7 +1224,17 @@ async function handleSubmit() {
         
         // Add variants
         if (form.has_variants) {
-            data.variants = articleVariants.value
+            data.variants = articleVariants.value.map(variant => ({
+                name: variant.name,
+                price_impact: variant.price_impact || 0,
+                cost_price: variant.cost_price || 0,
+                sku: variant.sku || null,
+                barcode: variant.barcode || null,
+                template_name: variant.template_name || null,
+                template_value: variant.template_value || null,
+                is_active: variant.is_active,
+                sort_order: variant.sort_order || 0,
+            }))
         } else {
             data.variants = []
         }
@@ -1240,30 +1341,58 @@ async function createNewOption() {
     }
 }
 
+function resetVariantForm() {
+    newVariant.templateId = ''
+    newVariant.value = ''
+    newVariant.price_impact = 0
+    newVariant.cost_price = 0
+    newVariant.sku = ''
+    newVariant.barcode = ''
+    newVariant.is_active = true
+}
+
 function addArticleVariant() {
-    if (!newVariant.name.trim()) {
-        alert('Veuillez entrer un nom pour la variante')
+    if (!newVariant.templateId) {
+        alert('Sélectionnez une variante existante')
         return
     }
-    
+    if (!newVariant.value.trim()) {
+        alert('Veuillez entrer une valeur pour la variante')
+        return
+    }
+
+    const template = variantTemplates.value.find(t => t.id === newVariant.templateId)
+    const templateName = template?.name || ''
+    const templateValue = newVariant.value.trim()
+    const label = templateName ? `${templateName} · ${templateValue}` : templateValue
+
     articleVariants.value.push({
-        name: newVariant.name.trim(),
+        name: label,
+        template_id: template?.id || '',
+        template_name: templateName || null,
+        template_value: templateValue,
         price_impact: Number(newVariant.price_impact) || 0,
+        cost_price: Number(newVariant.cost_price) || 0,
+        sku: newVariant.sku.trim() || null,
+        barcode: newVariant.barcode.trim() || null,
         is_active: newVariant.is_active,
         sort_order: articleVariants.value.length,
     })
     
     // Reset form
-    newVariant.name = ''
-    newVariant.price_impact = 0
-    newVariant.is_active = true
+    resetVariantForm()
     showVariantModal.value = false
 }
 
 function editArticleVariant(index) {
     const variant = articleVariants.value[index]
-    newVariant.name = variant.name
-    newVariant.price_impact = variant.price_impact
+    const templateMatch = variantTemplates.value.find(t => t.name === variant.template_name)
+    newVariant.templateId = templateMatch?.id || ''
+    newVariant.value = variant.template_value || variant.name || ''
+    newVariant.price_impact = variant.price_impact || 0
+    newVariant.cost_price = variant.cost_price || 0
+    newVariant.sku = variant.sku || ''
+    newVariant.barcode = variant.barcode || ''
     newVariant.is_active = variant.is_active
     editingVariantIndex.value = index
     showVariantModal.value = true
@@ -1275,22 +1404,35 @@ function updateArticleVariant() {
         return
     }
     
-    if (!newVariant.name.trim()) {
-        alert('Veuillez entrer un nom pour la variante')
+    if (!newVariant.templateId) {
+        alert('Sélectionnez une variante existante')
         return
     }
-    
+    if (!newVariant.value.trim()) {
+        alert('Veuillez entrer une valeur pour la variante')
+        return
+    }
+
+    const template = variantTemplates.value.find(t => t.id === newVariant.templateId)
+    const templateName = template?.name || ''
+    const templateValue = newVariant.value.trim()
+    const label = templateName ? `${templateName} · ${templateValue}` : templateValue
+
     articleVariants.value[editingVariantIndex.value] = {
-        name: newVariant.name.trim(),
+        name: label,
+        template_id: template?.id || '',
+        template_name: templateName || null,
+        template_value: templateValue,
         price_impact: Number(newVariant.price_impact) || 0,
+        cost_price: Number(newVariant.cost_price) || 0,
+        sku: newVariant.sku.trim() || null,
+        barcode: newVariant.barcode.trim() || null,
         is_active: newVariant.is_active,
         sort_order: editingVariantIndex.value,
     }
     
     // Reset form
-    newVariant.name = ''
-    newVariant.price_impact = 0
-    newVariant.is_active = true
+    resetVariantForm()
     editingVariantIndex.value = null
     showVariantModal.value = false
 }
@@ -1302,6 +1444,7 @@ function deleteArticleVariant(index) {
 }
 
 onMounted(async () => {
+    variantTemplatesStore.loadTemplates()
     await fetchCategories()
     await fetchOptions()
     await fetchArticle()

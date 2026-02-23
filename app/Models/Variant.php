@@ -11,12 +11,18 @@ class Variant extends Model
         'article_id',
         'name',
         'price_impact',
+        'cost_price',
+        'sku',
+        'barcode',
+        'template_name',
+        'template_value',
         'sort_order',
         'is_active',
     ];
 
     protected $casts = [
         'price_impact' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 

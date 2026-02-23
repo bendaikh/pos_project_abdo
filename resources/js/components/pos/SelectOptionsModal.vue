@@ -16,21 +16,7 @@
 
             <!-- Content -->
             <div class="p-6 space-y-6">
-                <!-- No Options Available -->
-                <div v-if="selectableOptions.length === 0" class="text-center py-12">
-                    <div class="text-6xl mb-4">📭</div>
-                    <p class="text-xl font-bold text-gray-900 mb-2">Aucune option disponible</p>
-                    <p class="text-gray-600 mb-6">Cet article n'a pas encore d'options configurées</p>
-                    <button
-                        @click="$emit('create-option')"
-                        class="px-6 py-3 bg-primary-500 text-gray-900 font-bold rounded-xl hover:bg-primary-600 transition-colors"
-                    >
-                        ⚙️ Créer une option
-                    </button>
-                </div>
-
-                <!-- Options Available -->
-                <div v-else class="space-y-6">
+                <div class="space-y-6" v-if="selectableOptions.length > 0">
                     <!-- Option Cards -->
                     <div v-for="option in selectableOptions" :key="option.id" class="bg-gray-50 rounded-2xl p-5 border border-gray-200">
                         <!-- Option Header -->
