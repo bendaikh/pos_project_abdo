@@ -17,8 +17,17 @@ export const useCartStore = defineStore('cart', () => {
     // Computed
     const itemCount = computed(() => items.value.length)
     
+    function calculateItemTotal(item) {
+        const unitPrice = Number(item.unit_price) || 0
+        const variantPrice = Number(item.variant_price) || 0
+        const optionsPrice = Number(item.options_price) || 0
+        const quantity = Number(item.quantity) || 0
+        const discount = Number(item.discount_amount) || 0
+        return (unitPrice + variantPrice + optionsPrice) * quantity - discount
+    }
+
     const subtotal = computed(() => {
-        return items.value.reduce((sum, item) => sum + item.total, 0)
+        return items.value.reduce((sum, item) => sum + calculateItemTotal(item), 0)
     })
 
     const discountTotal = computed(() => {
@@ -43,24 +52,40 @@ export const useCartStore = defineStore('cart', () => {
     })
 
     // Actions
-    function addItem(article, quantity = 1, selectedOptions = null, optionsPrice = 0) {
+    function addItem(article, quantity = 1, selectedOptions = null, optionsPrice = 0, selectedVariant = null) {
+        const variantPrice = selectedVariant ? Number(selectedVariant.price_impact) || 0 : 0
+        const finalOptionsPrice = Number(optionsPrice) || 0
+        const itemTotal = (article.sell_price + variantPrice + finalOptionsPrice) * quantity
+        
+        console.log('🛒 addItem details:', {
+            article: article.name,
+            sell_price: article.sell_price,
+            variantPrice,
+            optionsPrice: finalOptionsPrice,
+            quantity,
+            itemTotal,
+            calculated: `${article.sell_price} + ${variantPrice} + ${finalOptionsPrice} = ${article.sell_price + variantPrice + finalOptionsPrice}`
+        })
+        
         const existingIndex = items.value.findIndex(
             item => item.article_id === article.id && 
-                    JSON.stringify(item.selected_options) === JSON.stringify(selectedOptions)
+                    JSON.stringify(item.selected_options || []) === JSON.stringify(selectedOptions || []) &&
+                    (item.variant_price || 0) === variantPrice
         )
 
         if (existingIndex > -1) {
             items.value[existingIndex].quantity += quantity
             recalculateItemTotal(existingIndex)
         } else {
-            const itemTotal = (article.sell_price + optionsPrice) * quantity
             items.value.push({
                 article_id: article.id,
                 article_name: article.name,
                 unit_price: article.sell_price,
                 quantity: quantity,
                 selected_options: selectedOptions,
-                options_price: optionsPrice,
+                options_price: finalOptionsPrice,
+                variant_price: variantPrice,
+                selected_variant: selectedVariant,
                 discount_amount: 0,
                 total: itemTotal,
                 article: article
@@ -83,8 +108,7 @@ export const useCartStore = defineStore('cart', () => {
 
     function recalculateItemTotal(index) {
         const item = items.value[index]
-        const baseTotal = (item.unit_price + item.options_price) * item.quantity
-        item.total = baseTotal - item.discount_amount
+        item.total = calculateItemTotal(item)
     }
 
     function updateItemOptions(index, selectedOptions = null, optionsPrice = 0) {
@@ -134,6 +158,7 @@ export const useCartStore = defineStore('cart', () => {
                 article_id: item.article_id,
                 quantity: item.quantity,
                 unit_price: item.unit_price,
+                variant_price: item.variant_price || 0,
                 selected_options: item.selected_options,
                 options_price: item.options_price,
                 discount_amount: item.discount_amount

@@ -12,7 +12,7 @@ class ArticleController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Article::with(['category', 'subcategory', 'options.variants', 'photos']);
+        $query = Article::with(['category', 'subcategory', 'options.variants', 'variants', 'photos']);
 
         // Filter by category
         if ($request->has('category_id')) {
@@ -109,9 +109,15 @@ class ArticleController extends Controller
             'is_favorite' => 'boolean',
             'is_active' => 'boolean',
             'has_options' => 'boolean',
+            'has_variants' => 'boolean',
             'is_on_sale' => 'boolean',
             'options' => 'nullable|array',
             'options.*' => 'exists:options,id',
+            'variants' => 'nullable|array',
+            'variants.*.name' => 'required|string|max:255',
+            'variants.*.price_impact' => 'nullable|numeric|min:0',
+            'variants.*.is_active' => 'nullable|boolean',
+            'variants.*.sort_order' => 'nullable|integer|min:0',
             'photos' => 'nullable|array',
             'photos.*.photo_url' => 'required|string',
             'photos.*.sort_order' => 'nullable|integer',
@@ -119,13 +125,25 @@ class ArticleController extends Controller
         ]);
 
         $optionIds = $validated['options'] ?? [];
+        $variantsData = $validated['variants'] ?? [];
         $photos = $validated['photos'] ?? [];
-        unset($validated['options'], $validated['photos']);
+        unset($validated['options'], $validated['variants'], $validated['photos']);
 
         $article = Article::create($validated);
 
         if (!empty($optionIds)) {
             $article->options()->sync($optionIds);
+        }
+
+        if (!empty($variantsData)) {
+            foreach ($variantsData as $index => $variant) {
+                $article->variants()->create([
+                    'name' => $variant['name'],
+                    'price_impact' => $variant['price_impact'] ?? 0,
+                    'is_active' => $variant['is_active'] ?? true,
+                    'sort_order' => $variant['sort_order'] ?? $index,
+                ]);
+            }
         }
 
         if (!empty($photos)) {
@@ -138,12 +156,12 @@ class ArticleController extends Controller
             }
         }
 
-        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'photos']), 201);
+        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']), 201);
     }
 
     public function show(Article $article): JsonResponse
     {
-        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'photos']));
+        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']));
     }
 
     public function update(Request $request, Article $article): JsonResponse
@@ -164,9 +182,16 @@ class ArticleController extends Controller
             'is_favorite' => 'boolean',
             'is_active' => 'boolean',
             'has_options' => 'boolean',
+            'has_variants' => 'boolean',
             'is_on_sale' => 'boolean',
             'options' => 'nullable|array',
             'options.*' => 'exists:options,id',
+            'variants' => 'nullable|array',
+            'variants.*.id' => 'nullable|exists:variants,id',
+            'variants.*.name' => 'required|string|max:255',
+            'variants.*.price_impact' => 'nullable|numeric|min:0',
+            'variants.*.is_active' => 'nullable|boolean',
+            'variants.*.sort_order' => 'nullable|integer|min:0',
             'photos' => 'nullable|array',
             'photos.*.id' => 'nullable|exists:article_photos,id',
             'photos.*.photo_url' => 'required|string',
@@ -177,6 +202,20 @@ class ArticleController extends Controller
         if (isset($validated['options'])) {
             $article->options()->sync($validated['options']);
             unset($validated['options']);
+        }
+
+        if (isset($validated['variants'])) {
+            // Handle variants: delete old ones and create new ones
+            $article->variants()->delete();
+            foreach ($validated['variants'] as $index => $variant) {
+                $article->variants()->create([
+                    'name' => $variant['name'],
+                    'price_impact' => $variant['price_impact'] ?? 0,
+                    'is_active' => $variant['is_active'] ?? true,
+                    'sort_order' => $variant['sort_order'] ?? $index,
+                ]);
+            }
+            unset($validated['variants']);
         }
 
         if (isset($validated['photos'])) {
@@ -196,12 +235,62 @@ class ArticleController extends Controller
 
         $article->update($validated);
 
-        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'photos']));
+        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']));
     }
 
     public function destroy(Article $article): JsonResponse
     {
         $article->delete();
+
+        return response()->json(null, 204);
+    }
+
+    // Variant Management Endpoints
+    public function listVariants(Article $article): JsonResponse
+    {
+        return response()->json($article->variants);
+    }
+
+    public function getVariant(Article $article, $variantId): JsonResponse
+    {
+        $variant = $article->variants()->findOrFail($variantId);
+        return response()->json($variant);
+    }
+
+    public function createVariant(Request $request, Article $article): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'price_impact' => 'nullable|numeric|min:0',
+            'is_active' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+        ]);
+
+        $variant = $article->variants()->create($validated);
+
+        return response()->json($variant, 201);
+    }
+
+    public function updateVariant(Request $request, Article $article, $variantId): JsonResponse
+    {
+        $variant = $article->variants()->findOrFail($variantId);
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'price_impact' => 'nullable|numeric|min:0',
+            'is_active' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+        ]);
+
+        $variant->update($validated);
+
+        return response()->json($variant);
+    }
+
+    public function deleteVariant(Article $article, $variantId): JsonResponse
+    {
+        $variant = $article->variants()->findOrFail($variantId);
+        $variant->delete();
 
         return response()->json(null, 204);
     }

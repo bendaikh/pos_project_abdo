@@ -28,6 +28,7 @@ class Article extends Model
         'is_favorite',
         'is_active',
         'has_options',
+        'has_variants',
         'is_on_sale',
         'color',
         'price_type',
@@ -42,6 +43,7 @@ class Article extends Model
         'is_favorite' => 'boolean',
         'is_active' => 'boolean',
         'has_options' => 'boolean',
+        'has_variants' => 'boolean',
         'is_on_sale' => 'boolean',
         'is_composite' => 'boolean',
         'has_tax' => 'boolean',
@@ -60,6 +62,11 @@ class Article extends Model
     public function options(): BelongsToMany
     {
         return $this->belongsToMany(Option::class, 'article_options');
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(Variant::class)->orderBy('sort_order');
     }
 
     public function saleItems(): HasMany

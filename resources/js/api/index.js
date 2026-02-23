@@ -88,6 +88,12 @@ export const articlesApi = {
     create: (data) => api.post('/articles', data),
     update: (id, data) => api.put(`/articles/${id}`, data),
     delete: (id) => api.delete(`/articles/${id}`),
+    // Variants management
+    listVariants: (articleId) => api.get(`/articles/${articleId}/variants`),
+    getVariant: (articleId, variantId) => api.get(`/articles/${articleId}/variants/${variantId}`),
+    createVariant: (articleId, data) => api.post(`/articles/${articleId}/variants`, data),
+    updateVariant: (articleId, variantId, data) => api.put(`/articles/${articleId}/variants/${variantId}`, data),
+    deleteVariant: (articleId, variantId) => api.delete(`/articles/${articleId}/variants/${variantId}`),
 }
 
 // Options API

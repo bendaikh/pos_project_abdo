@@ -50,6 +50,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/articles/favorites', [ArticleController::class, 'favorites']);
     Route::get('/articles/low-stock', [ArticleController::class, 'lowStock']);
     Route::apiResource('articles', ArticleController::class);
+    // Article Variants
+    Route::get('/articles/{article}/variants', [ArticleController::class, 'listVariants']);
+    Route::post('/articles/{article}/variants', [ArticleController::class, 'createVariant']);
+    Route::get('/articles/{article}/variants/{variantId}', [ArticleController::class, 'getVariant']);
+    Route::put('/articles/{article}/variants/{variantId}', [ArticleController::class, 'updateVariant']);
+    Route::delete('/articles/{article}/variants/{variantId}', [ArticleController::class, 'deleteVariant']);
 
     // Sales
     Route::get('/sales/pending', [SaleController::class, 'pending']);

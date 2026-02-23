@@ -455,12 +455,101 @@
                 </div>
             </div>
 
-            <!-- Product Variants/Options Section -->
+            <!-- Product Variants Section (Single-Choice, Article-Specific) -->
             <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                 <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900">🎨 Options d'articles (Variants)</h2>
-                        <p class="text-sm text-gray-500 mt-1">Ajoutez des variantes comme taille, couleur, etc.</p>
+                        <h2 class="text-lg font-semibold text-gray-900">📏 Variantes Produit</h2>
+                        <p class="text-sm text-gray-500 mt-1">Sélection unique (taille, couleur, format, etc.)</p>
+                    </div>
+                    <button 
+                        type="button"
+                        @click="showVariantModal = true"
+                        class="text-sm text-primary-600 hover:text-primary-700 font-medium hover:underline"
+                    >
+                        + Ajouter une variante
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <label for="has_variants" class="text-sm font-medium text-gray-700">
+                                Activer les variantes
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">L'utilisateur doit sélectionner exactement une variante</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input 
+                                v-model="form.has_variants"
+                                type="checkbox"
+                                id="has_variants"
+                                class="sr-only peer"
+                            >
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                        </label>
+                    </div>
+
+                    <transition name="fade">
+                        <div v-if="form.has_variants" class="space-y-3">
+                            <div v-if="articleVariants.length === 0" class="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                Aucune variante définie. 
+                                <button 
+                                    type="button"
+                                    @click="showVariantModal = true"
+                                    class="text-primary-600 hover:underline font-medium"
+                                >
+                                    Ajoutez-en une
+                                </button>
+                                pour commencer.
+                            </div>
+                            
+                            <div v-else class="space-y-2 max-h-80 overflow-y-auto p-2">
+                                <div 
+                                    v-for="(variant, index) in articleVariants" 
+                                    :key="index"
+                                    class="flex items-start justify-between p-4 border rounded-lg hover:bg-gray-50 transition-all bg-gray-50 border-gray-200"
+                                >
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-900">{{ variant.name }}</p>
+                                        <div class="flex items-center gap-3 mt-1">
+                                            <span v-if="variant.price_impact > 0" class="text-xs text-green-600 font-medium">
+                                                +{{ formatCurrency(variant.price_impact) }}
+                                            </span>
+                                            <span v-if="variant.is_active" class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                                                Actif
+                                            </span>
+                                            <span v-else class="px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-700 rounded-full">
+                                                Inactif
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        @click="editArticleVariant(index)"
+                                        class="text-primary-600 hover:text-primary-700 text-sm font-medium px-3 py-1 border border-primary-200 rounded-lg hover:bg-primary-50"
+                                    >
+                                        Éditer
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div v-if="articleVariants.length > 0" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p class="text-sm text-blue-800 font-medium">
+                                    {{ articleVariants.length }} variante(s) définie(s)
+                                </p>
+                            </div>
+                        </div>
+                    </transition>
+                </div>
+            </div>
+
+            <!-- Article Options Section (Multi-Choice, Reusable) -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">🎁 Options Additionnelles</h2>
+                        <p class="text-sm text-gray-500 mt-1">Sélection multiple (suppléments, garnitures, etc.)</p>
                     </div>
                     <button 
                         type="button"
@@ -475,9 +564,9 @@
                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
                             <label for="has_options" class="text-sm font-medium text-gray-700">
-                                Activer les options/variants
+                                Activer les options
                             </label>
-                            <p class="text-xs text-gray-500 mt-1">Permettre la sélection de variantes pour cet article</p>
+                            <p class="text-xs text-gray-500 mt-1">L'utilisateur peut sélectionner zéro ou plusieurs options</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input 
@@ -523,10 +612,9 @@
                                         <div class="flex items-center justify-between">
                                             <p class="font-medium text-gray-900">{{ option.name }}</p>
                                             <span 
-                                                class="px-2.5 py-0.5 text-xs font-medium rounded-full"
-                                                :class="option.type === 'fixed' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
+                                                class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700"
                                             >
-                                                {{ option.type === 'fixed' ? 'Unique' : 'Multiple' }}
+                                                Choix multiples
                                             </span>
                                         </div>
                                         <p class="text-sm text-gray-500 mt-1">{{ formatOptionVariants(option) }}</p>
@@ -561,6 +649,95 @@
                 </button>
             </div>
         </form>
+
+        <!-- Create Variant Modal -->
+        <transition name="fade">
+            <div v-if="showVariantModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <!-- Modal Header -->
+                    <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            {{ editingVariantIndex !== null ? 'Éditer la variante' : 'Ajouter une variante' }}
+                        </h3>
+                        <button 
+                            type="button"
+                            @click="showVariantModal = false; editingVariantIndex = null"
+                            class="text-gray-400 hover:text-gray-600"
+                        >
+                            <XMarkIcon class="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="p-6 space-y-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Nom *</label>
+                            <input
+                                v-model="newVariant.name"
+                                type="text"
+                                placeholder="Exemple: Petit, Moyen, Grand, Rouge, Bleu..."
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Impact sur le prix ({{ settingsStore.currencyCode }})</label>
+                            <input
+                                v-model.number="newVariant.price_impact"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-bold text-lg"
+                            >
+                            <p class="text-xs text-gray-500 mt-1">Prix supplémentaire pour cette variante (optionnel)</p>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Variante active</label>
+                                <p class="text-xs text-gray-500 mt-1">Disponible à la sélection</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    v-model="newVariant.is_active"
+                                    type="checkbox"
+                                    class="sr-only peer"
+                                >
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
+                        <button 
+                            type="button"
+                            @click="showVariantModal = false; editingVariantIndex = null"
+                            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
+                        >
+                            Annuler
+                        </button>
+                        <button 
+                            v-if="editingVariantIndex !== null"
+                            type="button"
+                            @click="deleteArticleVariant(editingVariantIndex); showVariantModal = false; editingVariantIndex = null"
+                            class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                        >
+                            Supprimer
+                        </button>
+                        <button 
+                            type="button"
+                            @click="editingVariantIndex !== null ? updateArticleVariant() : addArticleVariant()"
+                            :disabled="!newVariant.name.trim()"
+                            class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {{ editingVariantIndex !== null ? 'Mettre à jour' : 'Ajouter' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
 
         <!-- Create Option Modal -->
         <transition name="fade">
@@ -651,16 +828,26 @@ const isEdit = computed(() => !!route.params.id)
 const categories = ref([])
 const options = ref([])
 const selectedOptions = ref([])
+const articleVariants = ref([])
 const saving = ref(false)
 const showOptionModal = ref(false)
+const showVariantModal = ref(false)
 const showColorPicker = ref(false)
 const creatingOption = ref(false)
+const editingVariantIndex = ref(null)
 const standardColors = ['#FF0000', '#00A854', '#0050B3', '#FAAD14', '#F5222D', '#722ED1']
 
 const newOption = reactive({
     optionName: '',
     variantName: '',
     variantPrice: null,
+})
+
+const newVariant = reactive({
+    name: '',
+    price_impact: 0,
+    is_active: true,
+    sort_order: 0,
 })
 
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
@@ -795,6 +982,17 @@ async function fetchArticle() {
         // Set selected options
         if (article.options) {
             selectedOptions.value = article.options.map(o => o.id)
+        }
+        
+        // Set variants
+        if (article.variants) {
+            articleVariants.value = article.variants.map(v => ({
+                id: v.id,
+                name: v.name,
+                price_impact: Number(v.price_impact) || 0,
+                is_active: v.is_active !== false,
+                sort_order: v.sort_order || 0,
+            }))
         }
         
         // Set photos
@@ -933,6 +1131,13 @@ async function handleSubmit() {
             data.options = []
         }
         
+        // Add variants
+        if (form.has_variants) {
+            data.variants = articleVariants.value
+        } else {
+            data.variants = []
+        }
+        
         // Filter out empty photo URLs
         if (data.photos && data.photos.length > 0) {
             data.photos = data.photos
@@ -1032,6 +1237,67 @@ async function createNewOption() {
         }
     } finally {
         creatingOption.value = false
+    }
+}
+
+function addArticleVariant() {
+    if (!newVariant.name.trim()) {
+        alert('Veuillez entrer un nom pour la variante')
+        return
+    }
+    
+    articleVariants.value.push({
+        name: newVariant.name.trim(),
+        price_impact: Number(newVariant.price_impact) || 0,
+        is_active: newVariant.is_active,
+        sort_order: articleVariants.value.length,
+    })
+    
+    // Reset form
+    newVariant.name = ''
+    newVariant.price_impact = 0
+    newVariant.is_active = true
+    showVariantModal.value = false
+}
+
+function editArticleVariant(index) {
+    const variant = articleVariants.value[index]
+    newVariant.name = variant.name
+    newVariant.price_impact = variant.price_impact
+    newVariant.is_active = variant.is_active
+    editingVariantIndex.value = index
+    showVariantModal.value = true
+}
+
+function updateArticleVariant() {
+    if (editingVariantIndex.value === null) {
+        addArticleVariant()
+        return
+    }
+    
+    if (!newVariant.name.trim()) {
+        alert('Veuillez entrer un nom pour la variante')
+        return
+    }
+    
+    articleVariants.value[editingVariantIndex.value] = {
+        name: newVariant.name.trim(),
+        price_impact: Number(newVariant.price_impact) || 0,
+        is_active: newVariant.is_active,
+        sort_order: editingVariantIndex.value,
+    }
+    
+    // Reset form
+    newVariant.name = ''
+    newVariant.price_impact = 0
+    newVariant.is_active = true
+    editingVariantIndex.value = null
+    showVariantModal.value = false
+}
+
+function deleteArticleVariant(index) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette variante?')) {
+        articleVariants.value.splice(index, 1)
     }
 }
 

@@ -37,24 +37,16 @@
                         <div class="mb-4">
                             <div class="flex items-center justify-between">
                                 <h4 class="text-lg font-bold text-gray-900">{{ option.name }}</h4>
-                                <div class="flex items-center gap-3">
-                                    <span 
-                                        class="px-3 py-1 text-xs font-semibold rounded-full"
-                                        :class="option.type === 'fixed' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'"
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        class="sr-only peer"
+                                        :checked="isOptionEnabled(option.id)"
+                                        :disabled="option.is_required"
+                                        @change="toggleOption(option.id, $event.target.checked)"
                                     >
-                                        {{ option.type === 'fixed' ? '★ Un choix' : '✦ Plusieurs' }}
-                                    </span>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            class="sr-only peer"
-                                            :checked="isOptionEnabled(option.id)"
-                                            :disabled="option.is_required"
-                                            @change="toggleOption(option.id, $event.target.checked)"
-                                        >
-                                        <div class="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
-                                    </label>
-                                </div>
+                                    <div class="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                                </label>
                             </div>
                             <p class="text-sm text-gray-600 mt-2">
                                 <span v-if="option.is_required" class="text-orange-600 font-medium">✱ Obligatoire</span>
@@ -253,13 +245,34 @@ function selectVariant(option, variantId) {
     const variant = option.variants.find((v) => v.id === variantId)
     if (!variant) return
 
-    selectedOptions.value = selectedOptions.value.filter((sel) => sel.option_id !== option.id)
-    selectedOptions.value.push({
-        option_id: option.id,
-        option_name: option.name,
-        type: option.type,
-        variants: [{ id: variant.id, name: variant.name, price_impact: variant.price_impact }],
-    })
+    // Get or create option selection
+    let optionSelection = selectedOptions.value.find((sel) => sel.option_id === option.id)
+    
+    if (!optionSelection) {
+        // Create new option selection
+        optionSelection = {
+            option_id: option.id,
+            option_name: option.name,
+            type: option.type,
+            variants: [],
+        }
+        selectedOptions.value.push(optionSelection)
+    }
+
+    // Toggle variant selection (add if not present, remove if present)
+    const variantIndex = optionSelection.variants.findIndex((v) => v.id === variantId)
+    
+    if (variantIndex >= 0) {
+        // Remove variant
+        optionSelection.variants.splice(variantIndex, 1)
+    } else {
+        // Add variant
+        optionSelection.variants.push({
+            id: variant.id,
+            name: variant.name,
+            price_impact: variant.price_impact
+        })
+    }
 
     updateOptionsPrice()
 }
@@ -269,14 +282,11 @@ function hasSelection(optionId) {
 }
 
 function updateOptionsPrice() {
-    optionsPrice.value = selectedOptions.value.reduce((total, option) => {
-        const optionObj = (props.article.options || []).find((o) => o.id === option.option_id)
-        const variantsTotal = option.variants.reduce((sum, variant) => {
-            const matchedVariant = optionObj?.variants?.find((v) => v.id === variant.id)
-            const impact = matchedVariant
-                ? Number(matchedVariant.price_impact) || 0
-                : Number(variant.price_impact) || 0
-            return sum + impact
+    optionsPrice.value = selectedOptions.value.reduce((total, optionSelection) => {
+        // Sum price for all selected variants in this option
+        const variantsTotal = optionSelection.variants.reduce((sum, variant) => {
+            const priceImpact = Number(variant.price_impact) || 0
+            return sum + priceImpact
         }, 0)
         return total + variantsTotal
     }, 0)

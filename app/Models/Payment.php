@@ -17,6 +17,12 @@ class Payment extends Model
         'received_amount',
         'change_amount',
         'reference',
+        'transaction_number',
+        'piece_number',
+        'issue_date',
+        'bank_name',
+        'due_date',
+        'payment_status',
         'notes',
     ];
 
@@ -24,6 +30,8 @@ class Payment extends Model
         'amount' => 'decimal:2',
         'received_amount' => 'decimal:2',
         'change_amount' => 'decimal:2',
+        'issue_date' => 'date',
+        'due_date' => 'date',
     ];
 
     public function sale(): BelongsTo

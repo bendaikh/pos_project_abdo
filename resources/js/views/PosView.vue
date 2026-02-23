@@ -185,11 +185,18 @@
                         <div class="flex justify-between items-start">
                             <div class="flex-1 min-w-0">
                                 <h4 class="text-sm font-bold text-gray-900 truncate">{{ item.article_name }}</h4>
+                                <div class="text-xs text-gray-600 mt-1">
+                                    <span class="font-medium">{{ formatCurrency(item.unit_price) }}</span>
+                                    <span v-if="item.variant_price > 0" class="ml-2 text-orange-600 font-semibold">+ Variant: {{ formatCurrency(item.variant_price) }}</span>
+                                    <span v-if="item.options_price > 0" class="ml-2 text-primary-600 font-semibold">+ Options: {{ formatCurrency(item.options_price) }}</span>
+                                    <span class="ml-2 text-gray-500">=</span>
+                                    <span class="ml-2 font-bold text-gray-900">{{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs</span>
+                                </div>
                                 <button
                                     v-if="item.article?.has_options"
                                     type="button"
                                     @click="editItemOptions(index, item)"
-                                    class="mt-1 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                                    class="mt-2 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
                                 >
                                     ✏️ Modifier les options
                                 </button>
@@ -220,12 +227,10 @@
                                         +
                                     </button>
                                 </div>
-                                <p v-if="item.options_price" class="text-xs text-primary-600 font-semibold mt-1">
-                                    + Options: {{ formatCurrency(item.options_price) }}
-                                </p>
                             </div>
                             <div class="text-right ml-2">
-                                <p class="text-sm font-bold text-gray-900 bg-primary-100 px-2 py-1 rounded">{{ formatCurrency(item.total) }}</p>
+                                <p class="text-xs text-gray-500 mb-1">{{ item.quantity }}x</p>
+                                <p class="text-sm font-bold text-gray-900 bg-primary-100 px-2 py-1 rounded">{{ formatCurrency(getItemLineTotal(item)) }}</p>
                                 <button 
                                     @click="removeItem(index)"
                                     class="text-red-500 hover:text-red-700 mt-1 text-lg"
@@ -240,21 +245,30 @@
             </div>
 
             <!-- Cart Summary -->
-            <div class="border-t border-gray-200 p-4 bg-gradient-to-b from-white to-gray-50 space-y-2">
-                <div class="flex justify-between text-sm text-gray-600">
+            <div class="border-t border-gray-200 p-4 bg-gradient-to-b from-white to-gray-50 space-y-2 text-sm">
+                <!-- Subtotal -->
+                <div class="flex justify-between text-gray-600">
                     <span class="font-medium">Sous-total:</span>
                     <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.subtotal) }}</span>
                 </div>
-                <div v-if="cartStore.discountTotal > 0" class="flex justify-between text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                <!-- Discount -->
+                <div v-if="cartStore.discountTotal > 0" class="flex justify-between text-orange-600 bg-orange-50 px-2 py-1 rounded">
                     <span class="font-medium">🏷️ Remise:</span>
                     <span class="font-semibold">-{{ formatCurrency(cartStore.discountTotal) }}</span>
                 </div>
-                <div class="flex justify-between text-sm text-gray-600">
+                <!-- After Discount -->
+                <div v-if="cartStore.discountTotal > 0" class="flex justify-between text-gray-600 border-t border-gray-300 pt-2">
+                    <span class="font-medium">Après remise:</span>
+                    <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.afterDiscount) }}</span>
+                </div>
+                <!-- Tax -->
+                <div class="flex justify-between text-gray-600">
                     <span class="font-medium">{{ settingsStore.taxName }} ({{ settingsStore.taxRate }}%):</span>
                     <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.taxAmount) }}</span>
                 </div>
+                <!-- Total -->
                 <div class="border-t border-gray-300 pt-2 flex justify-between text-lg font-bold text-gray-900 bg-primary-100 px-2 py-2 rounded-lg">
-                    <span>Total:</span>
+                    <span>TOTAL À PAYER:</span>
                     <span class="text-primary-600">{{ formatCurrency(cartStore.total) }}</span>
                 </div>
             </div>
@@ -278,8 +292,8 @@
             </div>
         </div>
 
-        <!-- Payment Modal -->
-        <PaymentModal 
+        <!-- Payment Modal - Multiple Methods -->
+        <PaymentMultiModal 
             v-if="showPaymentModal"
             :total="cartStore.total"
             @close="showPaymentModal = false"
@@ -299,6 +313,15 @@
             :initial-selections="optionsInitialSelections"
             @close="closeOptionsModal"
             @confirm="handleOptionsConfirm"
+        />
+
+        <!-- Selection-First Variants Modal -->
+        <SelectVariantsModal
+            v-if="showSelectVariantsModal && selectedArticleForVariants"
+            :article="selectedArticleForVariants"
+            :model-value="selectedVariantId"
+            @close="closeSelectVariantsModal"
+            @confirm="handleSelectVariantsConfirm"
         />
 
         <!-- Selection-First Options Modal -->
@@ -469,10 +492,11 @@ import { useSettingsStore } from '../stores/settings'
 import { useCustomersStore } from '../stores/customers'
 import { useOfflineStore } from '../stores/offline'
 import { salesApi, optionsApi, articlesApi } from '../api'
-import PaymentModal from '../components/pos/PaymentModal.vue'
+import PaymentMultiModal from '../components/pos/PaymentMultiModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
 import OptionsModal from '../components/pos/OptionsModal.vue'
 import SelectOptionsModal from '../components/pos/SelectOptionsModal.vue'
+import SelectVariantsModal from '../components/pos/SelectVariantsModal.vue'
 import OptionFormContent from '../components/forms/OptionFormContent.vue'
 import {
     Bars3Icon,
@@ -508,9 +532,15 @@ const showDiscountModal = ref(false)
 const showSelectOptionsModal = ref(false)
 const showCreateOptionModal = ref(false)
 const showNeedOptionsPrompt = ref(false)
+const showSelectVariantsModal = ref(false)
 const optionsArticle = ref(null)
+const selectedArticleForVariants = ref(null)
+const selectedVariantId = ref(null)
+const selectedVariantPrice = ref(0)
+const selectedVariantObject = ref(null)
 const optionsInitialSelections = ref([])
 const optionsMode = ref('add')
+const variantSelectionMode = ref('add')
 const editingCartIndex = ref(null)
 const searchQuery = ref('')
 const selectedCategoryId = ref(null)
@@ -593,6 +623,15 @@ function formatCurrency(amount) {
     return settingsStore.formatCurrency(amount)
 }
 
+function getItemLineTotal(item) {
+    const unitPrice = Number(item.unit_price) || 0
+    const variantPrice = Number(item.variant_price) || 0
+    const optionsPrice = Number(item.options_price) || 0
+    const quantity = Number(item.quantity) || 0
+    const discount = Number(item.discount_amount) || 0
+    return (unitPrice + variantPrice + optionsPrice) * quantity - discount
+}
+
 function formatOptionsPrice(amount) {
     const numeric = Number(amount || 0)
     if (numeric > 0) {
@@ -606,39 +645,42 @@ function selectCategory(categoryId) {
 }
 
 async function addToCart(article) {
-    const hasDeclaredOptions = Array.isArray(article.options) && article.options.length > 0
-    const hasLoadedVariants = hasDeclaredOptions && article.options.some((option) => Array.isArray(option.variants) && option.variants.length > 0)
-    const needsOptionSelection = hasDeclaredOptions || article?.has_options
+    // First, check if article has variants (mandatory single-choice)
+    const hasVariants = article.has_variants || (Array.isArray(article.variants) && article.variants.length > 0)
+    
+    // Then, check if article has options (optional multi-choice)
+    const hasOptions = article.has_options || (Array.isArray(article.options) && article.options.length > 0)
 
-    if (!needsOptionSelection) {
-        cartStore.addItem(article)
-        return
-    }
-
+    // Load full article data if needed
     let fullArticle = article
-    if (!hasLoadedVariants) {
+    if ((hasVariants || hasOptions) && !article.variants && !article.options) {
         try {
             const response = await articlesApi.get(article.id)
             fullArticle = response.data || article
         } catch (error) {
-            console.error('Failed to load article options:', error)
+            console.error('Failed to load article:', error)
         }
     }
 
-    const hasOptions = Array.isArray(fullArticle.options) && fullArticle.options.length > 0
+    // If article has variants, show variant selection modal first
+    if (fullArticle.has_variants || (Array.isArray(fullArticle.variants) && fullArticle.variants.length > 0)) {
+        showSelectVariantsModal.value = true
+        selectedArticleForVariants.value = fullArticle
+        variantSelectionMode.value = 'add'
+        return
+    }
 
-    if (!hasOptions) {
+    // If article has options but no variants, show options selection
+    if (fullArticle.has_options || (Array.isArray(fullArticle.options) && fullArticle.options.length > 0)) {
+        showSelectOptionsModal.value = true
         optionsArticle.value = fullArticle
-        showNeedOptionsPrompt.value = true
         optionsMode.value = 'add'
         editingCartIndex.value = null
         return
     }
 
-    showSelectOptionsModal.value = true
-    optionsArticle.value = fullArticle
-    optionsMode.value = 'add'
-    editingCartIndex.value = null
+    // No variants or options, add directly to cart
+    cartStore.addItem(article)
 }
 
 function updateQuantity(index, quantity) {
@@ -661,14 +703,14 @@ async function saveSale() {
     }
 }
 
-async function completeSale(paymentData) {
+async function completeSale(payments) {
     const offlineStore = useOfflineStore()
     
     try {
         const data = cartStore.getCartData()
         const saleData = {
             ...data,
-            payment: paymentData,
+            payments: payments, // Multiple payments
             status: 'completed',
         }
 
@@ -691,8 +733,10 @@ async function completeSale(paymentData) {
             cartStore.setSaleId(response.data.id)
         }
 
-        // Add payment
-        await salesApi.addPayment(cartStore.currentSaleId, paymentData)
+        // Add all payments
+        for (const payment of payments) {
+            await salesApi.addPayment(cartStore.currentSaleId, payment)
+        }
 
         // Complete sale
         await salesApi.complete(cartStore.currentSaleId)
@@ -721,6 +765,42 @@ function closeOptionsModal() {
     editingCartIndex.value = null
 }
 
+function closeSelectVariantsModal() {
+    showSelectVariantsModal.value = false
+    selectedArticleForVariants.value = null
+    selectedVariantId.value = null
+    selectedVariantObject.value = null
+    selectedVariantPrice.value = 0
+}
+
+function handleSelectVariantsConfirm(variantId) {
+    if (!selectedArticleForVariants.value) return
+    
+    // Store the selected variant
+    const selectedVariant = selectedArticleForVariants.value.variants?.find(v => v.id === variantId)
+    if (!selectedVariant) return
+    
+    const article = selectedArticleForVariants.value
+    
+    // Store variant info for later use
+    selectedVariantObject.value = selectedVariant
+    selectedVariantPrice.value = Number(selectedVariant.price_impact) || 0
+    
+    // Check if article also has options
+    if (article.has_options || (Array.isArray(article.options) && article.options.length > 0)) {
+        // Close variants modal and show options modal
+        showSelectVariantsModal.value = false
+        showSelectOptionsModal.value = true
+        optionsArticle.value = article
+        optionsMode.value = 'add'
+        editingCartIndex.value = null
+    } else {
+        // No options, add directly with the selected variant
+        cartStore.addItem(article, 1, [], 0, selectedVariant)
+        closeSelectVariantsModal()
+    }
+}
+
 function closeSelectOptionsModal() {
     showSelectOptionsModal.value = false
     optionsArticle.value = null
@@ -741,13 +821,22 @@ function promptCreateOptions() {
 function handleSelectOptionsConfirm({ selectedOptions, optionsPrice }) {
     if (!optionsArticle.value) return
     
+    console.log('handleSelectOptionsConfirm:', {
+        optionsPrice,
+        selectedOptions,
+        variant: selectedVariantObject.value
+    })
+    
     if (optionsMode.value === 'edit' && editingCartIndex.value !== null) {
         cartStore.updateItemOptions(editingCartIndex.value, selectedOptions, optionsPrice)
     } else {
-        cartStore.addItem(optionsArticle.value, 1, selectedOptions, optionsPrice)
+        // Use the stored variant object
+        cartStore.addItem(optionsArticle.value, 1, selectedOptions, optionsPrice, selectedVariantObject.value)
     }
     
     closeSelectOptionsModal()
+    selectedVariantObject.value = null
+    selectedVariantPrice.value = 0
 }
 
 function showCreateOptionForArticle() {
