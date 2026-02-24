@@ -1,302 +1,352 @@
 <template>
-    <div class="h-[calc(100vh-7rem)] flex">
-        <!-- Left Panel - Products -->
-        <div class="flex-1 flex flex-col bg-[#fafafa] -m-6 mr-0">
-            <!-- Header -->
-            <div class="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <button @click="showMenu = !showMenu" class="p-2 hover:bg-gray-800 rounded-lg">
-                        <Bars3Icon class="w-5 h-5" />
-                    </button>
-                    <span class="font-semibold">{{ selectedCategoryName }}</span>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button @click="showSearch = !showSearch" class="p-2 hover:bg-gray-800 rounded-lg">
-                        <MagnifyingGlassIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="openQRScanner" class="p-2 hover:bg-gray-800 rounded-lg" title="Scanner code QR">
-                        <QrCodeIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="toggleDarkMode" class="p-2 hover:bg-gray-800 rounded-lg" title="Mode sombre">
-                        <MoonIcon class="w-5 h-5" />
-                    </button>
-                </div>
-            </div>
-
-            <!-- Search Bar -->
-            <div v-if="showSearch" class="p-4 bg-white border-b">
-                <input 
-                    v-model="searchQuery"
-                    type="text"
-                    placeholder="Rechercher un article..."
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+    <div class="h-screen flex flex-col bg-[#f4f3ef]">
+        <header class="flex items-center gap-4 px-4 py-3 bg-gray-900 text-white">
+            <div class="flex items-center gap-3">
+                <button
+                    @click="toggleAppSidebar"
+                    class="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    type="button"
+                    title="Afficher/Masquer le menu"
                 >
+                    <Bars3Icon class="w-5 h-5" />
+                </button>
+                <div>
+                    <p class="text-xs uppercase text-gray-400">Catégorie active</p>
+                    <p class="text-lg font-semibold">{{ selectedCategoryName }}</p>
+                    <p class="text-xs text-gray-400">{{ totalArticles }} articles</p>
+                </div>
             </div>
-
-            <!-- Product Grid -->
-            <div class="flex-1 overflow-auto p-4">
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    <div 
-                        v-for="article in filteredArticles" 
-                        :key="article.id"
-                        @click="addToCart(article)"
-                        class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+            <div class="flex-1">
+                <div class="relative">
+                    <input
+                        ref="searchField"
+                        v-model="searchQuery"
+                        type="text"
+                        autofocus
+                        placeholder="Rechercher par nom ou code-barres"
+                        class="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                        <div class="aspect-square bg-gray-100 flex items-center justify-center">
-                            <img 
-                                v-if="article.photo"
-                                :src="article.photo" 
-                                :alt="article.name"
-                                class="w-full h-full object-cover"
-                            >
-                            <span v-else class="text-4xl">📦</span>
-                        </div>
-                        <div class="p-3">
-                            <h3 class="text-sm font-medium text-gray-900 truncate">{{ article.name }}</h3>
-                            <p class="text-sm font-semibold text-secondary-600">
-                                {{ formatCurrency(article.sell_price) }}<span v-if="article.unit !== 'piece'">/{{ article.unit }}</span>
-                            </p>
-                        </div>
+                    <MagnifyingGlassIcon class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                </div>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden">
+            <transition name="fade">
+                <aside
+                    v-if="categoriesDisplayMode === 'sidebar'"
+                    class="w-64 border-r border-gray-200 bg-white flex flex-col"
+                >
+                    <div class="px-4 py-3 border-b border-gray-100">
+                        <p class="text-xs uppercase tracking-wide text-gray-500">Catégories</p>
+                        <h3 class="text-base font-semibold text-gray-900">Navigation</h3>
                     </div>
-
-                    <!-- Special Items -->
-                    <div 
-                        @click="showCategoriesModal = true"
-                        class="bg-primary-500 rounded-xl shadow-sm overflow-hidden cursor-pointer hover:bg-primary-600 transition-colors"
-                    >
-                        <div class="aspect-square flex flex-col items-center justify-center text-gray-900">
-                            <TagIcon class="w-8 h-8 mb-2" />
-                            <span class="font-medium">Catégories</span>
-                        </div>
+                    <div class="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+                        <button
+                            v-for="button in categoryButtons"
+                            :key="button.id"
+                            @click="selectCategory(button.id)"
+                            type="button"
+                            class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors"
+                            :class="selectedCategoryId === button.id ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-100'"
+                        >
+                            <span class="text-2xl">{{ button.icon }}</span>
+                            <span class="flex-1 text-left truncate">{{ button.label }}</span>
+                        </button>
                     </div>
-                </div>
-            </div>
+                </aside>
+            </transition>
 
-            <!-- Category Tabs -->
-            <div class="bg-white border-t border-gray-200 px-2 py-3">
-                <div class="flex space-x-1 overflow-x-auto">
-                    <button 
-                        @click="selectCategory(null)"
-                        class="flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors min-w-[70px]"
-                        :class="!selectedCategoryId ? 'bg-primary-500 text-gray-900' : 'text-gray-500 hover:bg-gray-100'"
-                    >
-                        <HeartIcon class="w-5 h-5" />
-                        <span class="text-xs">FAVORIS</span>
-                    </button>
-                    <button 
-                        v-for="category in categories"
-                        :key="category.id"
-                        @click="selectCategory(category.id)"
-                        class="flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors min-w-[70px]"
-                        :class="selectedCategoryId === category.id ? 'bg-primary-500 text-gray-900' : 'text-gray-500 hover:bg-gray-100'"
-                    >
-                        <span class="text-lg">{{ getCategoryIcon(category.icon) }}</span>
-                        <span class="text-xs uppercase">{{ category.name }}</span>
-                    </button>
-                    <button 
-                        @click="selectCategory('all')"
-                        class="flex flex-col items-center justify-center px-4 py-2 rounded-lg transition-colors min-w-[70px]"
-                        :class="selectedCategoryId === 'all' ? 'bg-primary-500 text-gray-900' : 'text-gray-500 hover:bg-gray-100'"
-                    >
-                        <Squares2X2Icon class="w-5 h-5" />
-                        <span class="text-xs">TOUS</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Panel - Cart/Ticket -->
-        <div class="w-80 bg-white border-l border-gray-200 flex flex-col">
-            <!-- Ticket Header -->
-            <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
-                <h2 class="text-lg font-bold text-gray-900">Ticket</h2>
-                <div class="flex items-center space-x-1">
-                    <button 
-                        @click="showCustomerSelector = !showCustomerSelector" 
-                        class="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                        title="Sélectionner client"
-                    >
-                        <UserIcon class="w-5 h-5" />
-                    </button>
-                    <button 
-                        @click="showOptionsMenu = !showOptionsMenu" 
-                        class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Options du ticket"
-                    >
-                        <Bars3BottomRightIcon class="w-5 h-5" />
-                    </button>
-                </div>
-            </div>
-
-            <!-- Options Menu Dropdown -->
-            <div v-if="showOptionsMenu" class="bg-gray-50 border-b border-gray-200 p-3 space-y-2">
-                <button 
-                    @click="showNotesModal = true; showOptionsMenu = false"
-                    class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white rounded-lg transition-colors"
-                >
-                    📝 Notes
-                </button>
-                <button 
-                    @click="showDiscountModal = true; showOptionsMenu = false"
-                    class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white rounded-lg transition-colors"
-                >
-                    🏷️ Appliquer remise
-                </button>
-                <button 
-                    @click="resetCart; showOptionsMenu = false"
-                    class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white hover:text-red-600 rounded-lg transition-colors"
-                >
-                    🔄 Réinitialiser
-                </button>
-            </div>
-
-            <!-- Customer Selector -->
-            <div v-if="showCustomerSelector" class="bg-blue-50 border-b border-blue-200 p-3">
-                <input 
-                    v-model="customerSearch"
-                    type="text"
-                    placeholder="Chercher ou créer client..."
-                    class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                >
-                <div class="mt-2 max-h-32 overflow-y-auto space-y-1">
-                    <button 
-                        v-for="customer in filteredCustomers"
-                        :key="customer.id"
-                        @click="selectCustomer(customer)"
-                        class="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-blue-100 transition-colors"
-                    >
-                        {{ customer.name }}
-                    </button>
-                </div>
-            </div>
-
-            <!-- Cart Items -->
-            <div class="flex-1 overflow-auto">
-                <div v-if="cartStore.items.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400">
-                    <ShoppingCartIcon class="w-12 h-12 mb-2" />
-                    <p class="text-sm">Ticket vide</p>
-                </div>
-                <div v-else class="divide-y divide-gray-100">
-                    <div 
-                        v-for="(item, index) in cartStore.items" 
-                        :key="index"
-                        class="p-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
-                    >
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1 min-w-0">
-                                <h4 class="text-sm font-bold text-gray-900 truncate">{{ item.article_name }}</h4>
-                                <div class="text-xs text-gray-600 mt-1">
-                                    <span class="font-medium">{{ formatCurrency(item.unit_price) }}</span>
-                                    <span v-if="item.variant_price > 0" class="ml-2 text-orange-600 font-semibold">+ Variant: {{ formatCurrency(item.variant_price) }}</span>
-                                    <span v-if="item.options_price > 0" class="ml-2 text-primary-600 font-semibold">+ Options: {{ formatCurrency(item.options_price) }}</span>
-                                    <span class="ml-2 text-gray-500">=</span>
-                                    <span class="ml-2 font-bold text-gray-900">{{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs</span>
-                                </div>
-                                <div v-if="item.selected_variant?.template_name" class="text-xs text-gray-600 mt-1">
-                                    {{ item.selected_variant.template_name }} · {{ item.selected_variant.template_value }}
-                                </div>
-                                <button
-                                    v-if="item.article?.has_options"
-                                    type="button"
-                                    @click="editItemOptions(index, item)"
-                                    class="mt-2 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <div class="flex-1 overflow-hidden p-4 bg-[#f8f8f8]">
+                    <div class="grid grid-cols-5 grid-rows-4 gap-4 h-full" style="grid-auto-rows: minmax(0, 1fr);">
+                        <div
+                            v-for="article in paginatedArticles"
+                            :key="article.id"
+                            class="cursor-pointer rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition-shadow h-full flex flex-col"
+                            @click="addToCart(article)"
+                        >
+                            <div class="flex-1 rounded-t-2xl bg-gray-100 flex items-center justify-center overflow-hidden">
+                                <img
+                                    v-if="article.photo"
+                                    :src="article.photo"
+                                    :alt="article.name"
+                                    class="h-full w-full object-cover"
                                 >
-                                    ✏️ Modifier les options
+                                <span v-else class="text-3xl">📦</span>
+                            </div>
+                            <div class="p-3 space-y-1">
+                                <h3 class="text-sm font-semibold text-gray-900 truncate">{{ article.name }}</h3>
+                                <p class="text-base font-bold text-primary-600">{{ formatCurrency(article.sell_price) }}</p>
+                            </div>
+                        </div>
+                        <div v-if="paginatedArticles.length === 0" class="col-span-full rounded-2xl border border-dashed border-gray-300 bg-white/80 p-6 text-center text-sm text-gray-500">
+                            Aucun produit ne correspond à cette recherche.
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="totalArticles > itemsPerPage" class="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+                    <p class="text-sm text-gray-500">{{ pageSummary }}</p>
+                    <div class="flex items-center gap-2">
+                        <button
+                            @click="prevPage"
+                            :disabled="currentPage === 1"
+                            class="px-3 py-1 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-40"
+                        >
+                            Précédent
+                        </button>
+                        <button
+                            @click="nextPage"
+                            :disabled="currentPage === totalPages"
+                            class="px-3 py-1 rounded-lg border border-primary-500 text-sm font-semibold text-primary-600 disabled:opacity-40"
+                        >
+                            Suivant
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="categoriesDisplayMode === 'bottom'" class="border-t border-gray-200 bg-white px-4 py-3">
+                    <div class="flex gap-3 overflow-x-auto">
+                        <button
+                            v-for="button in categoryButtons"
+                            :key="button.id + '-bottom'"
+                            @click="selectCategory(button.id)"
+                            type="button"
+                            class="flex items-center gap-3 rounded-full border px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors"
+                            :class="selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'"
+                        >
+                            <span class="text-2xl">{{ button.icon }}</span>
+                            <span>{{ button.label }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <section class="w-[360px] flex-shrink-0 bg-[#fbfaf7] border-l border-gray-200 flex flex-col">
+                <div class="border-b border-gray-200 bg-white p-4 shadow-sm space-y-4">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs uppercase tracking-wide text-gray-500">Encaissement</p>
+                            <h2 class="text-xl font-bold text-gray-900">Ticket</h2>
+                            <p class="text-xs text-gray-500">{{ cartStore.items.length }} articles</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs uppercase tracking-wide text-gray-500">Total</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(cartStore.total) }}</p>
+                            <span class="inline-flex mt-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-600 bg-primary-50 rounded-full">
+                                {{ serviceModeLabel }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                        <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Mode de service</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button
+                                v-for="mode in serviceModes"
+                                :key="mode.value"
+                                @click="serviceMode = mode.value"
+                                type="button"
+                                class="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors"
+                                :class="serviceMode === mode.value ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'"
+                            >
+                                <span class="text-xl">{{ mode.icon }}</span>
+                                <span>{{ mode.label }}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs uppercase tracking-wide text-gray-500">Client</p>
+                                <p class="text-sm font-semibold text-gray-900">{{ cartStore.customerName || 'Client Anonyme' }}</p>
+                                <p class="text-xs text-gray-500">{{ cartStore.customerId ? 'Client sélectionné' : 'Aucun client (facultatif)' }}</p>
+                            </div>
+                            <button
+                                @click="showCustomerSelector = !showCustomerSelector"
+                                class="rounded-lg border border-primary-500 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary-600 hover:bg-primary-50"
+                                type="button"
+                            >
+                                {{ showCustomerSelector ? 'Masquer' : 'Choisir' }}
+                            </button>
+                        </div>
+                        <div v-if="showCustomerSelector" class="space-y-2">
+                            <input
+                                v-model="customerSearch"
+                                type="text"
+                                placeholder="Chercher un client..."
+                                class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                            <div class="max-h-32 overflow-y-auto space-y-1">
+                                <button
+                                    v-for="customer in filteredCustomers"
+                                    :key="customer.id"
+                                    @click="selectCustomer(customer)"
+                                    class="w-full text-left rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-white transition-colors"
+                                    type="button"
+                                >
+                                    {{ customer.name }}
                                 </button>
-                                <div v-if="item.selected_options && item.selected_options.length" class="mt-2 space-y-0.5 bg-gray-50 p-2 rounded">
-                                    <div
-                                        v-for="option in item.selected_options"
-                                        :key="option.option_id"
-                                        class="text-xs text-gray-600"
+                                <p v-if="filteredCustomers.length === 0" class="text-xs text-gray-500 px-3 py-2">
+                                    Aucun client trouvé.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <button
+                            @click="showNotesModal = true"
+                            class="rounded-lg border border-gray-200 px-2 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                            type="button"
+                        >
+                            📝 Notes
+                        </button>
+                        <button
+                            @click="showDiscountModal = true"
+                            class="rounded-lg border border-gray-200 px-2 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                            type="button"
+                        >
+                            🏷️ Remise
+                        </button>
+                        <button
+                            @click="resetCart"
+                            class="rounded-lg border border-red-200 px-2 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                            type="button"
+                        >
+                            🔄 Reset
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-auto">
+                    <div class="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2">
+                        <p class="text-xs uppercase tracking-wide text-gray-500">Articles</p>
+                    </div>
+                    <div v-if="cartStore.items.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400">
+                        <ShoppingCartIcon class="w-12 h-12 mb-2" />
+                        <p class="text-sm">Ticket vide</p>
+                    </div>
+                    <div v-else class="divide-y divide-gray-100">
+                        <div
+                            v-for="(item, index) in cartStore.items"
+                            :key="index"
+                            class="p-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                        >
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="text-sm font-bold text-gray-900 truncate">{{ item.article_name }}</h4>
+                                    <div class="text-xs text-gray-600 mt-1">
+                                        <span class="font-medium">{{ formatCurrency(item.unit_price) }}</span>
+                                        <span v-if="item.variant_price > 0" class="ml-2 text-orange-600 font-semibold">+ Variant: {{ formatCurrency(item.variant_price) }}</span>
+                                        <span v-if="item.options_price > 0" class="ml-2 text-primary-600 font-semibold">+ Options: {{ formatCurrency(item.options_price) }}</span>
+                                        <span class="ml-2 text-gray-500">=</span>
+                                        <span class="ml-2 font-bold text-gray-900">{{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs</span>
+                                    </div>
+                                    <div v-if="item.selected_variant?.template_name" class="text-xs text-gray-600 mt-1">
+                                        {{ item.selected_variant.template_name }} · {{ item.selected_variant.template_value }}
+                                    </div>
+                                    <button
+                                        v-if="item.article?.has_options"
+                                        type="button"
+                                        @click="editItemOptions(index, item)"
+                                        class="mt-2 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
                                     >
-                                        <span class="font-semibold text-gray-700">{{ option.option_name }}:</span>
-                                        <span class="ml-1 text-gray-800">
-                                            {{ option.variants.map(v => v.name).join(', ') }}
-                                        </span>
+                                        ✏️ Modifier les options
+                                    </button>
+                                    <div v-if="item.selected_options && item.selected_options.length" class="mt-2 space-y-0.5 bg-gray-50 p-2 rounded">
+                                        <div
+                                            v-for="option in item.selected_options"
+                                            :key="option.option_id"
+                                            class="text-xs text-gray-600"
+                                        >
+                                            <span class="font-semibold text-gray-700">{{ option.option_name }}:</span>
+                                            <span class="ml-1 text-gray-800">
+                                                {{ option.variants.map(v => v.name).join(', ') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 mt-2">
+                                        <button
+                                            @click="updateQuantity(index, item.quantity - 1)"
+                                            class="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-300 rounded font-bold"
+                                            type="button"
+                                        >
+                                            −
+                                        </button>
+                                        <span class="text-sm text-gray-900 font-bold w-6 text-center">{{ item.quantity }}</span>
+                                        <button
+                                            @click="updateQuantity(index, item.quantity + 1)"
+                                            class="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-300 rounded font-bold"
+                                            type="button"
+                                        >
+                                            +
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="flex items-center space-x-2 mt-2">
-                                    <button 
-                                        @click="updateQuantity(index, item.quantity - 1)"
-                                        class="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-300 rounded font-bold"
+                                <div class="text-right ml-2">
+                                    <p class="text-xs text-gray-500 mb-1">{{ item.quantity }}x</p>
+                                    <p class="text-sm font-bold text-gray-900 bg-primary-100 px-2 py-1 rounded">{{ formatCurrency(getItemLineTotal(item)) }}</p>
+                                    <button
+                                        @click="removeItem(index)"
+                                        class="text-red-500 hover:text-red-700 mt-1 text-lg"
+                                        title="Supprimer"
+                                        type="button"
                                     >
-                                        −
-                                    </button>
-                                    <span class="text-sm text-gray-900 font-bold w-6 text-center">{{ item.quantity }}</span>
-                                    <button 
-                                        @click="updateQuantity(index, item.quantity + 1)"
-                                        class="w-6 h-6 flex items-center justify-center text-gray-600 hover:bg-gray-300 rounded font-bold"
-                                    >
-                                        +
+                                        ✕
                                     </button>
                                 </div>
-                            </div>
-                            <div class="text-right ml-2">
-                                <p class="text-xs text-gray-500 mb-1">{{ item.quantity }}x</p>
-                                <p class="text-sm font-bold text-gray-900 bg-primary-100 px-2 py-1 rounded">{{ formatCurrency(getItemLineTotal(item)) }}</p>
-                                <button 
-                                    @click="removeItem(index)"
-                                    class="text-red-500 hover:text-red-700 mt-1 text-lg"
-                                    title="Supprimer"
-                                >
-                                    ✕
-                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Cart Summary -->
-            <div class="border-t border-gray-200 p-4 bg-gradient-to-b from-white to-gray-50 space-y-2 text-sm">
-                <!-- Subtotal -->
-                <div class="flex justify-between text-gray-600">
-                    <span class="font-medium">Sous-total:</span>
-                    <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.subtotal) }}</span>
+                <div class="border-t border-gray-200 p-4 bg-gradient-to-b from-white to-gray-50 space-y-2 text-sm">
+                    <div class="flex justify-between text-gray-600">
+                        <span class="font-medium">Sous-total:</span>
+                        <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.subtotal) }}</span>
+                    </div>
+                    <div v-if="cartStore.discountTotal > 0" class="flex justify-between text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                        <span class="font-medium">🏷️ Remise:</span>
+                        <span class="font-semibold">-{{ formatCurrency(cartStore.discountTotal) }}</span>
+                    </div>
+                    <div v-if="cartStore.discountTotal > 0" class="flex justify-between text-gray-600 border-t border-gray-300 pt-2">
+                        <span class="font-medium">Après remise:</span>
+                        <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.afterDiscount) }}</span>
+                    </div>
+                    <div class="flex justify-between text-gray-600">
+                        <span class="font-medium">{{ settingsStore.taxName }} ({{ settingsStore.taxRate }}%):</span>
+                        <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.taxAmount) }}</span>
+                    </div>
+                    <div class="border-t border-gray-300 pt-2 flex justify-between text-lg font-bold text-gray-900 bg-primary-100 px-2 py-2 rounded-lg">
+                        <span>TOTAL À PAYER:</span>
+                        <span class="text-primary-600">{{ formatCurrency(cartStore.total) }}</span>
+                    </div>
                 </div>
-                <!-- Discount -->
-                <div v-if="cartStore.discountTotal > 0" class="flex justify-between text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                    <span class="font-medium">🏷️ Remise:</span>
-                    <span class="font-semibold">-{{ formatCurrency(cartStore.discountTotal) }}</span>
+                <div class="p-4 border-t border-gray-200 space-y-2">
+                    <button
+                        @click="saveSale"
+                        :disabled="cartStore.items.length === 0"
+                        class="w-full py-3 px-4 border-2 border-gray-400 text-gray-900 font-bold rounded-lg hover:bg-gray-100 hover:border-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-400"
+                        type="button"
+                    >
+                        💾 SAUVEGARDER
+                    </button>
+                    <button
+                        @click="showPaymentModal = true"
+                        :disabled="cartStore.items.length === 0"
+                        class="w-full py-3 px-4 bg-gradient-to-r from-primary-500 to-primary-600 text-gray-900 font-bold rounded-lg hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-primary-500 disabled:hover:to-primary-600 disabled:hover:shadow-lg"
+                        type="button"
+                    >
+                        💳 PAYER
+                    </button>
                 </div>
-                <!-- After Discount -->
-                <div v-if="cartStore.discountTotal > 0" class="flex justify-between text-gray-600 border-t border-gray-300 pt-2">
-                    <span class="font-medium">Après remise:</span>
-                    <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.afterDiscount) }}</span>
-                </div>
-                <!-- Tax -->
-                <div class="flex justify-between text-gray-600">
-                    <span class="font-medium">{{ settingsStore.taxName }} ({{ settingsStore.taxRate }}%):</span>
-                    <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.taxAmount) }}</span>
-                </div>
-                <!-- Total -->
-                <div class="border-t border-gray-300 pt-2 flex justify-between text-lg font-bold text-gray-900 bg-primary-100 px-2 py-2 rounded-lg">
-                    <span>TOTAL À PAYER:</span>
-                    <span class="text-primary-600">{{ formatCurrency(cartStore.total) }}</span>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="p-4 border-t border-gray-200 space-y-2">
-                <button 
-                    @click="saveSale"
-                    :disabled="cartStore.items.length === 0"
-                    class="w-full py-3 px-4 border-2 border-gray-400 text-gray-900 font-bold rounded-lg hover:bg-gray-100 hover:border-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-400"
-                >
-                    💾 SAUVEGARDER
-                </button>
-                <button 
-                    @click="showPaymentModal = true"
-                    :disabled="cartStore.items.length === 0"
-                    class="w-full py-3 px-4 bg-gradient-to-r from-primary-500 to-primary-600 text-gray-900 font-bold rounded-lg hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-primary-500 disabled:hover:to-primary-600 disabled:hover:shadow-lg"
-                >
-                    💳 PAYER
-                </button>
-            </div>
+            </section>
         </div>
+    </div>
 
-        <!-- Payment Modal - Multiple Methods -->
-        <PaymentMultiModal 
+    <!-- Payment Modal - Multiple Methods -->
+    <PaymentMultiModal 
             v-if="showPaymentModal"
             :total="cartStore.total"
             @close="showPaymentModal = false"
@@ -374,7 +424,7 @@
                     placeholder="Notes sur la commande..."
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
                     rows="4"
-                />
+                ></textarea>
                 <div class="flex gap-2 justify-end">
                     <button 
                         @click="showNotesModal = false"
@@ -484,16 +534,17 @@
                 </div>
             </div>
         </div>
-    </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useCartStore } from '../stores/cart'
 import { useArticlesStore } from '../stores/articles'
 import { useSettingsStore } from '../stores/settings'
 import { useCustomersStore } from '../stores/customers'
 import { useOfflineStore } from '../stores/offline'
+import { useUiStore } from '../stores/ui'
 import { salesApi, optionsApi, articlesApi } from '../api'
 import PaymentMultiModal from '../components/pos/PaymentMultiModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
@@ -504,13 +555,6 @@ import OptionFormContent from '../components/forms/OptionFormContent.vue'
 import {
     Bars3Icon,
     MagnifyingGlassIcon,
-    QrCodeIcon,
-    MoonIcon,
-    HeartIcon,
-    Squares2X2Icon,
-    TagIcon,
-    UserIcon,
-    Bars3BottomRightIcon,
     ShoppingCartIcon,
     MinusIcon,
     PlusIcon,
@@ -521,13 +565,11 @@ const cartStore = useCartStore()
 const articlesStore = useArticlesStore()
 const settingsStore = useSettingsStore()
 const customersStore = useCustomersStore()
-
-const showMenu = ref(false)
-const showSearch = ref(false)
+const uiStore = useUiStore()
+const { posCategoryDisplayMode } = storeToRefs(settingsStore)
+const categoriesDisplayMode = posCategoryDisplayMode
 const showPaymentModal = ref(false)
 const showCalculator = ref(false)
-const showCategoriesModal = ref(false)
-const showOptionsMenu = ref(false)
 const showOptionsModal = ref(false)
 const showCustomerSelector = ref(false)
 const showNotesModal = ref(false)
@@ -544,12 +586,13 @@ const optionsMode = ref('add')
 const variantSelectionMode = ref('add')
 const editingCartIndex = ref(null)
 const searchQuery = ref('')
-const selectedCategoryId = ref(null)
+const selectedCategoryId = ref('all')
 const customerSearch = ref('')
-const selectedCustomer = ref(null)
 const ticketNotes = ref('')
 const discountAmount = ref(0)
 const discountPercent = ref(0)
+const currentPage = ref(1)
+const itemsPerPage = ref(20)
 const creatingOption = ref(false)
 const newOptionForm = ref({
     name: '',
@@ -562,6 +605,38 @@ const newOptionForm = ref({
 })
 
 const categories = computed(() => articlesStore.categories)
+
+const categoryButtons = computed(() => {
+    const baseButtons = [
+        { id: null, label: 'Favoris', icon: '⭐' },
+        { id: 'all', label: 'Tous', icon: '📦' },
+    ]
+
+    const dynamicButtons = (categories.value || []).map((category) => ({
+        id: category.id,
+        label: category.name,
+        icon: getCategoryIcon(category.icon),
+    }))
+
+    return [...baseButtons, ...dynamicButtons]
+})
+
+const serviceModes = [
+    { value: 'dine_in', label: 'Sur place', icon: '🍽️' },
+    { value: 'delivery', label: 'Livraison', icon: '🚚' },
+    { value: 'pickup', label: 'Emporté', icon: '🥡' },
+    { value: 'glovo', label: 'Glovo', icon: '🛵' },
+]
+
+const serviceMode = computed({
+    get: () => cartStore.deliveryMode,
+    set: (value) => cartStore.setDeliveryMode(value),
+})
+
+const serviceModeLabel = computed(() => {
+    const match = serviceModes.find((mode) => mode.value === serviceMode.value)
+    return match ? match.label : 'Sur place'
+})
 
 const filteredCustomers = computed(() => {
     const query = customerSearch.value.toLowerCase()
@@ -600,6 +675,27 @@ const filteredArticles = computed(() => {
     return articles
 })
 
+const totalArticles = computed(() => filteredArticles.value.length)
+
+const totalPages = computed(() => {
+    const pages = Math.ceil(totalArticles.value / itemsPerPage.value)
+    return pages > 0 ? pages : 1
+})
+
+const paginatedArticles = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage.value
+    return filteredArticles.value.slice(start, start + itemsPerPage.value)
+})
+
+const pageSummary = computed(() => {
+    if (totalArticles.value === 0) {
+        return 'Aucun article'
+    }
+    const start = (currentPage.value - 1) * itemsPerPage.value + 1
+    const end = Math.min(currentPage.value * itemsPerPage.value, totalArticles.value)
+    return `Affichage de ${start} à ${end} sur ${totalArticles.value}`
+})
+
 const selectedCategoryName = computed(() => {
     if (selectedCategoryId.value === null) return 'Favoris'
     if (selectedCategoryId.value === 'all') return 'Tous les Articles'
@@ -618,6 +714,10 @@ const categoryIcons = {
 
 function getCategoryIcon(icon) {
     return categoryIcons[icon] || '📦'
+}
+
+function toggleAppSidebar() {
+    uiStore.togglePosSidebar()
 }
 
 function formatCurrency(amount) {
@@ -643,6 +743,18 @@ function formatOptionsPrice(amount) {
 
 function selectCategory(categoryId) {
     selectedCategoryId.value = categoryId
+}
+
+function nextPage() {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value += 1
+    }
+}
+
+function prevPage() {
+    if (currentPage.value > 1) {
+        currentPage.value -= 1
+    }
 }
 
 async function addToCart(article) {
@@ -885,21 +997,7 @@ function editItemOptions(index, item) {
     console.warn('This article has no options')
 }
 
-function openQRScanner() {
-    console.log('QR Scanner opened')
-    // TODO: Implement QR code scanner using camera
-    // Could use a library like jsQR or zxing-js
-    alert('Fonctionnalité QR Code à implémenter')
-}
-
-function toggleDarkMode() {
-    console.log('Dark mode toggle')
-    // TODO: Implement dark mode toggle
-    alert('Mode sombre à implémenter')
-}
-
 function selectCustomer(customer) {
-    selectedCustomer.value = customer
     cartStore.setCustomer(customer.id, customer.name)
     showCustomerSelector.value = false
     customerSearch.value = ''
@@ -918,12 +1016,24 @@ function applyDiscount() {
 function resetCart() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser le ticket?')) {
         cartStore.clearCart()
-        selectedCustomer.value = null
         ticketNotes.value = ''
         discountAmount.value = 0
         discountPercent.value = 0
     }
 }
+
+watch([searchQuery, selectedCategoryId], () => {
+    currentPage.value = 1
+})
+
+watch([filteredArticles, itemsPerPage], () => {
+    if (currentPage.value > totalPages.value) {
+        currentPage.value = totalPages.value
+    }
+    if (currentPage.value < 1) {
+        currentPage.value = 1
+    }
+})
 
 const isNewOptionValid = computed(() => {
     return newOptionForm.value.name.trim() && 
@@ -1025,6 +1135,7 @@ async function createQuickOption() {
 }
 
 onMounted(async () => {
+    await settingsStore.fetchSettings()
     await articlesStore.refresh()
     await customersStore.fetchCustomers()
 })

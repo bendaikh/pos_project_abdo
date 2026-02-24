@@ -14,7 +14,8 @@ export const useCustomersStore = defineStore('customers', () => {
         loading.value = true
         try {
             const response = await customersApi.list({ limit: 100 })
-            customers.value = response.data || []
+            const payload = response.data
+            customers.value = Array.isArray(payload) ? payload : payload?.data || []
             console.log(`Loaded ${customers.value.length} customers`)
         } catch (error) {
             console.error('Failed to load customers:', error)

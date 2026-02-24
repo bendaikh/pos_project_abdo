@@ -25,6 +25,10 @@ export const useSettingsStore = defineStore('settings', () => {
             receipt_header: 'Merci pour votre achat!',
             receipt_footer: 'À bientôt!',
             receipt_show_logo: true
+        },
+        pos: {
+            categories_display_mode: 'sidebar',
+            pos_categories_display_mode: 'sidebar'
         }
     })
     const loading = ref(false)
@@ -38,6 +42,15 @@ export const useSettingsStore = defineStore('settings', () => {
     const taxEnabled = computed(() => settings.value.tax?.tax_enabled ?? true)
     const taxRate = computed(() => settings.value.tax?.tax_rate || 0)
     const taxName = computed(() => settings.value.tax?.tax_name || 'TVA')
+    const posCategoryDisplayMode = computed(() => {
+        const posSettings = settings.value.pos || {}
+        return (
+            posSettings.categories_display_mode ||
+            posSettings.pos_categories_display_mode ||
+            settings.value.pos_categories_display_mode ||
+            'sidebar'
+        )
+    })
 
     // Format currency
     function formatCurrency(amount) {
@@ -66,6 +79,19 @@ export const useSettingsStore = defineStore('settings', () => {
         try {
             const response = await settingsApi.all()
             settings.value = response.data
+            if (!settings.value.pos) {
+                settings.value.pos = { categories_display_mode: 'sidebar' }
+            }
+            const posSettings = settings.value.pos
+            if (!posSettings.categories_display_mode && posSettings.pos_categories_display_mode) {
+                posSettings.categories_display_mode = posSettings.pos_categories_display_mode
+            }
+            if (!posSettings.categories_display_mode && settings.value.pos_categories_display_mode) {
+                posSettings.categories_display_mode = settings.value.pos_categories_display_mode
+            }
+            if (!posSettings.categories_display_mode) {
+                posSettings.categories_display_mode = 'sidebar'
+            }
             loaded.value = true
             
             // Cache settings for offline use (with error handling)
@@ -115,6 +141,7 @@ export const useSettingsStore = defineStore('settings', () => {
         taxEnabled,
         taxRate,
         taxName,
+        posCategoryDisplayMode,
         formatCurrency,
         fetchSettings,
         updateSettings

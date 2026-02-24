@@ -8,7 +8,7 @@ export const useCartStore = defineStore('cart', () => {
     const customerName = ref('Client Anonyme')
     const discountAmount = ref(0)
     const discountPercent = ref(0)
-    const deliveryMode = ref('pickup')
+    const deliveryMode = ref('dine_in')
     const notes = ref('')
     const currentSaleId = ref(null)
 
@@ -146,7 +146,7 @@ export const useCartStore = defineStore('cart', () => {
         customerName.value = 'Client Anonyme'
         discountAmount.value = 0
         discountPercent.value = 0
-        deliveryMode.value = 'pickup'
+        deliveryMode.value = 'dine_in'
         notes.value = ''
         currentSaleId.value = null
     }
@@ -165,7 +165,7 @@ export const useCartStore = defineStore('cart', () => {
             })),
             discount_amount: discountAmount.value,
             discount_percent: discountPercent.value,
-            delivery_mode: deliveryMode.value,
+            delivery_mode: deliveryMode.value === 'glovo' ? 'delivery' : deliveryMode.value,
             notes: notes.value
         }
     }

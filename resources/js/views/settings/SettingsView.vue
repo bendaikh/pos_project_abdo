@@ -216,6 +216,33 @@
                     </div>
                 </div>
 
+                <!-- POS -->
+                <div v-show="activeTab === 'pos'" class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <ComputerDesktopIcon class="w-5 h-5 mr-2 text-primary-500" />
+                        Affichage POS
+                    </h2>
+                    <div class="border border-gray-200 rounded-lg p-4 space-y-3">
+                        <p class="text-sm text-gray-700 font-medium">Emplacement des catégories</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-3 cursor-pointer hover:border-primary-300">
+                                <input type="radio" v-model="settings.pos_categories_display_mode" value="sidebar" class="text-primary-500">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">Barre latérale gauche</p>
+                                    <p class="text-xs text-gray-500">Affiche les catégories dans le panneau gauche, comme sur la borne.</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-3 cursor-pointer hover:border-primary-300">
+                                <input type="radio" v-model="settings.pos_categories_display_mode" value="bottom" class="text-primary-500">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">Barre inférieure</p>
+                                    <p class="text-xs text-gray-500">Place les catégories en bas pour maximiser l'espace produits.</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Taxes -->
                 <div v-show="activeTab === 'taxes'" class="space-y-4">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -364,6 +391,7 @@ const tabs = [
     { id: 'material', label: 'Matériel' },
     { id: 'currency', label: 'Devise' },
     { id: 'receipt', label: 'Format du Reçu' },
+    { id: 'pos', label: 'POS' },
     { id: 'taxes', label: 'Taxes' },
     { id: 'commissions', label: 'Commissions' },
     { id: 'subscription', label: 'Abonnement' },
@@ -400,6 +428,9 @@ const settings = reactive({
     receipt_note: '',
     receipt_show_qr: false,
     receipt_qr_content: '',
+
+    // POS
+    pos_categories_display_mode: 'sidebar',
     
     // Taxes
     tax_enabled: true,
@@ -488,6 +519,7 @@ async function saveSettings() {
             else if (key.startsWith('receipt_')) group = 'receipt'
             else if (key.startsWith('store_')) group = 'general'
             else if (key.startsWith('printer_') || key.startsWith('scanner_') || key.startsWith('cash_') || key.startsWith('customer_')) group = 'material'
+            else if (key.startsWith('pos_')) group = 'pos'
             else if (key.startsWith('commission_')) group = 'commission'
             else if (key.startsWith('subscription_')) group = 'subscription'
             
