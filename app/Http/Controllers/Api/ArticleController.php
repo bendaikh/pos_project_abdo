@@ -93,80 +93,87 @@ class ArticleController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'sku' => 'nullable|string|max:50|unique:articles',
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'category_id' => 'nullable|exists:categories,id',
-            'subcategory_id' => 'nullable|exists:subcategories,id',
-            'sell_price' => 'required|numeric|min:0',
-            'buy_price' => 'nullable|numeric|min:0',
-            'unit' => 'nullable|string|max:20',
-            'manage_stock' => 'boolean',
-            'stock_quantity' => 'nullable|integer|min:0',
-            'stock_alert_threshold' => 'nullable|integer|min:0',
-            'photo' => 'nullable|string',
-            'is_favorite' => 'boolean',
-            'is_active' => 'boolean',
-            'has_options' => 'boolean',
-            'has_variants' => 'boolean',
-            'is_on_sale' => 'boolean',
-            'options' => 'nullable|array',
-            'options.*' => 'exists:options,id',
-            'variants' => 'nullable|array',
-            'variants.*.name' => 'required|string|max:255',
-            'variants.*.price_impact' => 'nullable|numeric|min:0',
-            'variants.*.cost_price' => 'nullable|numeric|min:0',
-            'variants.*.sku' => 'nullable|string|max:100',
-            'variants.*.barcode' => 'nullable|string|max:100',
-            'variants.*.template_name' => 'nullable|string|max:100',
-            'variants.*.template_value' => 'nullable|string|max:100',
-            'variants.*.is_active' => 'nullable|boolean',
-            'variants.*.sort_order' => 'nullable|integer|min:0',
-            'photos' => 'nullable|array',
-            'photos.*.photo_url' => 'required|string',
-            'photos.*.sort_order' => 'nullable|integer',
-            'photos.*.is_primary' => 'nullable|boolean',
-        ]);
+        try {
+            $validated = $request->validate([
+                'sku' => 'nullable|string|max:50|unique:articles',
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'category_id' => 'nullable|exists:categories,id',
+                'subcategory_id' => 'nullable|exists:subcategories,id',
+                'sell_price' => 'required|numeric|min:0',
+                'buy_price' => 'nullable|numeric|min:0',
+                'unit' => 'nullable|string|max:20',
+                'manage_stock' => 'boolean',
+                'stock_quantity' => 'nullable|integer|min:0',
+                'stock_alert_threshold' => 'nullable|integer|min:0',
+                'photo' => 'nullable|string',
+                'is_favorite' => 'boolean',
+                'is_active' => 'boolean',
+                'has_options' => 'boolean',
+                'has_variants' => 'boolean',
+                'is_on_sale' => 'boolean',
+                'options' => 'nullable|array',
+                'options.*' => 'exists:options,id',
+                'variants' => 'nullable|array',
+                'variants.*.name' => 'required|string|max:255',
+                'variants.*.price_impact' => 'nullable|numeric|min:0',
+                'variants.*.cost_price' => 'nullable|numeric|min:0',
+                'variants.*.sku' => 'nullable|string|max:100',
+                'variants.*.barcode' => 'nullable|string|max:100',
+                'variants.*.template_name' => 'nullable|string|max:100',
+                'variants.*.template_value' => 'nullable|string|max:100',
+                'variants.*.is_active' => 'nullable|boolean',
+                'variants.*.sort_order' => 'nullable|integer|min:0',
+                'photos' => 'nullable|array',
+                'photos.*.photo_url' => 'required|string',
+                'photos.*.sort_order' => 'nullable|integer',
+                'photos.*.is_primary' => 'nullable|boolean',
+            ]);
 
-        $optionIds = $validated['options'] ?? [];
-        $variantsData = $validated['variants'] ?? [];
-        $photos = $validated['photos'] ?? [];
-        unset($validated['options'], $validated['variants'], $validated['photos']);
+            $optionIds = $validated['options'] ?? [];
+            $variantsData = $validated['variants'] ?? [];
+            $photos = $validated['photos'] ?? [];
+            unset($validated['options'], $validated['variants'], $validated['photos']);
 
-        $article = Article::create($validated);
+            $article = Article::create($validated);
 
-        if (!empty($optionIds)) {
-            $article->options()->sync($optionIds);
-        }
+            if (!empty($optionIds)) {
+                $article->options()->sync($optionIds);
+            }
 
-        if (!empty($variantsData)) {
-            foreach ($variantsData as $index => $variant) {
-                $article->variants()->create([
-                    'name' => $variant['name'],
+            if (!empty($variantsData)) {
+                foreach ($variantsData as $index => $variant) {
+                    $article->variants()->create([
+                        'name' => $variant['name'],
                         'price_impact' => $variant['price_impact'] ?? 0,
                         'cost_price' => $variant['cost_price'] ?? 0,
                         'sku' => $variant['sku'] ?? null,
                         'barcode' => $variant['barcode'] ?? null,
                         'template_name' => $variant['template_name'] ?? null,
                         'template_value' => $variant['template_value'] ?? null,
-                    'is_active' => $variant['is_active'] ?? true,
-                    'sort_order' => $variant['sort_order'] ?? $index,
-                ]);
+                        'is_active' => $variant['is_active'] ?? true,
+                        'sort_order' => $variant['sort_order'] ?? $index,
+                    ]);
+                }
             }
-        }
 
-        if (!empty($photos)) {
-            foreach ($photos as $index => $photo) {
-                $article->photos()->create([
-                    'photo_url' => $photo['photo_url'],
-                    'sort_order' => $photo['sort_order'] ?? $index,
-                    'is_primary' => $photo['is_primary'] ?? ($index === 0),
-                ]);
+            if (!empty($photos)) {
+                foreach ($photos as $index => $photo) {
+                    $article->photos()->create([
+                        'photo_url' => $photo['photo_url'],
+                        'sort_order' => $photo['sort_order'] ?? $index,
+                        'is_primary' => $photo['is_primary'] ?? ($index === 0),
+                    ]);
+                }
             }
-        }
 
-        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']), 201);
+            return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']), 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            \Log::error('Article creation failed: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json(['error' => 'Failed to create article: ' . $e->getMessage()], 500);
+        }
     }
 
     public function show(Article $article): JsonResponse
@@ -176,86 +183,93 @@ class ArticleController extends Controller
 
     public function update(Request $request, Article $article): JsonResponse
     {
-        $validated = $request->validate([
-            'sku' => 'nullable|string|max:50|unique:articles,sku,' . $article->id,
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'category_id' => 'nullable|exists:categories,id',
-            'subcategory_id' => 'nullable|exists:subcategories,id',
-            'sell_price' => 'sometimes|required|numeric|min:0',
-            'buy_price' => 'nullable|numeric|min:0',
-            'unit' => 'nullable|string|max:20',
-            'manage_stock' => 'boolean',
-            'stock_quantity' => 'nullable|integer|min:0',
-            'stock_alert_threshold' => 'nullable|integer|min:0',
-            'photo' => 'nullable|string',
-            'is_favorite' => 'boolean',
-            'is_active' => 'boolean',
-            'has_options' => 'boolean',
-            'has_variants' => 'boolean',
-            'is_on_sale' => 'boolean',
-            'options' => 'nullable|array',
-            'options.*' => 'exists:options,id',
-            'variants' => 'nullable|array',
-            'variants.*.id' => 'nullable|exists:variants,id',
-            'variants.*.name' => 'required|string|max:255',
-            'variants.*.price_impact' => 'nullable|numeric|min:0',
-            'variants.*.cost_price' => 'nullable|numeric|min:0',
-            'variants.*.sku' => 'nullable|string|max:100',
-            'variants.*.barcode' => 'nullable|string|max:100',
-            'variants.*.template_name' => 'nullable|string|max:100',
-            'variants.*.template_value' => 'nullable|string|max:100',
-            'variants.*.is_active' => 'nullable|boolean',
-            'variants.*.sort_order' => 'nullable|integer|min:0',
-            'photos' => 'nullable|array',
-            'photos.*.id' => 'nullable|exists:article_photos,id',
-            'photos.*.photo_url' => 'required|string',
-            'photos.*.sort_order' => 'nullable|integer',
-            'photos.*.is_primary' => 'nullable|boolean',
-        ]);
+        try {
+            $validated = $request->validate([
+                'sku' => 'nullable|string|max:50|unique:articles,sku,' . $article->id,
+                'name' => 'sometimes|required|string|max:255',
+                'description' => 'nullable|string',
+                'category_id' => 'nullable|exists:categories,id',
+                'subcategory_id' => 'nullable|exists:subcategories,id',
+                'sell_price' => 'sometimes|required|numeric|min:0',
+                'buy_price' => 'nullable|numeric|min:0',
+                'unit' => 'nullable|string|max:20',
+                'manage_stock' => 'boolean',
+                'stock_quantity' => 'nullable|integer|min:0',
+                'stock_alert_threshold' => 'nullable|integer|min:0',
+                'photo' => 'nullable|string',
+                'is_favorite' => 'boolean',
+                'is_active' => 'boolean',
+                'has_options' => 'boolean',
+                'has_variants' => 'boolean',
+                'is_on_sale' => 'boolean',
+                'options' => 'nullable|array',
+                'options.*' => 'exists:options,id',
+                'variants' => 'nullable|array',
+                'variants.*.id' => 'nullable|exists:variants,id',
+                'variants.*.name' => 'required|string|max:255',
+                'variants.*.price_impact' => 'nullable|numeric|min:0',
+                'variants.*.cost_price' => 'nullable|numeric|min:0',
+                'variants.*.sku' => 'nullable|string|max:100',
+                'variants.*.barcode' => 'nullable|string|max:100',
+                'variants.*.template_name' => 'nullable|string|max:100',
+                'variants.*.template_value' => 'nullable|string|max:100',
+                'variants.*.is_active' => 'nullable|boolean',
+                'variants.*.sort_order' => 'nullable|integer|min:0',
+                'photos' => 'nullable|array',
+                'photos.*.id' => 'nullable|exists:article_photos,id',
+                'photos.*.photo_url' => 'required|string',
+                'photos.*.sort_order' => 'nullable|integer',
+                'photos.*.is_primary' => 'nullable|boolean',
+            ]);
 
-        if (isset($validated['options'])) {
-            $article->options()->sync($validated['options']);
-            unset($validated['options']);
-        }
-
-        if (isset($validated['variants'])) {
-            // Handle variants: delete old ones and create new ones
-            $article->variants()->delete();
-            foreach ($validated['variants'] as $index => $variant) {
-                $article->variants()->create([
-                    'name' => $variant['name'],
-                    'price_impact' => $variant['price_impact'] ?? 0,
-                    'cost_price' => $variant['cost_price'] ?? 0,
-                    'sku' => $variant['sku'] ?? null,
-                    'barcode' => $variant['barcode'] ?? null,
-                    'template_name' => $variant['template_name'] ?? null,
-                    'template_value' => $variant['template_value'] ?? null,
-                    'is_active' => $variant['is_active'] ?? true,
-                    'sort_order' => $variant['sort_order'] ?? $index,
-                ]);
+            if (isset($validated['options'])) {
+                $article->options()->sync($validated['options']);
+                unset($validated['options']);
             }
-            unset($validated['variants']);
-        }
 
-        if (isset($validated['photos'])) {
-            // Delete existing photos
-            $article->photos()->delete();
-            
-            // Create new photos
-            foreach ($validated['photos'] as $index => $photo) {
-                $article->photos()->create([
-                    'photo_url' => $photo['photo_url'],
-                    'sort_order' => $photo['sort_order'] ?? $index,
-                    'is_primary' => $photo['is_primary'] ?? ($index === 0),
-                ]);
+            if (isset($validated['variants'])) {
+                // Handle variants: delete old ones and create new ones
+                $article->variants()->delete();
+                foreach ($validated['variants'] as $index => $variant) {
+                    $article->variants()->create([
+                        'name' => $variant['name'],
+                        'price_impact' => $variant['price_impact'] ?? 0,
+                        'cost_price' => $variant['cost_price'] ?? 0,
+                        'sku' => $variant['sku'] ?? null,
+                        'barcode' => $variant['barcode'] ?? null,
+                        'template_name' => $variant['template_name'] ?? null,
+                        'template_value' => $variant['template_value'] ?? null,
+                        'is_active' => $variant['is_active'] ?? true,
+                        'sort_order' => $variant['sort_order'] ?? $index,
+                    ]);
+                }
+                unset($validated['variants']);
             }
-            unset($validated['photos']);
+
+            if (isset($validated['photos'])) {
+                // Delete existing photos
+                $article->photos()->delete();
+                
+                // Create new photos
+                foreach ($validated['photos'] as $index => $photo) {
+                    $article->photos()->create([
+                        'photo_url' => $photo['photo_url'],
+                        'sort_order' => $photo['sort_order'] ?? $index,
+                        'is_primary' => $photo['is_primary'] ?? ($index === 0),
+                    ]);
+                }
+                unset($validated['photos']);
+            }
+
+            $article->update($validated);
+
+            return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            \Log::error('Article update failed: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json(['error' => 'Failed to update article: ' . $e->getMessage()], 500);
         }
-
-        $article->update($validated);
-
-        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']));
     }
 
     public function destroy(Article $article): JsonResponse
