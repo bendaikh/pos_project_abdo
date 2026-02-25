@@ -198,31 +198,15 @@
                                 <div
                                     v-for="(item, index) in cartStore.items"
                                     :key="index"
-                                    class="px-4 py-3"
+                                    class="px-4 py-2"
                                 >
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0 cursor-pointer" @click="openItemEditModal(index, item)">
-                                            <p class="text-sm font-semibold text-gray-900 truncate">{{ item.article_name }}</p>
-                                            <div v-if="getVariantDisplay(item)" class="text-xs text-gray-600 mt-1">
-                                                <span class="font-semibold text-gray-800">{{ getVariantDisplay(item).label }}</span>
-                                                <span class="ml-2 text-orange-600 font-semibold">
-                                                    +{{ formatCurrency(getVariantDisplay(item).price) }}
-                                                </span>
-                                            </div>
-                                            <div v-if="getOptionDisplays(item).length" class="mt-1 space-y-0.5">
-                                                <div
-                                                    v-for="option in getOptionDisplays(item)"
-                                                    :key="option.key"
-                                                    class="text-xs text-gray-600"
-                                                >
-                                                    <span class="font-semibold text-gray-800">{{ option.label }}</span>
-                                                    <span class="ml-2 text-blue-600 font-semibold">
-                                                        +{{ formatCurrency(option.price) }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-3">
+                                    <div class="cursor-pointer" @click="openItemEditModal(index, item)">
+                                        <p class="text-sm font-semibold text-gray-900 leading-tight break-words">
+                                            {{ item.article_name }}
+                                        </p>
+                                    </div>
+                                    <div class="mt-1 flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2">
                                             <div class="flex items-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1">
                                                 <button
                                                     @click.stop="updateQuantity(index, item.quantity - 1)"
@@ -243,6 +227,8 @@
                                             <span class="text-xs text-gray-500">
                                                 {{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs
                                             </span>
+                                        </div>
+                                        <div class="flex items-center gap-2 shrink-0">
                                             <span class="text-sm font-semibold text-gray-900">{{ formatCurrency(getItemLineTotal(item)) }}</span>
                                             <button
                                                 @click.stop="removeItem(index)"
@@ -253,6 +239,27 @@
                                                 <TrashIcon class="w-4 h-4" />
                                             </button>
                                         </div>
+                                    </div>
+                                    <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                        <span
+                                            v-if="getVariantDisplay(item)"
+                                            class="text-[11px] font-semibold text-gray-700 bg-orange-50 border border-orange-200 rounded-full px-2 py-0.5"
+                                        >
+                                            {{ getVariantDisplay(item).label }}
+                                            <span class="ml-1 text-orange-600">
+                                                +{{ formatCurrency(getVariantDisplay(item).price) }}
+                                            </span>
+                                        </span>
+                                        <span
+                                            v-for="option in getOptionDisplays(item)"
+                                            :key="option.key"
+                                            class="text-[11px] font-semibold text-gray-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5"
+                                        >
+                                            {{ option.label }}
+                                            <span class="ml-1 text-blue-600">
+                                                +{{ formatCurrency(option.price) }}
+                                            </span>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
