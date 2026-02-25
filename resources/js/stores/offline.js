@@ -44,6 +44,19 @@ export const useOfflineStore = defineStore('offline', () => {
                 const registration = await navigator.serviceWorker.register('/service-worker.js')
                 console.log('Service Worker registered:', registration)
 
+                await registration.update()
+
+                let hasRefreshed = false
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (hasRefreshed) return
+                    hasRefreshed = true
+                    window.location.reload()
+                })
+
+                if (registration.waiting) {
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+                }
+
                 // Listen for messages from service worker
                 navigator.serviceWorker.addEventListener('message', (event) => {
                     if (event.data.type === 'SYNC_PENDING_TRANSACTIONS') {
@@ -57,6 +70,7 @@ export const useOfflineStore = defineStore('offline', () => {
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                             console.log('New service worker available')
+                            newWorker.postMessage({ type: 'SKIP_WAITING' })
                         }
                     })
                 })

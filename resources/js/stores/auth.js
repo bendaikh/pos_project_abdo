@@ -9,6 +9,8 @@ export const useAuthStore = defineStore('auth', () => {
     const token = ref(null)
     const loading = ref(false)
     const offlineGuestMode = ref(false)
+    const initialized = ref(false)
+    let initPromise = null
 
     const isAuthenticated = computed(() => !!token.value || offlineGuestMode.value)
     const userName = computed(() => {
@@ -23,50 +25,62 @@ export const useAuthStore = defineStore('auth', () => {
     const isAdmin = computed(() => ['superadmin', 'admin'].includes(user.value?.role))
 
     async function initAuth() {
-        const storedToken = localStorage.getItem('auth_token')
-        const storedUser = localStorage.getItem('auth_user')
-        const storedOfflineMode = localStorage.getItem('offline_guest_mode')
-        
-        // Check for offline guest mode FIRST - this takes priority
-        if (storedOfflineMode === 'true') {
-            offlineGuestMode.value = true
-            token.value = storedToken || 'offline_guest_' + Date.now()
-            user.value = storedUser ? JSON.parse(storedUser) : {
-                id: 0,
-                name: 'Utilisateur Hors ligne',
-                email: 'offline@local',
-                role: 'cashier'
-            }
-            console.log('Offline guest mode restored')
-            return
-        }
-        
-        if (storedToken && storedUser) {
-            token.value = storedToken
-            user.value = JSON.parse(storedUser)
+        if (initialized.value) return
+        if (initPromise) return initPromise
+
+        initPromise = (async () => {
+            const storedToken = localStorage.getItem('auth_token')
+            const storedUser = localStorage.getItem('auth_user')
+            const storedOfflineMode = localStorage.getItem('offline_guest_mode')
             
-            // Skip verification for offline tokens
-            if (storedToken.startsWith('offline_')) {
-                console.log('Offline token detected, skipping verification')
+            // Check for offline guest mode FIRST - this takes priority
+            if (storedOfflineMode === 'true') {
+                offlineGuestMode.value = true
+                token.value = storedToken || 'offline_guest_' + Date.now()
+                user.value = storedUser ? JSON.parse(storedUser) : {
+                    id: 0,
+                    name: 'Utilisateur Hors ligne',
+                    email: 'offline@local',
+                    role: 'cashier'
+                }
+                console.log('Offline guest mode restored')
                 return
             }
             
-            const offlineStore = useOfflineStore()
-            
-            // Verify token is still valid (only if online)
-            if (offlineStore.isOnline) {
-                try {
-                    const response = await authApi.user()
-                    user.value = response.data
-                    localStorage.setItem('auth_user', JSON.stringify(response.data))
-                } catch (error) {
-                    // If verification fails and we're online, logout
-                    logout()
+            if (storedToken && storedUser) {
+                token.value = storedToken
+                user.value = JSON.parse(storedUser)
+                
+                // Skip verification for offline tokens
+                if (storedToken.startsWith('offline_')) {
+                    console.log('Offline token detected, skipping verification')
+                    return
                 }
-            } else {
-                // If offline, keep using cached credentials
-                console.log('Offline mode: Using cached credentials')
+                
+                const offlineStore = useOfflineStore()
+                
+                // Verify token is still valid (only if online)
+                if (offlineStore.isOnline) {
+                    try {
+                        const response = await authApi.user()
+                        user.value = response.data
+                        localStorage.setItem('auth_user', JSON.stringify(response.data))
+                    } catch (error) {
+                        // If verification fails and we're online, logout
+                        logout()
+                    }
+                } else {
+                    // If offline, keep using cached credentials
+                    console.log('Offline mode: Using cached credentials')
+                }
             }
+        })()
+
+        try {
+            await initPromise
+        } finally {
+            initialized.value = true
+            initPromise = null
         }
     }
 
@@ -220,6 +234,7 @@ export const useAuthStore = defineStore('auth', () => {
         login,
         logout,
         setOfflineGuestMode,
-        clearOfflineGuestMode
+        clearOfflineGuestMode,
+        initialized
     }
 })

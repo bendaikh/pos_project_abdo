@@ -1,12 +1,9 @@
 // Service Worker for offline functionality
-const CACHE_NAME = 'greenpos-v1';
+const CACHE_NAME = 'greenpos-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache
 const urlsToCache = [
-    '/',
-    '/build/assets/app.css',
-    '/build/assets/app.js',
     '/offline.html'
 ];
 
@@ -45,6 +42,15 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // HTML navigations - network first, fallback to offline page
+    if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+        event.respondWith(
+            fetch(event.request)
+                .catch(() => caches.match(OFFLINE_URL))
+        );
+        return;
+    }
+
     // API requests - network first, then cache
     if (event.request.url.includes('/api/')) {
         event.respondWith(
@@ -80,37 +86,22 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Static assets - cache first, then network
+    // Static assets - stale-while-revalidate
     event.respondWith(
-        caches.match(event.request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-                
-                return fetch(event.request)
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.match(event.request).then((cachedResponse) => {
+                const fetchPromise = fetch(event.request)
                     .then((response) => {
-                        // Don't cache if not successful
-                        if (!response || response.status !== 200 || response.type === 'error') {
-                            return response;
+                        if (response && response.status === 200) {
+                            cache.put(event.request, response.clone());
                         }
-                        
-                        // Clone the response
-                        const responseToCache = response.clone();
-                        
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        });
-                        
                         return response;
                     })
-                    .catch(() => {
-                        // Return offline page for navigation requests
-                        if (event.request.mode === 'navigate') {
-                            return caches.match(OFFLINE_URL);
-                        }
-                    });
-            })
+                    .catch(() => cachedResponse);
+
+                return cachedResponse || fetchPromise;
+            });
+        })
     );
 });
 

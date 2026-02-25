@@ -236,6 +236,7 @@ const router = createRouter({
 // Navigation guards
 router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
+    await authStore.initAuth()
     
     // Check if user is in offline guest mode (from localStorage directly for reliability)
     const isOfflineGuestMode = localStorage.getItem('offline_guest_mode') === 'true'

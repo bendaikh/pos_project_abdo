@@ -94,16 +94,6 @@
                                         <span v-else class="text-gray-500">Optionnel</span>
                                     </p>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        class="sr-only peer"
-                                        :checked="isOptionEnabled(option.id)"
-                                        :disabled="option.is_required"
-                                        @change="toggleOption(option.id, $event.target.checked)"
-                                    >
-                                    <div class="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
-                                </label>
                             </div>
 
                             <div v-if="activeOptionVariants(option).length === 0" class="text-sm text-gray-500 py-4">
@@ -116,8 +106,9 @@
                                     :key="variant.id"
                                     class="flex items-center gap-4 p-4 bg-white border-2 rounded-xl transition-all"
                                     :class="[
-                                        isVariantSelected(option, variant) ? 'border-primary-500 shadow-md bg-primary-50' : 'border-gray-200',
-                                        isOptionEnabled(option.id) ? 'cursor-pointer hover:border-primary-400' : 'opacity-50 cursor-not-allowed'
+                                        isVariantSelected(option, variant)
+                                            ? 'border-primary-500 shadow-md bg-primary-50'
+                                            : 'border-gray-200 hover:border-primary-400'
                                     ]"
                                 >
                                     <div class="flex-shrink-0">
@@ -127,7 +118,6 @@
                                             :value="variant.id"
                                             class="w-5 h-5 text-primary-600 border-gray-300 cursor-pointer"
                                             :checked="isVariantSelected(option, variant)"
-                                            :disabled="!isOptionEnabled(option.id)"
                                             @change="selectOptionVariant(option, variant.id)"
                                         >
                                     </div>
@@ -142,7 +132,7 @@
                                 </label>
                             </div>
 
-                            <p v-if="isOptionEnabled(option.id) && !hasSelection(option.id)" class="text-sm text-orange-600 mt-3">
+                            <p v-if="option.is_required && !hasSelection(option.id)" class="text-sm text-orange-600 mt-3">
                                 Choisissez une variante pour continuer.
                             </p>
                         </div>
@@ -202,7 +192,6 @@ const settingsStore = useSettingsStore()
 
 const selectedVariantId = ref(props.modelValue)
 const selectedOptions = ref([])
-const enabledOptions = ref([])
 const optionsPrice = ref(0)
 
 const currencyFormatter = new Intl.NumberFormat('fr-DZ', {
@@ -250,10 +239,7 @@ const selectableOptions = computed(() => {
 const hasOptions = computed(() => selectableOptions.value.length > 0)
 
 const missingRequiredOptions = computed(() => {
-    return selectableOptions.value.some(option => {
-        if (!option.is_required) return false
-        return !enabledOptions.value.includes(option.id) || !hasSelection(option.id)
-    })
+    return selectableOptions.value.some(option => option.is_required && !hasSelection(option.id))
 })
 
 const canConfirm = computed(() => {
@@ -274,36 +260,11 @@ const formatVariantPrice = (variant) => {
     return currencyFormatter.format(base + impact)
 }
 
-function ensureRequiredOptions() {
-    selectableOptions.value.forEach(option => {
-        if (option.is_required && !enabledOptions.value.includes(option.id)) {
-            enabledOptions.value.push(option.id)
-        }
-    })
-}
-
 function activeOptionVariants(option) {
     return (option.variants || []).filter(variant => variant.is_active)
 }
 
-function toggleOption(optionId, enabled) {
-    if (enabled) {
-        if (!enabledOptions.value.includes(optionId)) {
-            enabledOptions.value.push(optionId)
-        }
-        return
-    }
-
-    enabledOptions.value = enabledOptions.value.filter(id => id !== optionId)
-    selectedOptions.value = selectedOptions.value.filter(sel => sel.option_id !== optionId)
-    updateOptionsPrice()
-}
-
 function selectOptionVariant(option, variantId) {
-    if (!isOptionEnabled(option.id)) {
-        toggleOption(option.id, true)
-    }
-
     const variant = option.variants.find(v => v.id === variantId)
     if (!variant) return
 
@@ -330,10 +291,6 @@ function selectOptionVariant(option, variantId) {
     }
 
     updateOptionsPrice()
-}
-
-function isOptionEnabled(optionId) {
-    return enabledOptions.value.includes(optionId)
 }
 
 function isVariantSelected(option, variant) {
@@ -382,9 +339,7 @@ watch(
     selectableOptions,
     () => {
         selectedOptions.value = []
-        enabledOptions.value = []
         optionsPrice.value = 0
-        ensureRequiredOptions()
     },
     { immediate: true }
 )
