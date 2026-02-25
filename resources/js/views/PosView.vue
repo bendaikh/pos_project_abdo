@@ -169,13 +169,13 @@
                         </div>
 
                         <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
                                 <button
                                     v-for="mode in serviceModes"
                                     :key="mode.value"
                                     @click="serviceMode = mode.value"
                                     type="button"
-                                    class="flex items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors"
+                                    class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors shrink-0"
                                     :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'"
                                 >
                                     <span class="text-base">{{ mode.icon }}</span>
@@ -201,28 +201,23 @@
                                     class="px-4 py-3"
                                 >
                                     <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0">
+                                        <div class="min-w-0 cursor-pointer" @click="openItemEditModal(index, item)">
                                             <p class="text-sm font-semibold text-gray-900 truncate">{{ item.article_name }}</p>
-                                            <div v-if="item.selected_variant?.template_name" class="text-xs text-gray-500 mt-1">
-                                                {{ item.selected_variant.template_name }} · {{ item.selected_variant.template_value }}
+                                            <div v-if="getVariantDisplay(item)" class="text-xs text-gray-600 mt-1">
+                                                <span class="font-semibold text-gray-800">{{ getVariantDisplay(item).label }}</span>
+                                                <span class="ml-2 text-orange-600 font-semibold">
+                                                    +{{ formatCurrency(getVariantDisplay(item).price) }}
+                                                </span>
                                             </div>
-                                            <button
-                                                v-if="item.article?.has_options"
-                                                type="button"
-                                                @click="editItemOptions(index, item)"
-                                                class="mt-1 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
-                                            >
-                                                Modifier les options
-                                            </button>
-                                            <div v-if="item.selected_options && item.selected_options.length" class="mt-2 space-y-0.5">
+                                            <div v-if="getOptionDisplays(item).length" class="mt-1 space-y-0.5">
                                                 <div
-                                                    v-for="option in item.selected_options"
-                                                    :key="option.option_id"
+                                                    v-for="option in getOptionDisplays(item)"
+                                                    :key="option.key"
                                                     class="text-xs text-gray-600"
                                                 >
-                                                    <span class="font-semibold text-gray-700">{{ option.option_name }}:</span>
-                                                    <span class="ml-1 text-gray-800">
-                                                        {{ option.variants.map(v => v.name).join(', ') }}
+                                                    <span class="font-semibold text-gray-800">{{ option.label }}</span>
+                                                    <span class="ml-2 text-blue-600 font-semibold">
+                                                        +{{ formatCurrency(option.price) }}
                                                     </span>
                                                 </div>
                                             </div>
@@ -230,7 +225,7 @@
                                         <div class="flex items-center gap-3">
                                             <div class="flex items-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1">
                                                 <button
-                                                    @click="updateQuantity(index, item.quantity - 1)"
+                                                    @click.stop="updateQuantity(index, item.quantity - 1)"
                                                     class="text-gray-600 hover:text-gray-800"
                                                     type="button"
                                                 >
@@ -238,16 +233,19 @@
                                                 </button>
                                                 <span class="text-xs font-semibold text-gray-700">x{{ item.quantity }}</span>
                                                 <button
-                                                    @click="updateQuantity(index, item.quantity + 1)"
+                                                    @click.stop="updateQuantity(index, item.quantity + 1)"
                                                     class="text-gray-600 hover:text-gray-800"
                                                     type="button"
                                                 >
                                                     <PlusIcon class="w-4 h-4" />
                                                 </button>
                                             </div>
+                                            <span class="text-xs text-gray-500">
+                                                {{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs
+                                            </span>
                                             <span class="text-sm font-semibold text-gray-900">{{ formatCurrency(getItemLineTotal(item)) }}</span>
                                             <button
-                                                @click="removeItem(index)"
+                                                @click.stop="removeItem(index)"
                                                 class="text-red-500 hover:text-red-700"
                                                 title="Supprimer"
                                                 type="button"
@@ -255,15 +253,6 @@
                                                 <TrashIcon class="w-4 h-4" />
                                             </button>
                                         </div>
-                                    </div>
-                                    <div class="mt-2 text-xs text-gray-500">
-                                        {{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs
-                                        <span v-if="item.variant_price > 0" class="ml-2 text-orange-600 font-semibold">
-                                            + Variant {{ formatCurrency(item.variant_price) }}
-                                        </span>
-                                        <span v-if="item.options_price > 0" class="ml-2 text-blue-600 font-semibold">
-                                            + Options {{ formatCurrency(item.options_price) }}
-                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -409,6 +398,124 @@
             </div>
         </div>
 
+        <!-- Edit Item Modal -->
+        <div v-if="showItemEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl shadow-xl p-6 max-w-2xl w-full mx-4 space-y-4 max-h-[85vh] overflow-y-auto">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Modifier l'article</h3>
+                    <p class="text-sm text-gray-600 mt-1">{{ editingItem?.article_name }}</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-700">Quantité</span>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            @click="adjustEditQuantity(-1)"
+                            class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
+                        >
+                            −
+                        </button>
+                        <input
+                            v-model.number="editQuantity"
+                            type="number"
+                            min="1"
+                            class="w-20 text-center px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                        <button
+                            type="button"
+                            @click="adjustEditQuantity(1)"
+                            class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
+                        >
+                            +
+                        </button>
+                    </div>
+                </div>
+                <div v-if="editingActiveVariants.length" class="space-y-2">
+                    <p class="text-sm font-semibold text-gray-700">Variante</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <label
+                            v-for="variant in editingActiveVariants"
+                            :key="variant.id"
+                            class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer"
+                            :class="editSelectedVariantId === variant.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200'"
+                        >
+                            <input
+                                type="radio"
+                                name="edit-variant"
+                                class="w-4 h-4 text-primary-600 border-gray-300"
+                                :value="variant.id"
+                                v-model="editSelectedVariantId"
+                            >
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-900">
+                                    {{ variant.template_name ? `${variant.template_name} · ${variant.template_value}` : variant.name }}
+                                </span>
+                                <span v-if="Number(variant.price_impact) !== 0" class="ml-2 text-orange-600 font-semibold">
+                                    +{{ formatCurrency(variant.price_impact) }}
+                                </span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div v-if="editingSelectableOptions.length" class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-semibold text-gray-700">Options</p>
+                        <span v-if="editMissingRequiredOptions" class="text-xs text-orange-600 font-medium">
+                            Sélectionnez toutes les options obligatoires
+                        </span>
+                    </div>
+                    <div v-for="option in editingSelectableOptions" :key="option.id" class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-semibold text-gray-800">{{ option.name }}</span>
+                            <span class="text-xs text-gray-500">
+                                {{ option.is_required ? 'Obligatoire' : 'Optionnel' }}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label
+                                v-for="variant in option.variants"
+                                :key="variant.id"
+                                class="flex items-center gap-3 p-2 border rounded-lg bg-white"
+                                :class="isEditOptionVariantSelected(option, variant) ? 'border-primary-500 bg-primary-50' : 'border-gray-200'"
+                            >
+                                <input
+                                    type="checkbox"
+                                    class="w-4 h-4 text-primary-600 border-gray-300"
+                                    :checked="isEditOptionVariantSelected(option, variant)"
+                                    @change="toggleEditOptionVariant(option, variant.id)"
+                                >
+                                <div class="text-sm">
+                                    <span class="font-medium text-gray-900">{{ variant.name }}</span>
+                                    <span v-if="Number(variant.price_impact) !== 0" class="ml-2 text-blue-600 font-semibold">
+                                        +{{ formatCurrency(variant.price_impact) }}
+                                    </span>
+                                </div>
+                            </label>
+                        </div>
+                        <p v-if="option.is_required && !editHasSelection(option.id)" class="text-xs text-orange-600 mt-2">
+                            Choisissez au moins une variante.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button
+                        type="button"
+                        @click="closeItemEditModal"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                    >
+                        Annuler
+                    </button>
+                    <button
+                        type="button"
+                        @click="applyItemEdit"
+                        class="px-4 py-2 bg-primary-500 text-gray-900 font-semibold rounded-lg hover:bg-primary-600"
+                    >
+                        Appliquer
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Discount Modal -->
         <div v-if="showDiscountModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
@@ -542,6 +649,7 @@ const showOptionsModal = ref(false)
 const showCustomerSelector = ref(false)
 const showNotesModal = ref(false)
 const showDiscountModal = ref(false)
+const showItemEditModal = ref(false)
 const showSelectOptionsModal = ref(false)
 const showCreateOptionModal = ref(false)
 const showNeedOptionsPrompt = ref(false)
@@ -553,6 +661,12 @@ const optionsInitialSelections = ref([])
 const optionsMode = ref('add')
 const variantSelectionMode = ref('add')
 const editingCartIndex = ref(null)
+const editingItem = ref(null)
+const editQuantity = ref(1)
+const editingArticle = ref(null)
+const editSelectedVariantId = ref(null)
+const editSelectedOptions = ref([])
+const editOptionsPrice = ref(0)
 const searchQuery = ref('')
 const selectedCategoryId = ref('all')
 const customerSearch = ref('')
@@ -675,6 +789,47 @@ const categoryIcons = {
     meat: '🥩',
 }
 
+const editingItemHasVariants = computed(() => {
+    if (!editingItem.value) return false
+    if (editingItem.value.selected_variant) return true
+    return editingItem.value.article?.has_variants || (editingItem.value.article?.variants?.length || 0) > 0
+})
+
+const editingItemHasOptions = computed(() => {
+    if (!editingItem.value) return false
+    if (editingItem.value.selected_options?.length) return true
+    return editingItem.value.article?.has_options || (editingItem.value.article?.options?.length || 0) > 0
+})
+
+const editingActiveVariants = computed(() => {
+    return getActiveVariants(editingArticle.value)
+})
+
+const editingSelectableOptions = computed(() => {
+    return (editingArticle.value?.options || [])
+        .filter(option => option.is_active !== false)
+        .map(option => {
+            const activeVariants = (option.variants || []).filter(variant => variant.is_active !== false)
+            const fallbackVariants = !activeVariants.length && Array.isArray(option.values)
+                ? option.values.map((value, index) => ({
+                    id: `value-${option.id}-${index}`,
+                    name: value,
+                    price_impact: Number(option.extra_price) || 0,
+                    is_active: true,
+                }))
+                : []
+            return {
+                ...option,
+                variants: activeVariants.length > 0 ? activeVariants : fallbackVariants,
+            }
+        })
+        .filter(option => option.variants && option.variants.length > 0)
+})
+
+const editMissingRequiredOptions = computed(() => {
+    return editingSelectableOptions.value.some(option => option.is_required && !editHasSelection(option.id))
+})
+
 function getCategoryIcon(icon) {
     return categoryIcons[icon] || '📦'
 }
@@ -704,8 +859,156 @@ function formatOptionsPrice(amount) {
     return formatCurrency(numeric)
 }
 
+function getVariantDisplay(item) {
+    if (!item?.selected_variant) return null
+    const variant = item.selected_variant
+    const name = variant.template_name && variant.template_value
+        ? `${variant.template_name} · ${variant.template_value}`
+        : (variant.name || variant.template_value || null)
+    if (!name) return null
+    const price = Number(variant.price_impact ?? item.variant_price ?? 0) || 0
+    return { label: name, price }
+}
+
+function getOptionDisplays(item) {
+    const selections = item?.selected_options || []
+    const chips = []
+    selections.forEach((option) => {
+        const optionName = option.option_name || ''
+        ;(option.variants || []).forEach((variant) => {
+            const variantName = variant.name || variant.template_value || ''
+            if (!optionName && !variantName) return
+            const label = optionName && variantName
+                ? `${optionName} · ${variantName}`
+                : (optionName || variantName)
+            chips.push({
+                key: `${option.option_id}-${variant.id}`,
+                label,
+                price: Number(variant.price_impact) || 0,
+            })
+        })
+    })
+    return chips
+}
+
 function getActiveVariants(article) {
     return (article?.variants || []).filter(v => v.is_active !== false)
+}
+
+async function resolveEditableArticle(item) {
+    if (!item) return null
+    const baseArticle = item.article || item
+    const needsVariants = baseArticle?.has_variants && !baseArticle?.variants
+    const needsOptions = baseArticle?.has_options && !baseArticle?.options
+    if (needsVariants || needsOptions) {
+        try {
+            const response = await articlesApi.get(baseArticle.id)
+            return response.data || baseArticle
+        } catch (error) {
+            console.error('Failed to load article for edit:', error)
+            return baseArticle
+        }
+    }
+    return baseArticle
+}
+
+async function openItemEditModal(index, item) {
+    editingCartIndex.value = index
+    editingItem.value = item
+    editQuantity.value = Number(item.quantity) || 1
+    editingArticle.value = await resolveEditableArticle(item)
+    editSelectedVariantId.value = item.selected_variant?.id || null
+    editSelectedOptions.value = Array.isArray(item.selected_options)
+        ? JSON.parse(JSON.stringify(item.selected_options))
+        : []
+    updateEditOptionsPrice()
+    showItemEditModal.value = true
+}
+
+function closeItemEditModal() {
+    showItemEditModal.value = false
+    editingItem.value = null
+    editingArticle.value = null
+    editSelectedVariantId.value = null
+    editSelectedOptions.value = []
+    editOptionsPrice.value = 0
+    editingCartIndex.value = null
+}
+
+function adjustEditQuantity(delta) {
+    const next = Number(editQuantity.value || 1) + delta
+    editQuantity.value = Math.max(1, next)
+}
+
+function applyItemEdit() {
+    if (editingCartIndex.value === null) return
+    if (editingActiveVariants.value.length && !editSelectedVariantId.value) {
+        alert('Veuillez sélectionner une variante')
+        return
+    }
+    if (editMissingRequiredOptions.value) {
+        alert('Sélectionnez toutes les options obligatoires')
+        return
+    }
+    const qty = Math.max(1, Number(editQuantity.value) || 1)
+    cartStore.updateItemQuantity(editingCartIndex.value, qty)
+    const item = cartStore.items[editingCartIndex.value]
+    if (item && editingArticle.value) {
+        const selectedVariant = editingArticle.value.variants?.find(v => v.id === editSelectedVariantId.value) || null
+        item.selected_variant = selectedVariant
+        item.variant_price = selectedVariant ? Number(selectedVariant.price_impact) || 0 : 0
+        item.selected_options = normalizeSelectedOptions(editSelectedOptions.value)
+        item.options_price = Number(editOptionsPrice.value) || 0
+        item.total = getItemLineTotal(item)
+    }
+    closeItemEditModal()
+}
+
+function isEditOptionVariantSelected(option, variant) {
+    return editSelectedOptions.value.some(
+        (sel) => sel.option_id === option.id && sel.variants.some((v) => v.id === variant.id)
+    )
+}
+
+function editHasSelection(optionId) {
+    return editSelectedOptions.value.some((sel) => sel.option_id === optionId && sel.variants.length > 0)
+}
+
+function toggleEditOptionVariant(option, variantId) {
+    const variant = option.variants.find(v => v.id === variantId)
+    if (!variant) return
+
+    let optionSelection = editSelectedOptions.value.find((sel) => sel.option_id === option.id)
+    if (!optionSelection) {
+        optionSelection = {
+            option_id: option.id,
+            option_name: option.name,
+            type: option.type,
+            variants: [],
+        }
+        editSelectedOptions.value.push(optionSelection)
+    }
+
+    const variantIndex = optionSelection.variants.findIndex((v) => v.id === variantId)
+    if (variantIndex >= 0) {
+        optionSelection.variants.splice(variantIndex, 1)
+    } else {
+        optionSelection.variants.push({
+            id: variant.id,
+            name: variant.name,
+            price_impact: variant.price_impact,
+        })
+    }
+    updateEditOptionsPrice()
+}
+
+function updateEditOptionsPrice() {
+    editOptionsPrice.value = editSelectedOptions.value.reduce((total, optionSelection) => {
+        const variantsTotal = optionSelection.variants.reduce((sum, variant) => {
+            return sum + (Number(variant.price_impact) || 0)
+        }, 0)
+        return total + variantsTotal
+    }, 0)
 }
 
 function selectCategory(categoryId) {
@@ -843,6 +1146,7 @@ function closeSelectVariantsModal() {
     showSelectVariantsModal.value = false
     selectedArticleForVariants.value = null
     selectedVariantId.value = null
+    variantSelectionMode.value = 'add'
 }
 
 function handleSelectVariantsConfirm({ variantId, selectedOptions = [], optionsPrice = 0 }) {
@@ -852,13 +1156,24 @@ function handleSelectVariantsConfirm({ variantId, selectedOptions = [], optionsP
     if (!selectedVariant) return
 
     const normalizedOptions = normalizeSelectedOptions(selectedOptions)
-    cartStore.addItem(
-        selectedArticleForVariants.value,
-        1,
-        normalizedOptions,
-        optionsPrice,
-        selectedVariant
-    )
+    if (variantSelectionMode.value === 'edit' && editingCartIndex.value !== null) {
+        const item = cartStore.items[editingCartIndex.value]
+        if (item) {
+            item.selected_variant = selectedVariant
+            item.variant_price = Number(selectedVariant.price_impact) || 0
+            item.selected_options = normalizedOptions
+            item.options_price = Number(optionsPrice) || 0
+            item.total = getItemLineTotal(item)
+        }
+    } else {
+        cartStore.addItem(
+            selectedArticleForVariants.value,
+            1,
+            normalizedOptions,
+            optionsPrice,
+            selectedVariant
+        )
+    }
     closeSelectVariantsModal()
 }
 
