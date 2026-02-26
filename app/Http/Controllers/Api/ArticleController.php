@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class ArticleController extends Controller
 {
@@ -42,6 +44,14 @@ class ArticleController extends Controller
         // Filter on sale
         if ($request->has('on_sale')) {
             $query->where('is_on_sale', true);
+        }
+
+        if ($request->has('is_composite')) {
+            $query->where('is_composite', filter_var($request->is_composite, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        if ($request->has('manage_stock')) {
+            $query->where('manage_stock', filter_var($request->manage_stock, FILTER_VALIDATE_BOOLEAN));
         }
 
         // Search
@@ -128,46 +138,85 @@ class ArticleController extends Controller
                 'photos.*.photo_url' => 'required|string',
                 'photos.*.sort_order' => 'nullable|integer',
                 'photos.*.is_primary' => 'nullable|boolean',
+                'bom_items' => 'nullable|array',
+                'bom_items.*.component_id' => 'required|exists:articles,id',
+                'bom_items.*.quantity' => 'required|integer|min:1',
+                'bom_items.*.unit' => 'nullable|string|max:20',
+                'bom_items.*.unit_cost' => 'nullable|numeric|min:0',
             ]);
 
             $optionIds = $validated['options'] ?? [];
             $variantsData = $validated['variants'] ?? [];
             $photos = $validated['photos'] ?? [];
+            $bomItems = $validated['bom_items'] ?? [];
             unset($validated['options'], $validated['variants'], $validated['photos']);
+            unset($validated['bom_items']);
 
-            $article = Article::create($validated);
+            $article = DB::transaction(function () use ($validated, $optionIds, $variantsData, $photos, $bomItems) {
+                $article = Article::create($validated);
 
-            if (!empty($optionIds)) {
-                $article->options()->sync($optionIds);
-            }
-
-            if (!empty($variantsData)) {
-                foreach ($variantsData as $index => $variant) {
-                    $article->variants()->create([
-                        'name' => $variant['name'],
-                        'price_impact' => $variant['price_impact'] ?? 0,
-                        'cost_price' => $variant['cost_price'] ?? 0,
-                        'sku' => $variant['sku'] ?? null,
-                        'barcode' => $variant['barcode'] ?? null,
-                        'template_name' => $variant['template_name'] ?? null,
-                        'template_value' => $variant['template_value'] ?? null,
-                        'is_active' => $variant['is_active'] ?? true,
-                        'sort_order' => $variant['sort_order'] ?? $index,
-                    ]);
+                if (!empty($optionIds)) {
+                    $article->options()->sync($optionIds);
                 }
-            }
 
-            if (!empty($photos)) {
-                foreach ($photos as $index => $photo) {
-                    $article->photos()->create([
-                        'photo_url' => $photo['photo_url'],
-                        'sort_order' => $photo['sort_order'] ?? $index,
-                        'is_primary' => $photo['is_primary'] ?? ($index === 0),
-                    ]);
+                if (!empty($variantsData)) {
+                    foreach ($variantsData as $index => $variant) {
+                        $article->variants()->create([
+                            'name' => $variant['name'],
+                            'price_impact' => $variant['price_impact'] ?? 0,
+                            'cost_price' => $variant['cost_price'] ?? 0,
+                            'sku' => $variant['sku'] ?? null,
+                            'barcode' => $variant['barcode'] ?? null,
+                            'template_name' => $variant['template_name'] ?? null,
+                            'template_value' => $variant['template_value'] ?? null,
+                            'is_active' => $variant['is_active'] ?? true,
+                            'sort_order' => $variant['sort_order'] ?? $index,
+                        ]);
+                    }
                 }
-            }
 
-            return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']), 201);
+                if (!empty($photos)) {
+                    foreach ($photos as $index => $photo) {
+                        $article->photos()->create([
+                            'photo_url' => $photo['photo_url'],
+                            'sort_order' => $photo['sort_order'] ?? $index,
+                            'is_primary' => $photo['is_primary'] ?? ($index === 0),
+                        ]);
+                    }
+                }
+
+                if (!empty($bomItems)) {
+                    $seenComponents = [];
+                    foreach ($bomItems as $index => $item) {
+                        if ((int) $item['component_id'] === (int) $article->id) {
+                            throw ValidationException::withMessages([
+                                'bom_items' => ['Un article composite ne peut pas se contenir lui-même.'],
+                            ]);
+                        }
+
+                        if (in_array($item['component_id'], $seenComponents, true)) {
+                            continue;
+                        }
+                        $seenComponents[] = $item['component_id'];
+
+                        $article->bomItems()->create([
+                            'component_id' => $item['component_id'],
+                            'quantity' => $item['quantity'],
+                            'unit' => $item['unit'] ?? null,
+                            'unit_cost' => $item['unit_cost'] ?? null,
+                            'sort_order' => $index,
+                        ]);
+                    }
+
+                    if (!$article->is_composite) {
+                        $article->update(['is_composite' => true]);
+                    }
+                }
+
+                return $article;
+            });
+
+            return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos', 'bomItems.component']), 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
@@ -178,7 +227,7 @@ class ArticleController extends Controller
 
     public function show(Article $article): JsonResponse
     {
-        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']));
+        return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos', 'bomItems.component']));
     }
 
     public function update(Request $request, Article $article): JsonResponse
@@ -220,50 +269,84 @@ class ArticleController extends Controller
                 'photos.*.photo_url' => 'required|string',
                 'photos.*.sort_order' => 'nullable|integer',
                 'photos.*.is_primary' => 'nullable|boolean',
+                'bom_items' => 'nullable|array',
+                'bom_items.*.component_id' => 'required|exists:articles,id',
+                'bom_items.*.quantity' => 'required|integer|min:1',
+                'bom_items.*.unit' => 'nullable|string|max:20',
+                'bom_items.*.unit_cost' => 'nullable|numeric|min:0',
             ]);
 
-            if (isset($validated['options'])) {
-                $article->options()->sync($validated['options']);
-                unset($validated['options']);
-            }
-
-            if (isset($validated['variants'])) {
-                // Handle variants: delete old ones and create new ones
-                $article->variants()->delete();
-                foreach ($validated['variants'] as $index => $variant) {
-                    $article->variants()->create([
-                        'name' => $variant['name'],
-                        'price_impact' => $variant['price_impact'] ?? 0,
-                        'cost_price' => $variant['cost_price'] ?? 0,
-                        'sku' => $variant['sku'] ?? null,
-                        'barcode' => $variant['barcode'] ?? null,
-                        'template_name' => $variant['template_name'] ?? null,
-                        'template_value' => $variant['template_value'] ?? null,
-                        'is_active' => $variant['is_active'] ?? true,
-                        'sort_order' => $variant['sort_order'] ?? $index,
-                    ]);
+            return DB::transaction(function () use ($validated, $article) {
+                if (isset($validated['options'])) {
+                    $article->options()->sync($validated['options']);
+                    unset($validated['options']);
                 }
-                unset($validated['variants']);
-            }
 
-            if (isset($validated['photos'])) {
-                // Delete existing photos
-                $article->photos()->delete();
-                
-                // Create new photos
-                foreach ($validated['photos'] as $index => $photo) {
-                    $article->photos()->create([
-                        'photo_url' => $photo['photo_url'],
-                        'sort_order' => $photo['sort_order'] ?? $index,
-                        'is_primary' => $photo['is_primary'] ?? ($index === 0),
-                    ]);
+                if (isset($validated['variants'])) {
+                    // Handle variants: delete old ones and create new ones
+                    $article->variants()->delete();
+                    foreach ($validated['variants'] as $index => $variant) {
+                        $article->variants()->create([
+                            'name' => $variant['name'],
+                            'price_impact' => $variant['price_impact'] ?? 0,
+                            'cost_price' => $variant['cost_price'] ?? 0,
+                            'sku' => $variant['sku'] ?? null,
+                            'barcode' => $variant['barcode'] ?? null,
+                            'template_name' => $variant['template_name'] ?? null,
+                            'template_value' => $variant['template_value'] ?? null,
+                            'is_active' => $variant['is_active'] ?? true,
+                            'sort_order' => $variant['sort_order'] ?? $index,
+                        ]);
+                    }
+                    unset($validated['variants']);
                 }
-                unset($validated['photos']);
-            }
 
-            $article->update($validated);
+                if (isset($validated['photos'])) {
+                    // Delete existing photos
+                    $article->photos()->delete();
+                    
+                    // Create new photos
+                    foreach ($validated['photos'] as $index => $photo) {
+                        $article->photos()->create([
+                            'photo_url' => $photo['photo_url'],
+                            'sort_order' => $photo['sort_order'] ?? $index,
+                            'is_primary' => $photo['is_primary'] ?? ($index === 0),
+                        ]);
+                    }
+                    unset($validated['photos']);
+                }
 
-            return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos']));
+                if (isset($validated['bom_items'])) {
+                    $article->bomItems()->delete();
+                    $seenComponents = [];
+                    foreach ($validated['bom_items'] as $index => $item) {
+                        if ((int) $item['component_id'] === (int) $article->id) {
+                            throw ValidationException::withMessages([
+                                'bom_items' => ['Un article composite ne peut pas se contenir lui-même.'],
+                            ]);
+                        }
+                        if (in_array($item['component_id'], $seenComponents, true)) {
+                            continue;
+                        }
+                        $seenComponents[] = $item['component_id'];
+                        $article->bomItems()->create([
+                            'component_id' => $item['component_id'],
+                            'quantity' => $item['quantity'],
+                            'unit' => $item['unit'] ?? null,
+                            'unit_cost' => $item['unit_cost'] ?? null,
+                            'sort_order' => $index,
+                        ]);
+                    }
+                    if (!empty($validated['bom_items'])) {
+                        $validated['is_composite'] = true;
+                    }
+                    unset($validated['bom_items']);
+                }
+
+                $article->update($validated);
+
+                return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos', 'bomItems.component']));
+            });
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {

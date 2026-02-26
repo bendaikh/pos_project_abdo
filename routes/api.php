@@ -9,11 +9,13 @@ use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\OptionController;
 use App\Http\Controllers\Api\OptionVariantController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ProductionEntryController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\SubcategoryController;
+use App\Http\Controllers\Api\MaterialConsumptionController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -79,6 +81,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stock/movements', [StockController::class, 'movements']);
     Route::post('/stock/movement', [StockController::class, 'recordMovement']);
     Route::get('/stock/alerts', [StockController::class, 'alerts']);
+
+    // Production
+    Route::get('/production', [ProductionEntryController::class, 'index']);
+    Route::post('/production', [ProductionEntryController::class, 'store']);
+    Route::get('/production/{productionEntry}', [ProductionEntryController::class, 'show']);
+    Route::put('/production/{productionEntry}', [ProductionEntryController::class, 'update']);
+    Route::delete('/production/{productionEntry}', [ProductionEntryController::class, 'destroy']);
+    Route::post('/production/{productionEntry}/validate', [ProductionEntryController::class, 'validateEntry']);
+
+    // Material Consumption
+    Route::get('/consumptions', [MaterialConsumptionController::class, 'index']);
+    Route::post('/consumptions', [MaterialConsumptionController::class, 'store']);
 
     // Settings
     Route::get('/settings', [SettingController::class, 'index']);

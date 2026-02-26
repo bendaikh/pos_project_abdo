@@ -16,6 +16,10 @@ import OptionsList from '../views/options/OptionsList.vue'
 import OptionForm from '../views/options/OptionForm.vue'
 import OptionVariants from '../views/optionsVariants/OptionVariants.vue'
 import StockView from '../views/stock/StockView.vue'
+import ProductionEntryView from '../views/production/ProductionEntryView.vue'
+import MaterialConsumptionView from '../views/production/MaterialConsumptionView.vue'
+import ConsumptionHistoryView from '../views/production/ConsumptionHistoryView.vue'
+import ProductionCostView from '../views/production/ProductionCostView.vue'
 import CustomersList from '../views/customers/CustomersList.vue'
 import CustomerDetail from '../views/customers/CustomerDetail.vue'
 import EmployeesList from '../views/employees/EmployeesList.vue'
@@ -118,6 +122,26 @@ const routes = [
                 path: 'stock',
                 name: 'stock',
                 component: StockView
+            },
+            {
+                path: 'production',
+                name: 'production',
+                component: ProductionEntryView
+            },
+            {
+                path: 'production/consumption',
+                name: 'production.consumption',
+                component: MaterialConsumptionView
+            },
+            {
+                path: 'production/history',
+                name: 'production.history',
+                component: ConsumptionHistoryView
+            },
+            {
+                path: 'production/costs',
+                name: 'production.costs',
+                component: ProductionCostView
             },
             {
                 path: 'customers',

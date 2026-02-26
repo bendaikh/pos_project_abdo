@@ -150,6 +150,22 @@ export const stockApi = {
     alerts: () => api.get('/stock/alerts'),
 }
 
+// Production API
+export const productionApi = {
+    list: (params = {}) => api.get('/production', { params }),
+    get: (id) => api.get(`/production/${id}`),
+    create: (data) => api.post('/production', data),
+    update: (id, data) => api.put(`/production/${id}`, data),
+    validate: (id) => api.post(`/production/${id}/validate`),
+    delete: (id) => api.delete(`/production/${id}`),
+}
+
+// Material Consumption API
+export const consumptionsApi = {
+    list: (params = {}) => api.get('/consumptions', { params }),
+    create: (data) => api.post('/consumptions', data),
+}
+
 // Settings API
 export const settingsApi = {
     all: () => api.get('/settings'),

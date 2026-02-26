@@ -368,6 +368,134 @@
                 </div>
             </div>
 
+            <!-- BOM Section -->
+            <div v-if="form.is_composite" class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-2 border-b border-gray-200">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">🧩 Fiche technique (BOM)</h2>
+                        <p class="text-sm text-gray-500">Ajoutez les matières premières nécessaires pour produire cet article.</p>
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        Coût total de production :
+                        <span class="font-semibold text-primary-600">{{ formatCurrency(bomTotalCost) }}</span>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Recherche matière première</label>
+                        <input
+                            v-model="bomSearch"
+                            type="text"
+                            placeholder="Rechercher par nom ou code..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                        <div v-if="bomSearch && bomSearch.length >= 2" class="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+                            <div v-if="bomSearching" class="px-4 py-2 text-sm text-gray-500">Recherche...</div>
+                            <button
+                                v-for="result in bomResults"
+                                :key="result.id"
+                                type="button"
+                                @click="addBomItem(result)"
+                                class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-3"
+                            >
+                                <img
+                                    v-if="result.photo"
+                                    :src="result.photo"
+                                    :alt="result.name"
+                                    class="w-8 h-8 rounded-lg object-cover"
+                                >
+                                <div class="flex-1">
+                                    <p class="font-medium text-gray-800">{{ result.name }}</p>
+                                    <p class="text-xs text-gray-500">Unité: {{ result.unit || 'piece' }}</p>
+                                </div>
+                                <span class="text-xs text-gray-400">Stock: {{ result.stock_quantity }}</span>
+                            </button>
+                            <div v-if="!bomSearching && bomResults.length === 0" class="px-4 py-2 text-sm text-gray-500">
+                                Aucun résultat.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Matière première</th>
+                                    <th class="px-3 py-2 text-left">Quantité</th>
+                                    <th class="px-3 py-2 text-left">Unité</th>
+                                    <th class="px-3 py-2 text-left">Prix unitaire</th>
+                                    <th class="px-3 py-2 text-left">Total</th>
+                                    <th class="px-3 py-2 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="(item, index) in bomItems" :key="item.component_id">
+                                    <td class="px-3 py-2">
+                                        <div class="flex items-center gap-3">
+                                            <img
+                                                v-if="item.component_photo"
+                                                :src="item.component_photo"
+                                                :alt="item.component_name"
+                                                class="w-10 h-10 rounded-lg object-cover"
+                                            >
+                                            <div>
+                                                <p class="font-medium text-gray-900">{{ item.component_name }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input
+                                            v-model.number="item.quantity"
+                                            type="number"
+                                            min="1"
+                                            step="1"
+                                            class="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        >
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <select
+                                            v-model="item.unit"
+                                            class="w-32 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        >
+                                            <option v-for="unit in unitOptions" :key="unit.value" :value="unit.value">
+                                                {{ unit.label }}
+                                            </option>
+                                        </select>
+                                    </td>
+                                    <td class="px-3 py-2">
+                                        <input
+                                            v-model.number="item.unit_cost"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            class="w-28 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        >
+                                    </td>
+                                    <td class="px-3 py-2 font-semibold text-gray-900">
+                                        {{ formatCurrency(getBomLineTotal(item)) }}
+                                    </td>
+                                    <td class="px-3 py-2 text-right">
+                                        <button
+                                            type="button"
+                                            @click="removeBomItem(index)"
+                                            class="text-red-500 hover:text-red-700 text-xs"
+                                        >
+                                            Supprimer
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="bomItems.length === 0">
+                                    <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500">
+                                        Aucune matière première ajoutée.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Status & Visibility Section -->
             <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">✅ Statut & Visibilité</h2>
@@ -847,6 +975,11 @@ const saving = ref(false)
 const showOptionModal = ref(false)
 const creatingOption = ref(false)
 const advancedOpen = ref(false)
+const bomItems = ref([])
+const bomSearch = ref('')
+const bomResults = ref([])
+const bomSearching = ref(false)
+let bomSearchTimer = null
 const standardColors = ['#FF0000', '#00A854', '#0050B3', '#FAAD14', '#F5222D', '#722ED1']
 
 const newOption = reactive({
@@ -899,6 +1032,19 @@ const marginPercentage = computed(() => {
     return margin.toFixed(2)
 })
 
+const unitOptions = [
+    { value: 'piece', label: 'Pièce' },
+    { value: 'kg', label: 'Kilogramme (kg)' },
+    { value: 'g', label: 'Gramme (g)' },
+    { value: 'l', label: 'Litre (L)' },
+    { value: 'ml', label: 'Millilitre (ml)' },
+    { value: 'm', label: 'Mètre (M)' },
+]
+
+const bomTotalCost = computed(() => {
+    return bomItems.value.reduce((sum, item) => sum + getBomLineTotal(item), 0)
+})
+
 function isHexColor(color) {
     return /^#[0-9A-F]{6}$/i.test(color)
 }
@@ -938,6 +1084,57 @@ function optionExtraPriceLabel(option) {
         return `+${formatCurrency(minPrice)}`
     }
     return `+${formatCurrency(minPrice)} → ${formatCurrency(maxPrice)}`
+}
+
+function getBomLineTotal(item) {
+    const qty = Number(item.quantity) || 0
+    const unitCost = Number(item.unit_cost) || 0
+    return qty * unitCost
+}
+
+async function searchBomMaterials(query) {
+    if (!query || query.length < 2) {
+        bomResults.value = []
+        return
+    }
+    bomSearching.value = true
+    try {
+        const response = await articlesApi.list({ search: query })
+        const results = Array.isArray(response.data) ? response.data : (response.data.data || [])
+        const currentId = isEdit.value ? Number(route.params.id) : null
+        bomResults.value = results.filter((item) => item.id !== currentId)
+    } catch (error) {
+        console.error('Failed to search BOM materials:', error)
+        bomResults.value = []
+    } finally {
+        bomSearching.value = false
+    }
+}
+
+function addBomItem(article) {
+    const existing = bomItems.value.find((item) => item.component_id === article.id)
+    if (existing) {
+        existing.quantity = Number(existing.quantity) + 1
+        bomSearch.value = ''
+        bomResults.value = []
+        return
+    }
+
+    bomItems.value.push({
+        component_id: article.id,
+        component_name: article.name,
+        component_photo: article.photo,
+        quantity: 1,
+        unit: article.unit || 'piece',
+        unit_cost: Number(article.buy_price) || 0,
+    })
+
+    bomSearch.value = ''
+    bomResults.value = []
+}
+
+function removeBomItem(index) {
+    bomItems.value.splice(index, 1)
 }
 
 function resetVariantMatrix() {
@@ -1153,6 +1350,7 @@ async function fetchArticle() {
         if (form.photos.length === 0) {
             form.photos = [{ photo_url: '', is_primary: true, sort_order: 0 }]
         }
+        bomItems.value = []
         return
     }
 
@@ -1186,6 +1384,19 @@ async function fetchArticle() {
             form.photos = [{ photo_url: article.photo, is_primary: true, sort_order: 0 }]
         } else {
             form.photos = [{ photo_url: '', is_primary: true, sort_order: 0 }]
+        }
+
+        if (Array.isArray(article.bom_items)) {
+            bomItems.value = article.bom_items.map((item) => ({
+                component_id: item.component_id,
+                component_name: item.component?.name || '',
+                component_photo: item.component?.photo || null,
+                quantity: Number(item.quantity) || 1,
+                unit: item.unit || item.component?.unit || 'piece',
+                unit_cost: Number(item.unit_cost ?? item.component?.buy_price ?? 0),
+            }))
+        } else {
+            bomItems.value = []
         }
     } catch (error) {
         console.error('Failed to fetch article:', error)
@@ -1224,6 +1435,22 @@ async function handleSubmit() {
             data.variants = buildVariantPayload()
         } else {
             data.variants = []
+        }
+
+        if (form.is_composite) {
+            data.bom_items = bomItems.value.map((item) => ({
+                component_id: item.component_id,
+                quantity: Number(item.quantity) || 1,
+                unit: item.unit,
+                unit_cost: Number(item.unit_cost) || 0,
+            }))
+            if (data.bom_items.length === 0) {
+                alert('Veuillez ajouter au moins une matière première pour un article composite.')
+                saving.value = false
+                return
+            }
+        } else {
+            data.bom_items = []
         }
 
         if (data.photos && data.photos.length > 0) {
@@ -1339,6 +1566,53 @@ watch(
         ensureCurrentVariantRows()
     },
     { deep: true }
+)
+
+watch(bomSearch, (value) => {
+    if (bomSearchTimer) {
+        clearTimeout(bomSearchTimer)
+    }
+    if (!value) {
+        bomResults.value = []
+        return
+    }
+    bomSearchTimer = setTimeout(() => {
+        searchBomMaterials(value)
+    }, 300)
+})
+
+watch(
+    () => route.params.id,
+    async () => {
+        // Reset form when route changes
+        form.sku = ''
+        form.name = ''
+        form.description = ''
+        form.category_id = null
+        form.subcategory_id = null
+        form.sell_price = 0
+        form.buy_price = 0
+        form.unit = ''
+        form.manage_stock = false
+        form.stock_quantity = 0
+        form.stock_alert_threshold = 0
+        form.photo = ''
+        form.is_favorite = false
+        form.is_active = true
+        form.has_options = false
+        form.has_variants = false
+        form.is_on_sale = false
+        form.color = ''
+        form.price_type = 'fixed'
+        form.photos = [{ photo_url: '', is_primary: true, sort_order: 0 }]
+        selectedOptions.value = []
+        activeVariantTemplateIds.value = []
+        resetVariantMatrix()
+        bomItems.value = []
+        
+        // Reload the article data
+        await fetchArticle()
+    }
 )
 
 onMounted(async () => {

@@ -168,6 +168,62 @@
                 </div>
             </div>
 
+            <!-- PRODUCTION Section (Collapsible) -->
+            <div class="mt-2">
+                <button 
+                    @click="toggleSection('production')"
+                    class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                    <div class="flex items-center min-w-0">
+                        <WrenchScrewdriverIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">PRODUCTION</span>
+                    </div>
+                    <ChevronDownIcon 
+                        v-if="!collapsed"
+                        class="w-4 h-4 flex-shrink-0 transition-transform duration-200"
+                        :class="{ 'rotate-180': expandedSections.production }"
+                    />
+                </button>
+                
+                <div 
+                    v-show="expandedSections.production && !collapsed"
+                    class="mt-1 space-y-1 overflow-hidden"
+                >
+                    <router-link 
+                        to="/production"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/production', { exact: true }) ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'"
+                    >
+                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Entrée production</span>
+                    </router-link>
+                    <router-link 
+                        to="/production/consumption"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/production/consumption') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'"
+                    >
+                        <AdjustmentsHorizontalIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Consommation MP</span>
+                    </router-link>
+                    <router-link 
+                        to="/production/history"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/production/history') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'"
+                    >
+                        <ChartBarIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Historique</span>
+                    </router-link>
+                    <router-link 
+                        to="/production/costs"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/production/costs') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'"
+                    >
+                        <PresentationChartLineIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Coût de production</span>
+                    </router-link>
+                </div>
+            </div>
+
             <!-- GESTION FINANCIÈRE Section (Collapsible) -->
             <div class="mt-2">
                 <!-- Section Header - Clickable to expand/collapse -->
@@ -387,7 +443,8 @@ import {
     BuildingStorefrontIcon,
     KeyIcon,
     AdjustmentsHorizontalIcon,
-    FolderIcon
+    FolderIcon,
+    WrenchScrewdriverIcon
 } from '@heroicons/vue/24/outline'
 
 defineProps({
@@ -404,6 +461,7 @@ const authStore = useAuthStore()
 const expandedSections = reactive({
     vente: false,
     achat: false,
+    production: false,
     finance: false,
     articles: false,
     clients: false,
@@ -415,7 +473,10 @@ function toggleSection(section) {
     expandedSections[section] = !expandedSections[section]
 }
 
-function isActive(path) {
+function isActive(path, { exact = false } = {}) {
+    if (exact) {
+        return route.path === path
+    }
     return route.path === path || route.path.startsWith(path + '/')
 }
 
