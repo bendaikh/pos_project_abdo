@@ -1,7 +1,7 @@
 <template>
-    <div class="h-screen flex flex-col bg-[#f4f3ef]">
-        <header class="flex items-center gap-4 px-4 py-3 bg-gray-900 text-white">
-            <div class="flex items-center gap-3">
+    <div ref="posRoot" class="h-screen flex flex-col bg-[#f4f3ef] overflow-hidden">
+        <header class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-3 bg-gray-900 text-white">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
                 <button
                     @click="toggleAppSidebar"
                     class="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
@@ -16,7 +16,7 @@
                     <p class="text-xs text-gray-400">{{ totalArticles }} articles</p>
                 </div>
             </div>
-            <div class="flex-1">
+            <div class="flex-1 w-full">
                 <div class="relative">
                     <input
                         ref="searchField"
@@ -29,13 +29,36 @@
                     <MagnifyingGlassIcon class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
                 </div>
             </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                <button
+                    @click="toggleMobileCart"
+                    class="sm:hidden flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    type="button"
+                >
+                    <ShoppingCartIcon class="w-5 h-5" />
+                    <span class="text-xs font-semibold">{{ cartStore.items.length }}</span>
+                </button>
+                <button
+                    @click="toggleFullscreen"
+                    class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    type="button"
+                    :title="isFullscreen ? 'Quitter le plein écran' : 'Plein écran'"
+                >
+                    <span class="text-lg leading-none">⛶</span>
+                </button>
+            </div>
         </header>
 
         <div class="flex flex-1 overflow-hidden">
+            <div
+                v-if="isMobile && uiStore.posSidebarOpen"
+                class="fixed inset-0 bg-black/40 z-40"
+                @click="uiStore.closePosSidebar()"
+            ></div>
             <transition name="fade">
                 <aside
-                    v-if="categoriesDisplayMode === 'sidebar'"
-                    class="w-64 border-r border-gray-200 bg-white flex flex-col"
+                    v-if="effectiveCategoriesDisplayMode === 'sidebar' && (!isMobile || uiStore.posSidebarOpen)"
+                    :class="isMobile ? 'fixed inset-y-0 left-0 z-50 w-72 border-r border-gray-200 bg-white flex flex-col shadow-2xl' : 'w-64 border-r border-gray-200 bg-white flex flex-col'"
                 >
                     <div class="px-4 py-3 border-b border-gray-100">
                         <p class="text-xs uppercase tracking-wide text-gray-500">Catégories</p>
@@ -58,15 +81,30 @@
             </transition>
 
             <div class="flex-1 flex flex-col overflow-hidden">
-                <div class="flex-1 overflow-hidden p-4 bg-[#f8f8f8]">
-                    <div class="grid grid-cols-5 grid-rows-4 gap-4 h-full" style="grid-auto-rows: minmax(0, 1fr);">
+                <div v-if="effectiveCategoriesDisplayMode === 'top' && !appSidebarOpen" class="border-b border-gray-200 bg-white px-3 py-2">
+                        <div class="flex gap-3 overflow-x-auto">
+                        <button
+                            v-for="button in categoryButtons"
+                            :key="button.id + '-top'"
+                            @click="selectCategory(button.id)"
+                            type="button"
+                                class="flex items-center gap-2 rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition-colors whitespace-nowrap"
+                            :class="selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'"
+                        >
+                                <span class="text-lg">{{ button.icon }}</span>
+                            <span>{{ button.label }}</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-hidden p-4 bg-[#f8f8f8]" :class="contentPaddingClass">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                         <div
                             v-for="article in paginatedArticles"
                             :key="article.id"
                             class="cursor-pointer rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition-shadow h-full flex flex-col"
                             @click="addToCart(article)"
                         >
-                            <div class="flex-1 rounded-t-2xl bg-gray-100 flex items-center justify-center overflow-hidden">
+                            <div class="aspect-[4/3] rounded-t-2xl bg-gray-100 flex items-center justify-center overflow-hidden">
                                 <img
                                     v-if="article.photo"
                                     :src="article.photo"
@@ -106,201 +144,307 @@
                     </div>
                 </div>
 
-                <div v-if="categoriesDisplayMode === 'bottom'" class="border-t border-gray-200 bg-white px-4 py-3">
-                    <div class="flex gap-3 overflow-x-auto">
+                <div v-if="effectiveCategoriesDisplayMode === 'bottom'" class="border-t border-gray-200 bg-white px-3 py-2">
+                        <div class="flex gap-3 overflow-x-auto">
                         <button
                             v-for="button in categoryButtons"
                             :key="button.id + '-bottom'"
                             @click="selectCategory(button.id)"
                             type="button"
-                            class="flex items-center gap-3 rounded-full border px-4 py-3 text-sm font-semibold uppercase tracking-wide transition-colors"
+                                class="flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors"
                             :class="selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'"
                         >
-                            <span class="text-2xl">{{ button.icon }}</span>
+                                <span class="text-lg">{{ button.icon }}</span>
                             <span>{{ button.label }}</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <section class="w-[380px] flex-shrink-0 bg-[#f2f2f4] border-l border-gray-200 flex flex-col">
-                <div class="p-4 flex-1 overflow-hidden">
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 h-full flex flex-col">
-                        <div class="p-4 border-b border-gray-200 space-y-3">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                                    <span>Client</span>
-                                    <span class="text-gray-400">:</span>
-                                </div>
-                                <button
-                                    @click="showCustomerSelector = !showCustomerSelector"
-                                    class="p-1.5 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                    type="button"
-                                    title="Ajouter client"
-                                >
-                                    <UserPlusIcon class="w-5 h-5" />
-                                </button>
+            <section
+                class="bg-[#f2f2f4] flex flex-col transition-all duration-300"
+                :class="ticketPanelClass"
+            >
+                <!-- Mobile ticket handle strip — 3 states: collapsed / half / fullscreen -->
+                <div
+                    class="sm:hidden flex flex-col items-center cursor-pointer select-none transition-all duration-300 shrink-0"
+                    :class="isCartExpanded ? 'bg-white border-b border-gray-100' : 'bg-gradient-to-r from-blue-600 to-blue-500 rounded-t-2xl shadow-lg'"
+                    @click="toggleMobileCart"
+                >
+                    <!-- Drag handle pill -->
+                    <span
+                        class="mt-2.5 block w-12 h-1.5 rounded-full transition-colors duration-300"
+                        :class="isCartExpanded ? 'bg-gray-300' : 'bg-white/50'"
+                    ></span>
+
+                    <!-- Info row -->
+                    <div class="w-full flex items-center justify-between px-4 py-2">
+                        <!-- Left: icon + label + badge -->
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="flex items-center justify-center w-8 h-8 rounded-full transition-colors duration-300"
+                                :class="isCartExpanded ? 'bg-blue-50' : 'bg-white/20'"
+                            >
+                                <ShoppingCartIcon
+                                    class="w-4 h-4 transition-colors duration-300"
+                                    :class="isCartExpanded ? 'text-blue-600' : 'text-white'"
+                                />
                             </div>
-                            <p class="text-xs text-gray-500">
-                                {{ cartStore.customerId ? cartStore.customerName : 'Aucun client sélectionné' }}
-                            </p>
-                            <div v-if="showCustomerSelector" class="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                <input
-                                    v-model="customerSearch"
-                                    type="text"
-                                    placeholder="Chercher un client..."
-                                    class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                <div class="max-h-32 overflow-y-auto space-y-1">
-                                    <button
-                                        v-for="customer in filteredCustomers"
-                                        :key="customer.id"
-                                        @click="selectCustomer(customer)"
-                                        class="w-full text-left rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-white transition-colors"
-                                        type="button"
-                                    >
-                                        {{ customer.name }}
-                                    </button>
-                                    <p v-if="filteredCustomers.length === 0" class="text-xs text-gray-500 px-3 py-2">
-                                        Aucun client trouvé.
-                                    </p>
-                                </div>
-                            </div>
+                            <span
+                                class="text-sm font-bold transition-colors duration-300"
+                                :class="isCartExpanded ? 'text-gray-800' : 'text-white'"
+                            >Ticket</span>
+                            <span
+                                v-if="cartStore.items.length > 0"
+                                class="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[11px] font-bold transition-colors duration-300"
+                                :class="isCartExpanded ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'"
+                            >{{ cartStore.items.length }}</span>
                         </div>
 
-                        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                            <div class="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-                                <button
-                                    v-for="mode in serviceModes"
-                                    :key="mode.value"
-                                    @click="serviceMode = mode.value"
-                                    type="button"
-                                    class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors shrink-0"
-                                    :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'"
-                                >
-                                    <span class="text-base">{{ mode.icon }}</span>
-                                    <span>{{ mode.label }}</span>
-                                </button>
+                        <!-- Right: total + state indicator -->
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="text-sm font-bold transition-colors duration-300"
+                                :class="isCartExpanded ? 'text-green-600' : 'text-white'"
+                            >{{ formatCurrency(cartStore.total) }}</span>
+
+                            <!-- Chevron: up when collapsed, double-up when half, X when fullscreen -->
+                            <div
+                                class="flex items-center justify-center w-7 h-7 rounded-full transition-all duration-300"
+                                :class="isCartExpanded ? 'bg-gray-100' : 'bg-white/20'"
+                            >
+                                <!-- Collapsed: single chevron up -->
+                                <svg v-if="!isCartExpanded"
+                                    class="w-4 h-4 text-white"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
+                                </svg>
+                                <!-- Half: double chevron up (swipe for more) -->
+                                <svg v-else-if="!isCartFullscreen"
+                                    class="w-4 h-4 text-gray-500"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 17l7-7 7 7M5 11l7-7 7 7" />
+                                </svg>
+                                <!-- Fullscreen: X to close -->
+                                <svg v-else
+                                    class="w-4 h-4 text-gray-500"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                                </svg>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="px-4 py-2 border-b border-gray-200 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">
-                            <span>Articles</span>
-                            <span>{{ cartStore.items.length }} articles</span>
-                        </div>
+                    <!-- Collapsed hint — pulsing dots + label -->
+                    <div v-if="!isCartExpanded" class="w-full px-4 pb-2.5 flex items-center justify-center gap-1.5">
+                        <span class="relative flex h-2 w-2 shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-white/80"></span>
+                        </span>
+                        <p class="text-[11px] text-white/90 font-semibold tracking-wide">
+                            Appuyez ici pour voir le détail du ticket
+                        </p>
+                        <span class="relative flex h-2 w-2 shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-white/80"></span>
+                        </span>
+                    </div>
 
-                        <div class="flex-1 overflow-auto">
-                            <div v-if="cartStore.items.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400">
-                                <ShoppingCartIcon class="w-12 h-12 mb-2" />
-                                <p class="text-sm">Ticket vide</p>
-                            </div>
-                            <div v-else class="divide-y divide-dashed divide-gray-200">
-                                <div
-                                    v-for="(item, index) in cartStore.items"
-                                    :key="index"
-                                    class="px-4 py-2"
-                                >
-                                    <div class="cursor-pointer" @click="openItemEditModal(index, item)">
-                                        <p class="text-sm font-semibold text-gray-900 leading-tight break-words">
-                                            {{ item.article_name }}
-                                        </p>
+                    <!-- Half hint — subtle nudge to go fullscreen -->
+                    <div v-if="isCartExpanded && !isCartFullscreen" class="w-full pb-1 flex items-center justify-center">
+                        <p class="text-[10px] text-gray-400 tracking-wide">Appuyez encore pour plein écran</p>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col overflow-hidden h-full">
+                    <!-- Desktop: styled card wrapper -->
+                    <div class="hidden sm:flex flex-col p-4 h-full">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col flex-1 overflow-hidden">
+                            <!-- Client -->
+                            <div class="p-4 border-b border-gray-200 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                                        <span>Client</span>
+                                        <span class="text-gray-400">:</span>
                                     </div>
-                                    <div class="mt-1 flex items-center justify-between gap-2">
+                                    <button @click="showCustomerSelector = !showCustomerSelector" class="p-1.5 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50" type="button" title="Ajouter client">
+                                        <UserPlusIcon class="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-500">{{ cartStore.customerId ? cartStore.customerName : 'Aucun client sélectionné' }}</p>
+                                <div v-if="showCustomerSelector" class="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                    <input v-model="customerSearch" type="text" placeholder="Chercher un client..." class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <div class="max-h-32 overflow-y-auto space-y-1">
+                                        <button v-for="customer in filteredCustomers" :key="customer.id" @click="selectCustomer(customer)" class="w-full text-left rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-white transition-colors" type="button">{{ customer.name }}</button>
+                                        <p v-if="filteredCustomers.length === 0" class="text-xs text-gray-500 px-3 py-2">Aucun client trouvé.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Service mode -->
+                            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                                <div class="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+                                    <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button" class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors shrink-0" :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'">
+                                        <span class="text-base">{{ mode.icon }}</span>
+                                        <span>{{ mode.label }}</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Articles header -->
+                            <div class="px-4 py-2 border-b border-gray-200 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">
+                                <span>Articles</span>
+                                <span>{{ cartStore.items.length }} articles</span>
+                            </div>
+                            <!-- Articles list -->
+                            <div class="flex-1 overflow-y-auto">
+                                <div v-if="cartStore.items.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400">
+                                    <ShoppingCartIcon class="w-12 h-12 mb-2" />
+                                    <p class="text-sm">Ticket vide</p>
+                                </div>
+                                <div v-else class="divide-y divide-dashed divide-gray-200">
+                                    <div v-for="(item, index) in cartStore.items" :key="index" class="px-4 py-2">
+                                        <div class="cursor-pointer" @click="openItemEditModal(index, item)">
+                                            <p class="text-sm font-semibold text-gray-900 leading-tight break-words">{{ item.article_name }}</p>
+                                        </div>
+                                        <div class="mt-1 flex items-center justify-between gap-2">
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex items-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1">
+                                                    <button @click.stop="updateQuantity(index, item.quantity - 1)" class="p-1 rounded-md text-gray-600 hover:text-gray-800" type="button"><MinusIcon class="w-4 h-4" /></button>
+                                                    <span class="text-xs font-semibold text-gray-700">x{{ item.quantity }}</span>
+                                                    <button @click.stop="updateQuantity(index, item.quantity + 1)" class="p-1 rounded-md text-gray-600 hover:text-gray-800" type="button"><PlusIcon class="w-4 h-4" /></button>
+                                                </div>
+                                                <span class="text-xs text-gray-500">{{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <span class="text-sm font-semibold text-gray-900">{{ formatCurrency(getItemLineTotal(item)) }}</span>
+                                                <button @click.stop="removeItem(index)" class="text-red-500 hover:text-red-700" title="Supprimer" type="button"><TrashIcon class="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
+                                        <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                            <span v-if="getVariantDisplay(item)" class="text-[11px] font-semibold text-gray-700 bg-orange-50 border border-orange-200 rounded-full px-2 py-0.5">{{ getVariantDisplay(item).label }} <span class="ml-1 text-orange-600">+{{ formatCurrency(getVariantDisplay(item).price) }}</span></span>
+                                            <span v-for="option in getOptionDisplays(item)" :key="option.key" class="text-[11px] font-semibold text-gray-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">{{ option.label }} <span class="ml-1 text-blue-600">+{{ formatCurrency(option.price) }}</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Totals -->
+                            <div class="px-4 py-3 border-t border-gray-200 space-y-2 text-sm">
+                                <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">Total HT :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.subtotal) }}</span></div>
+                                <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">TVA :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.taxAmount) }}</span></div>
+                                <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">Remise :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.discountTotal) }}</span></div>
+                                <div class="flex items-baseline justify-between pt-2"><span class="text-lg font-bold text-gray-900">TOTAL TTC :</span><span class="text-2xl font-bold text-green-600">{{ formatCurrency(cartStore.total) }}</span></div>
+                            </div>
+                            <!-- Buttons -->
+                            <div class="px-4 py-3 border-t border-gray-200 space-y-2">
+                                <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">PASSER AU PAIEMENT</button>
+                                <button @click="saveSale" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">SAUVEGARDER</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile: flat layout (no extra card) -->
+                    <div v-show="isCartExpanded" class="sm:hidden flex flex-col flex-1 overflow-hidden bg-white">
+                        <!-- Client row (compact) -->
+                        <div class="px-3 py-2 border-b border-gray-100 flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <UserPlusIcon class="w-4 h-4 text-blue-500 shrink-0" />
+                                <p class="text-xs text-gray-500 truncate">{{ cartStore.customerId ? cartStore.customerName : 'Aucun client' }}</p>
+                            </div>
+                            <button @click="showCustomerSelector = !showCustomerSelector" class="text-[11px] font-semibold text-blue-600 shrink-0 px-2 py-1 rounded-md bg-blue-50" type="button">
+                                {{ showCustomerSelector ? 'Fermer' : 'Choisir' }}
+                            </button>
+                        </div>
+                        <div v-if="showCustomerSelector" class="px-3 py-2 border-b border-gray-100 bg-gray-50 space-y-1.5">
+                            <input v-model="customerSearch" type="text" placeholder="Chercher un client..." class="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <div class="max-h-24 overflow-y-auto space-y-0.5">
+                                <button v-for="customer in filteredCustomers" :key="customer.id" @click="selectCustomer(customer)" class="w-full text-left rounded px-3 py-1.5 text-xs text-gray-700 hover:bg-white" type="button">{{ customer.name }}</button>
+                                <p v-if="filteredCustomers.length === 0" class="text-xs text-gray-400 px-3 py-1">Aucun client trouvé.</p>
+                            </div>
+                        </div>
+
+                        <!-- Service mode (compact scrollable chips) -->
+                        <div class="px-3 py-1.5 border-b border-gray-100 bg-gray-50">
+                            <div class="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap no-scrollbar">
+                                <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button"
+                                    class="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors shrink-0"
+                                    :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600'">
+                                    <span>{{ mode.icon }}</span><span>{{ mode.label }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Articles header -->
+                        <div class="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between text-[10px] uppercase tracking-widest text-gray-400 font-semibold bg-gray-50">
+                            <span>Articles</span>
+                            <span class="text-blue-500">{{ cartStore.items.length }} article{{ cartStore.items.length !== 1 ? 's' : '' }}</span>
+                        </div>
+
+                        <!-- Articles list — takes all remaining space -->
+                        <div class="flex-1 overflow-y-auto overscroll-contain">
+                            <div v-if="cartStore.items.length === 0" class="flex flex-col items-center justify-center h-full text-gray-300 py-8">
+                                <ShoppingCartIcon class="w-10 h-10 mb-2" />
+                                <p class="text-xs font-medium">Ticket vide</p>
+                            </div>
+                            <div v-else class="divide-y divide-gray-100">
+                                <div v-for="(item, index) in cartStore.items" :key="index" class="px-3 py-2.5 active:bg-gray-50">
+                                    <!-- Article name (tappable to edit) -->
+                                    <div class="flex items-start justify-between gap-2 cursor-pointer" @click="openItemEditModal(index, item)">
+                                        <p class="text-sm font-semibold text-gray-900 leading-tight flex-1">{{ item.article_name }}</p>
+                                        <span class="text-sm font-bold text-gray-900 shrink-0">{{ formatCurrency(getItemLineTotal(item)) }}</span>
+                                    </div>
+                                    <!-- Qty controls + unit price + trash -->
+                                    <div class="mt-1.5 flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
-                                            <div class="flex items-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1">
-                                                <button
-                                                    @click.stop="updateQuantity(index, item.quantity - 1)"
-                                                    class="text-gray-600 hover:text-gray-800"
-                                                    type="button"
-                                                >
-                                                    <MinusIcon class="w-4 h-4" />
+                                            <!-- Qty stepper -->
+                                            <div class="flex items-center rounded-lg bg-gray-100 overflow-hidden">
+                                                <button @click.stop="updateQuantity(index, item.quantity - 1)" class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300" type="button">
+                                                    <MinusIcon class="w-3.5 h-3.5" />
                                                 </button>
-                                                <span class="text-xs font-semibold text-gray-700">x{{ item.quantity }}</span>
-                                                <button
-                                                    @click.stop="updateQuantity(index, item.quantity + 1)"
-                                                    class="text-gray-600 hover:text-gray-800"
-                                                    type="button"
-                                                >
-                                                    <PlusIcon class="w-4 h-4" />
+                                                <span class="px-2 text-xs font-bold text-gray-800 min-w-[24px] text-center">{{ item.quantity }}</span>
+                                                <button @click.stop="updateQuantity(index, item.quantity + 1)" class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300" type="button">
+                                                    <PlusIcon class="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
-                                            <span class="text-xs text-gray-500">
-                                                {{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs
-                                            </span>
+                                            <span class="text-[11px] text-gray-400">{{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/u</span>
                                         </div>
-                                        <div class="flex items-center gap-2 shrink-0">
-                                            <span class="text-sm font-semibold text-gray-900">{{ formatCurrency(getItemLineTotal(item)) }}</span>
-                                            <button
-                                                @click.stop="removeItem(index)"
-                                                class="text-red-500 hover:text-red-700"
-                                                title="Supprimer"
-                                                type="button"
-                                            >
-                                                <TrashIcon class="w-4 h-4" />
-                                            </button>
-                                        </div>
+                                        <button @click.stop="removeItem(index)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200" type="button">
+                                            <TrashIcon class="w-4 h-4" />
+                                        </button>
                                     </div>
-                                    <div class="mt-1 flex flex-wrap items-center gap-1.5">
-                                        <span
-                                            v-if="getVariantDisplay(item)"
-                                            class="text-[11px] font-semibold text-gray-700 bg-orange-50 border border-orange-200 rounded-full px-2 py-0.5"
-                                        >
-                                            {{ getVariantDisplay(item).label }}
-                                            <span class="ml-1 text-orange-600">
-                                                +{{ formatCurrency(getVariantDisplay(item).price) }}
-                                            </span>
+                                    <!-- Variant / options tags -->
+                                    <div v-if="getVariantDisplay(item) || getOptionDisplays(item).length > 0" class="mt-1.5 flex flex-wrap gap-1">
+                                        <span v-if="getVariantDisplay(item)" class="text-[10px] font-semibold text-orange-700 bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5">
+                                            {{ getVariantDisplay(item).label }} <span class="text-orange-500">+{{ formatCurrency(getVariantDisplay(item).price) }}</span>
                                         </span>
-                                        <span
-                                            v-for="option in getOptionDisplays(item)"
-                                            :key="option.key"
-                                            class="text-[11px] font-semibold text-gray-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5"
-                                        >
-                                            {{ option.label }}
-                                            <span class="ml-1 text-blue-600">
-                                                +{{ formatCurrency(option.price) }}
-                                            </span>
+                                        <span v-for="option in getOptionDisplays(item)" :key="option.key" class="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">
+                                            {{ option.label }} <span class="text-blue-500">+{{ formatCurrency(option.price) }}</span>
                                         </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="px-4 py-3 border-t border-gray-200 space-y-2 text-sm">
-                            <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2">
-                                <span class="font-medium">Total HT :</span>
-                                <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.subtotal) }}</span>
+                        <!-- Bottom bar: totals summary + action buttons (compact) -->
+                        <div class="shrink-0 border-t border-gray-200 bg-white">
+                            <!-- Mini totals strip -->
+                            <div class="px-3 py-1.5 flex items-center justify-between gap-4 text-[11px] text-gray-500 border-b border-dashed border-gray-100">
+                                <span>HT <span class="font-semibold text-gray-700">{{ formatCurrency(cartStore.subtotal) }}</span></span>
+                                <span>TVA <span class="font-semibold text-gray-700">{{ formatCurrency(cartStore.taxAmount) }}</span></span>
+                                <span>Rem. <span class="font-semibold text-gray-700">{{ formatCurrency(cartStore.discountTotal) }}</span></span>
+                                <span class="text-sm font-bold text-green-600 ml-auto">{{ formatCurrency(cartStore.total) }}</span>
                             </div>
-                            <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2">
-                                <span class="font-medium">TVA :</span>
-                                <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.taxAmount) }}</span>
+                            <!-- Action buttons side by side -->
+                            <div class="px-3 py-2 flex gap-2">
+                                <button @click="saveSale" :disabled="cartStore.items.length === 0"
+                                    class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                                    type="button">
+                                    💾 Sauvegarder
+                                </button>
+                                <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0"
+                                    class="flex-[1.4] py-2.5 text-xs font-bold rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
+                                    type="button">
+                                    💳 Paiement
+                                </button>
                             </div>
-                            <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2">
-                                <span class="font-medium">Remise :</span>
-                                <span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.discountTotal) }}</span>
-                            </div>
-                            <div class="flex items-baseline justify-between pt-2">
-                                <span class="text-lg font-bold text-gray-900">TOTAL TTC :</span>
-                                <span class="text-2xl font-bold text-green-600">{{ formatCurrency(cartStore.total) }}</span>
-                            </div>
-                        </div>
-
-                        <div class="px-4 py-3 border-t border-gray-200 space-y-2">
-                            <button
-                                @click="showPaymentModal = true"
-                                :disabled="cartStore.items.length === 0"
-                                class="w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                type="button"
-                            >
-                                PASSER AU PAIEMENT
-                            </button>
-                            <button
-                                @click="saveSale"
-                                :disabled="cartStore.items.length === 0"
-                                class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                type="button"
-                            >
-                                SAUVEGARDER
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -618,7 +762,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCartStore } from '../stores/cart'
 import { useArticlesStore } from '../stores/articles'
@@ -648,6 +792,7 @@ const articlesStore = useArticlesStore()
 const settingsStore = useSettingsStore()
 const customersStore = useCustomersStore()
 const uiStore = useUiStore()
+const { appSidebarOpen } = storeToRefs(uiStore)
 const { posCategoryDisplayMode } = storeToRefs(settingsStore)
 const categoriesDisplayMode = posCategoryDisplayMode
 const showPaymentModal = ref(false)
@@ -683,6 +828,12 @@ const discountPercent = ref(0)
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
 const creatingOption = ref(false)
+const posRoot = ref(null)
+const isFullscreen = ref(false)
+const screenMode = ref('desktop')
+const isCartExpanded = ref(true)
+const isCartFullscreen = ref(false)
+let viewportResizeHandler = null
 const newOptionForm = ref({
     name: '',
     type: 'fixed',
@@ -708,6 +859,37 @@ const categoryButtons = computed(() => {
     }))
 
     return [...baseButtons, ...dynamicButtons]
+})
+
+const isMobile = computed(() => screenMode.value === 'mobile')
+const isTablet = computed(() => screenMode.value === 'tablet')
+const effectiveCategoriesDisplayMode = computed(() => {
+    if (isMobile.value) {
+        return 'top'
+    }
+    if (isTablet.value) {
+        return 'bottom'
+    }
+    return categoriesDisplayMode.value
+})
+const contentPaddingClass = computed(() => {
+    if (!isMobile.value) return ''
+    if (!isCartExpanded.value) return 'pb-[88px]'
+    if (isCartFullscreen.value) return 'pb-0'
+    return 'pb-[55vh]'
+})
+const ticketPanelClass = computed(() => {
+    if (isMobile.value) {
+        let h
+        if (!isCartExpanded.value) h = 'h-[88px]'
+        else if (isCartFullscreen.value) h = 'h-[100dvh]'
+        else h = 'h-[60vh]'
+        return `fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-gray-200 shadow-2xl overflow-hidden ${h}`
+    }
+    if (isTablet.value) {
+        return 'w-80 flex-shrink-0 border-l border-gray-200 h-full overflow-hidden'
+    }
+    return 'w-[380px] flex-shrink-0 border-l border-gray-200 h-full overflow-hidden'
 })
 
 const serviceModes = [
@@ -842,7 +1024,56 @@ function getCategoryIcon(icon) {
 }
 
 function toggleAppSidebar() {
-    uiStore.togglePosSidebar()
+    uiStore.toggleAppSidebar()
+    if (isMobile.value && uiStore.appSidebarOpen) {
+        uiStore.closePosSidebar()
+    }
+}
+
+function toggleMobileCart() {
+    if (!isMobile.value) return
+    if (!isCartExpanded.value) {
+        // collapsed → half
+        isCartExpanded.value = true
+        isCartFullscreen.value = false
+    } else if (!isCartFullscreen.value) {
+        // half → fullscreen
+        isCartFullscreen.value = true
+    } else {
+        // fullscreen → collapsed
+        isCartExpanded.value = false
+        isCartFullscreen.value = false
+    }
+}
+
+function updateScreenMode() {
+    const width = Math.round(
+        window.visualViewport?.width || document.documentElement.clientWidth || window.innerWidth
+    )
+    if (width < 768) {
+        screenMode.value = 'mobile'
+    } else if (width < 1024) {
+        screenMode.value = 'tablet'
+    } else {
+        screenMode.value = 'desktop'
+    }
+}
+
+function handleFullscreenChange() {
+    isFullscreen.value = !!document.fullscreenElement
+    document.body.classList.toggle('overflow-hidden', isFullscreen.value)
+}
+
+async function toggleFullscreen() {
+    try {
+        if (!document.fullscreenElement) {
+            await posRoot.value?.requestFullscreen()
+        } else {
+            await document.exitFullscreen()
+        }
+    } catch (error) {
+        console.error('Fullscreen toggle failed:', error)
+    }
 }
 
 function formatCurrency(amount) {
@@ -1020,6 +1251,9 @@ function updateEditOptionsPrice() {
 
 function selectCategory(categoryId) {
     selectedCategoryId.value = categoryId
+    if (isMobile.value) {
+        uiStore.closePosSidebar()
+    }
 }
 
 function nextPage() {
@@ -1309,6 +1543,17 @@ watch([searchQuery, selectedCategoryId], () => {
     currentPage.value = 1
 })
 
+watch(isMobile, (value) => {
+    if (value) {
+        isCartExpanded.value = false
+        isCartFullscreen.value = false
+    } else {
+        uiStore.closePosSidebar()
+        isCartExpanded.value = true
+        isCartFullscreen.value = false
+    }
+})
+
 watch([filteredArticles, itemsPerPage], () => {
     if (currentPage.value > totalPages.value) {
         currentPage.value = totalPages.value
@@ -1418,8 +1663,23 @@ async function createQuickOption() {
 }
 
 onMounted(async () => {
+    updateScreenMode()
+    viewportResizeHandler = () => updateScreenMode()
+    window.addEventListener('resize', viewportResizeHandler)
+    window.visualViewport?.addEventListener('resize', viewportResizeHandler)
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    handleFullscreenChange()
     await settingsStore.fetchSettings()
     await articlesStore.refresh()
     await customersStore.fetchCustomers()
+})
+
+onUnmounted(() => {
+    if (viewportResizeHandler) {
+        window.removeEventListener('resize', viewportResizeHandler)
+        window.visualViewport?.removeEventListener('resize', viewportResizeHandler)
+    }
+    document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    document.body.classList.remove('overflow-hidden')
 })
 </script>

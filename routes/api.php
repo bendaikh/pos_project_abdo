@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\MaterialConsumptionController;
+use App\Http\Controllers\Api\LossController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -81,6 +82,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stock/movements', [StockController::class, 'movements']);
     Route::post('/stock/movement', [StockController::class, 'recordMovement']);
     Route::get('/stock/alerts', [StockController::class, 'alerts']);
+
+    // Losses
+    Route::get('/losses/reference', [LossController::class, 'reference']);
+    Route::get('/losses', [LossController::class, 'index']);
+    Route::post('/losses', [LossController::class, 'store']);
 
     // Production
     Route::get('/production', [ProductionEntryController::class, 'index']);

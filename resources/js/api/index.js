@@ -150,6 +150,13 @@ export const stockApi = {
     alerts: () => api.get('/stock/alerts'),
 }
 
+// Losses API
+export const lossesApi = {
+    reference: () => api.get('/losses/reference'),
+    list: (params = {}) => api.get('/losses', { params }),
+    create: (data) => api.post('/losses', data),
+}
+
 // Production API
 export const productionApi = {
     list: (params = {}) => api.get('/production', { params }),

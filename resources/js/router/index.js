@@ -16,6 +16,8 @@ import OptionsList from '../views/options/OptionsList.vue'
 import OptionForm from '../views/options/OptionForm.vue'
 import OptionVariants from '../views/optionsVariants/OptionVariants.vue'
 import StockView from '../views/stock/StockView.vue'
+import LossesView from '../views/losses/LossesView.vue'
+import LossHistoryView from '../views/losses/LossHistoryView.vue'
 import ProductionEntryView from '../views/production/ProductionEntryView.vue'
 import MaterialConsumptionView from '../views/production/MaterialConsumptionView.vue'
 import ConsumptionHistoryView from '../views/production/ConsumptionHistoryView.vue'
@@ -122,6 +124,16 @@ const routes = [
                 path: 'stock',
                 name: 'stock',
                 component: StockView
+            },
+            {
+                path: 'losses',
+                name: 'losses',
+                component: LossesView
+            },
+            {
+                path: 'losses/history',
+                name: 'losses.history',
+                component: LossHistoryView
             },
             {
                 path: 'production',

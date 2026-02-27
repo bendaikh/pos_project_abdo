@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\ProductionEntryItem;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -49,6 +50,10 @@ class Article extends Model
         'has_tax' => 'boolean',
     ];
 
+    protected $appends = [
+        'cost_basis',
+    ];
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
@@ -67,6 +72,11 @@ class Article extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(Variant::class)->orderBy('sort_order');
+    }
+
+    public function productionItems(): HasMany
+    {
+        return $this->hasMany(ProductionEntryItem::class);
     }
 
     public function saleItems(): HasMany
@@ -130,5 +140,56 @@ class Article extends Model
         if ($this->manage_stock) {
             $this->increment('stock_quantity', $quantity);
         }
+    }
+
+    public function getCostBasisAttribute(): float
+    {
+        return round($this->calculateCostBasis(), 2);
+    }
+
+    public function calculateCostBasis(): float
+    {
+        $buyPrice = $this->buy_price;
+        if (!is_null($buyPrice) && (float) $buyPrice > 0) {
+            return (float) $buyPrice;
+        }
+
+        $compositeCost = $this->calculateCompositeCost();
+        if ($compositeCost > 0) {
+            return $compositeCost;
+        }
+
+        $productionCost = $this->productionItems()
+            ->whereHas('productionEntry', fn ($query) => $query->where('status', 'validated'))
+            ->latest('created_at')
+            ->value('unit_cost');
+
+        if (!is_null($productionCost)) {
+            return (float) $productionCost;
+        }
+
+        return (float) ($this->sell_price ?? 0);
+    }
+
+    protected function calculateCompositeCost(): float
+    {
+        if (!$this->is_composite) {
+            return 0.0;
+        }
+
+        $this->loadMissing('bomItems.component');
+
+        $total = 0.0;
+        foreach ($this->bomItems as $bomItem) {
+            $componentCost = $bomItem->unit_cost;
+
+            if ($componentCost === null && $bomItem->component) {
+                $componentCost = $bomItem->component->buy_price ?? $bomItem->component->sell_price ?? 0;
+            }
+
+            $total += (float) ($componentCost ?? 0) * (float) ($bomItem->quantity ?? 0);
+        }
+
+        return $total;
     }
 }

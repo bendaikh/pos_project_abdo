@@ -1,5 +1,5 @@
 <template>
-    <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+    <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6">
         <!-- Left side -->
         <div class="flex items-center space-x-4">
             <button 
@@ -8,7 +8,7 @@
             >
                 <Bars3Icon class="w-5 h-5" />
             </button>
-            <h1 class="text-lg font-semibold text-gray-900">{{ pageTitle }}</h1>
+            <h1 class="text-lg font-semibold text-gray-900 hidden sm:block">{{ pageTitle }}</h1>
         </div>
 
         <!-- Right side -->

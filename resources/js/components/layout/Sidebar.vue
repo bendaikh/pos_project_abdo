@@ -1,10 +1,10 @@
 <template>
     <aside 
         class="fixed inset-y-0 left-0 z-50 bg-gray-900 border-r border-gray-800 transition-all duration-300"
-        :class="collapsed ? 'w-20' : 'w-64'"
+        :class="sidebarClasses"
     >
         <!-- Logo -->
-        <div class="flex items-center h-16 px-4 border-b border-gray-800">
+        <div class="flex items-center justify-between h-16 px-4 border-b border-gray-800">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center flex-shrink-0">
                     <svg class="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -14,6 +14,14 @@
                 </div>
                 <span v-if="!collapsed" class="text-xl font-bold text-white">GREENPOS</span>
             </div>
+            <button
+                v-if="isMobile"
+                type="button"
+                class="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg"
+                @click="$emit('close')"
+            >
+                ✕
+            </button>
         </div>
 
         <!-- Navigation -->
@@ -334,6 +342,46 @@
                 </div>
             </div>
 
+            <!-- Gestion des pertes Section (Collapsible) -->
+            <div class="mt-4">
+                <button 
+                    @click="toggleSection('losses')"
+                    class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                    <div class="flex items-center min-w-0">
+                        <FireIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-3 whitespace-nowrap">Gestion de perte</span>
+                    </div>
+                    <ChevronDownIcon 
+                        v-if="!collapsed"
+                        class="w-4 h-4 flex-shrink-0 transition-transform duration-200"
+                        :class="{ 'rotate-180': expandedSections.losses }"
+                    />
+                </button>
+
+                <div 
+                    v-show="expandedSections.losses && !collapsed"
+                    class="mt-1 space-y-1 overflow-hidden"
+                >
+                    <router-link 
+                        to="/losses"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/losses', { exact: true }) ? 'bg-rose-500 text-gray-900' : 'text-rose-200 hover:bg-gray-800'"
+                    >
+                        <ClipboardDocumentCheckIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Déclaration de perte</span>
+                    </router-link>
+                    <router-link 
+                        to="/losses/history"
+                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
+                        :class="isActive('/losses/history') ? 'bg-rose-500 text-gray-900' : 'text-rose-200 hover:bg-gray-800'"
+                    >
+                        <ClockIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Historique des pertes</span>
+                    </router-link>
+                </div>
+            </div>
+
             <!-- Other menu items -->
             <div class="mt-4 space-y-1">
                 <router-link 
@@ -416,7 +464,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import {
@@ -444,18 +492,33 @@ import {
     KeyIcon,
     AdjustmentsHorizontalIcon,
     FolderIcon,
-    WrenchScrewdriverIcon
+    WrenchScrewdriverIcon,
+    FireIcon,
+    ClockIcon,
+    ClipboardDocumentCheckIcon
 } from '@heroicons/vue/24/outline'
 
-defineProps({
-    collapsed: Boolean
+const props = defineProps({
+    collapsed: Boolean,
+    isMobile: Boolean,
+    mobileOpen: Boolean
 })
 
-defineEmits(['toggle'])
+defineEmits(['toggle', 'close'])
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+
+const sidebarClasses = computed(() => {
+    const widthClass = props.isMobile
+        ? 'w-72 max-w-[85vw]'
+        : (props.collapsed ? 'w-20' : 'w-64')
+    const translateClass = props.isMobile
+        ? (props.mobileOpen ? 'translate-x-0' : '-translate-x-full')
+        : 'translate-x-0'
+    return `${widthClass} ${translateClass}`
+})
 
 // Collapsible sections state
 const expandedSections = reactive({
@@ -465,7 +528,8 @@ const expandedSections = reactive({
     finance: false,
     articles: false,
     clients: false,
-    fournisseurs: false
+    fournisseurs: false,
+    losses: false
 })
 
 // Toggle section expand/collapse
