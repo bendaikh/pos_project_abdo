@@ -380,15 +380,6 @@ function getRoleLabel(role) {
     return labels[role] || role
 }
 
-function getEmployeePhotoUrl(employee) {
-    if (employee?.photo_url) {
-        const cacheKey = employee.photo_cache_key || 0
-        const separator = employee.photo_url.includes('?') ? '&' : '?'
-        return `${employee.photo_url}${separator}t=${cacheKey}`
-    }
-    return employee?.avatar || ''
-}
-
 function getStatusBadgeClass(status) {
     const classes = {
         'active': 'bg-green-100 text-green-800 border border-green-300',
