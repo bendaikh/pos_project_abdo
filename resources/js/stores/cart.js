@@ -152,7 +152,7 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     function getCartData() {
-        return {
+        const data = {
             customer_id: customerId.value,
             items: items.value.map(item => ({
                 article_id: item.article_id,
@@ -166,8 +166,14 @@ export const useCartStore = defineStore('cart', () => {
             discount_amount: discountAmount.value,
             discount_percent: discountPercent.value,
             delivery_mode: deliveryMode.value === 'glovo' ? 'delivery' : deliveryMode.value,
-            notes: notes.value
+            notes: notes.value,
+            subtotal: subtotal.value,
+            tax: taxAmount.value,
+            total: total.value,
+            items_count: items.value.length
         }
+        console.log('DEBUG cart.getCartData:', data)
+        return data
     }
 
     return {

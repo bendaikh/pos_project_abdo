@@ -1,6 +1,6 @@
 <template>
     <aside 
-        class="fixed inset-y-0 left-0 z-50 bg-gray-900 border-r border-gray-800 transition-all duration-300"
+        class="fixed inset-y-0 left-0 z-50 flex flex-col bg-gray-900 border-r border-gray-800 transition-all duration-300"
         :class="sidebarClasses"
     >
         <!-- Logo -->
@@ -25,7 +25,17 @@
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
+        <nav class="flex-1 min-h-0 px-3 py-4 space-y-2 overflow-y-auto">
+            <!-- Point de Vente -->
+            <router-link 
+                to="/pos"
+                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                :class="isActive('/pos') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
+            >
+                <CalculatorIcon class="w-5 h-5 flex-shrink-0" />
+                <span v-if="!collapsed" class="ml-3">Point de Vente (PDV)</span>
+            </router-link>
+
             <!-- Dashboard -->
             <router-link 
                 to="/dashboard"
@@ -36,267 +46,15 @@
                 <span v-if="!collapsed" class="ml-3">Dashboard</span>
             </router-link>
 
-            <!-- POS -->
-            <router-link 
-                to="/pos"
-                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                :class="isActive('/pos') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
-            >
-                <CalculatorIcon class="w-5 h-5 flex-shrink-0" />
-                <span v-if="!collapsed" class="ml-3">Menu POS</span>
-            </router-link>
-
-            <!-- VENTE Section (Collapsible) -->
-            <div class="mt-4">
-                <!-- Section Header - Clickable to expand/collapse -->
-                <button 
-                    @click="toggleSection('vente')"
-                    class="flex items-center justify-between w-full px-3 py-2 text-sm font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                    <div class="flex items-center">
-                        <CurrencyDollarIcon class="w-5 h-5 flex-shrink-0" />
-                        <span v-if="!collapsed" class="ml-3">VENTE</span>
-                    </div>
-                    <ChevronDownIcon 
-                        v-if="!collapsed"
-                        class="w-4 h-4 transition-transform duration-200"
-                        :class="{ 'rotate-180': expandedSections.vente }"
-                    />
-                </button>
-                
-                <!-- Sub-sections (Collapsible content) -->
-                <div 
-                    v-show="expandedSections.vente && !collapsed"
-                    class="mt-1 space-y-1 overflow-hidden"
-                >
-                    <!-- Devis -->
-                    <router-link 
-                        to="/devis"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/devis') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <DocumentTextIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Devis</span>
-                    </router-link>
-
-                    <!-- Bon de livraison -->
-                    <router-link 
-                        to="/bon-livraison"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/bon-livraison') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <TruckIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Bon de livraison</span>
-                    </router-link>
-
-                    <!-- Facture -->
-                    <router-link 
-                        to="/facture"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/facture') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <DocumentIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Facture</span>
-                    </router-link>
-                </div>
-            </div>
-
-            <!-- ACHAT Section (Collapsible) -->
-            <div class="mt-2">
-                <!-- Section Header - Clickable to expand/collapse -->
-                <button 
-                    @click="toggleSection('achat')"
-                    class="flex items-center justify-between w-full px-3 py-2 text-sm font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                    <div class="flex items-center">
-                        <ShoppingCartIcon class="w-5 h-5 flex-shrink-0" />
-                        <span v-if="!collapsed" class="ml-3">ACHAT</span>
-                    </div>
-                    <ChevronDownIcon 
-                        v-if="!collapsed"
-                        class="w-4 h-4 transition-transform duration-200"
-                        :class="{ 'rotate-180': expandedSections.achat }"
-                    />
-                </button>
-                
-                <!-- Sub-sections (Collapsible content) -->
-                <div 
-                    v-show="expandedSections.achat && !collapsed"
-                    class="mt-1 space-y-1 overflow-hidden"
-                >
-                    <!-- Fournisseur -->
-                    <router-link 
-                        to="/fournisseurs"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/fournisseurs') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <BuildingOfficeIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Fournisseur</span>
-                    </router-link>
-
-                    <!-- Bon de commande -->
-                    <router-link 
-                        to="/bon-commande"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/bon-commande') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Bon de commande</span>
-                    </router-link>
-
-                    <!-- Réception de Marchandise -->
-                    <router-link 
-                        to="/reception-marchandise"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/reception-marchandise') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <TruckIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Réception de Marchandise</span>
-                    </router-link>
-
-                    <!-- Facture fournisseur -->
-                    <router-link 
-                        to="/facture-fournisseur"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/facture-fournisseur') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <DocumentIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Facture fournisseur</span>
-                    </router-link>
-
-                    <!-- Historique d'achats -->
-                    <router-link 
-                        to="/historique-achats"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/historique-achats') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Historique d'achats</span>
-                    </router-link>
-                </div>
-            </div>
-
-            <!-- PRODUCTION Section (Collapsible) -->
-            <div class="mt-2">
-                <button 
-                    @click="toggleSection('production')"
-                    class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                    <div class="flex items-center min-w-0">
-                        <WrenchScrewdriverIcon class="w-5 h-5 flex-shrink-0" />
-                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">PRODUCTION</span>
-                    </div>
-                    <ChevronDownIcon 
-                        v-if="!collapsed"
-                        class="w-4 h-4 flex-shrink-0 transition-transform duration-200"
-                        :class="{ 'rotate-180': expandedSections.production }"
-                    />
-                </button>
-                
-                <div 
-                    v-show="expandedSections.production && !collapsed"
-                    class="mt-1 space-y-1 overflow-hidden"
-                >
-                    <router-link 
-                        to="/production"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/production', { exact: true }) ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'"
-                    >
-                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Entrée production</span>
-                    </router-link>
-                    <router-link 
-                        to="/production/consumption"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/production/consumption') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'"
-                    >
-                        <AdjustmentsHorizontalIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Consommation MP</span>
-                    </router-link>
-                    <router-link 
-                        to="/production/history"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/production/history') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'"
-                    >
-                        <ChartBarIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Historique</span>
-                    </router-link>
-                    <router-link 
-                        to="/production/costs"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/production/costs') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'"
-                    >
-                        <PresentationChartLineIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Coût de production</span>
-                    </router-link>
-                </div>
-            </div>
-
-            <!-- GESTION FINANCIÈRE Section (Collapsible) -->
-            <div class="mt-2">
-                <!-- Section Header - Clickable to expand/collapse -->
-                <button 
-                    @click="toggleSection('finance')"
-                    class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                    <div class="flex items-center min-w-0">
-                        <BanknotesIcon class="w-5 h-5 flex-shrink-0" />
-                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">GESTION FINANCIÈRE</span>
-                    </div>
-                    <ChevronDownIcon 
-                        v-if="!collapsed"
-                        class="w-4 h-4 flex-shrink-0 transition-transform duration-200"
-                        :class="{ 'rotate-180': expandedSections.finance }"
-                    />
-                </button>
-                
-                <!-- Sub-sections (Collapsible content) -->
-                <div 
-                    v-show="expandedSections.finance && !collapsed"
-                    class="mt-1 space-y-1 overflow-hidden"
-                >
-                    <!-- Journal de caisse -->
-                    <router-link 
-                        to="/journal-caisse"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/journal-caisse') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <BookOpenIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Journal de caisse</span>
-                    </router-link>
-
-                    <!-- Dépenses -->
-                    <router-link 
-                        to="/depenses"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/depenses') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <CreditCardIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Dépenses</span>
-                    </router-link>
-
-                    <!-- Bilan -->
-                    <router-link 
-                        to="/bilan"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/bilan') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'"
-                    >
-                        <PresentationChartLineIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Bilan</span>
-                    </router-link>
-                </div>
-            </div>
-
-            <!-- Gestion des Articles Section (Collapsible) -->
-            <div class="mt-4">
-                <!-- Section Header - Clickable to expand/collapse -->
+            <!-- Gestion d'Articles -->
+            <div class="mt-3">
                 <button 
                     @click="toggleSection('articles')"
                     class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
                 >
                     <div class="flex items-center min-w-0">
                         <ClipboardDocumentListIcon class="w-5 h-5 flex-shrink-0" />
-                        <span v-if="!collapsed" class="ml-3 whitespace-nowrap">Gestion des articles</span>
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Gestion d'Articles</span>
                     </div>
                     <ChevronDownIcon 
                         v-if="!collapsed"
@@ -304,140 +62,219 @@
                         :class="{ 'rotate-180': expandedSections.articles }"
                     />
                 </button>
-                
-                <!-- Sub-sections (Collapsible content) -->
-                <div 
-                    v-show="expandedSections.articles && !collapsed"
-                    class="mt-1 space-y-1 overflow-hidden"
-                >
-                    <!-- Articles -->
-                    <router-link 
-                        to="/articles"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/articles') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
-                    >
+                <div v-show="expandedSections.articles && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/articles" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/articles') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'">
                         <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Articles</span>
                     </router-link>
-
-                    <!-- Catégories -->
-                    <router-link 
-                        to="/categories"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/categories') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
-                    >
+                    <router-link to="/categories" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/categories') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'">
                         <FolderIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Catégories</span>
                     </router-link>
-
-                    <!-- Options & Variantes -->
-                    <router-link 
-                        to="/options"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/options') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'"
-                    >
+                    <router-link to="/options" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/options') ? 'bg-cyan-500 text-gray-900' : 'text-cyan-300 hover:bg-gray-800'">
                         <AdjustmentsHorizontalIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3 whitespace-nowrap">Options & Variantes</span>
                     </router-link>
                 </div>
             </div>
 
-            <!-- Gestion des pertes Section (Collapsible) -->
-            <div class="mt-4">
+            <!-- Gestion de Stock -->
+            <router-link 
+                to="/stock"
+                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                :class="isActive('/stock') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
+            >
+                <ArchiveBoxIcon class="w-5 h-5 flex-shrink-0" />
+                <span v-if="!collapsed" class="ml-3">Gestion de Stock</span>
+            </router-link>
+
+            <!-- Production -->
+            <div class="mt-3">
                 <button 
-                    @click="toggleSection('losses')"
+                    @click="toggleSection('production')"
                     class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors"
                 >
                     <div class="flex items-center min-w-0">
-                        <FireIcon class="w-5 h-5 flex-shrink-0" />
-                        <span v-if="!collapsed" class="ml-3 whitespace-nowrap">Gestion de perte</span>
+                        <WrenchScrewdriverIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Production</span>
                     </div>
-                    <ChevronDownIcon 
-                        v-if="!collapsed"
-                        class="w-4 h-4 flex-shrink-0 transition-transform duration-200"
-                        :class="{ 'rotate-180': expandedSections.losses }"
-                    />
+                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.production }" />
                 </button>
-
-                <div 
-                    v-show="expandedSections.losses && !collapsed"
-                    class="mt-1 space-y-1 overflow-hidden"
-                >
-                    <router-link 
-                        to="/losses"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/losses', { exact: true }) ? 'bg-rose-500 text-gray-900' : 'text-rose-200 hover:bg-gray-800'"
-                    >
-                        <ClipboardDocumentCheckIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Déclaration de perte</span>
+                <div v-show="expandedSections.production && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/production" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/production', { exact: true }) ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'">
+                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Entrée production</span>
                     </router-link>
-                    <router-link 
-                        to="/losses/history"
-                        class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors"
-                        :class="isActive('/losses/history') ? 'bg-rose-500 text-gray-900' : 'text-rose-200 hover:bg-gray-800'"
-                    >
-                        <ClockIcon class="w-4 h-4 flex-shrink-0" />
-                        <span class="ml-3">Historique des pertes</span>
+                    <router-link to="/production/consumption" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/production/consumption') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'">
+                        <AdjustmentsHorizontalIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Consommation MP</span>
+                    </router-link>
+                    <router-link to="/production/history" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/production/history') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'">
+                        <ChartBarIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Historique</span>
+                    </router-link>
+                    <router-link to="/production/costs" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/production/costs') ? 'bg-indigo-500 text-gray-900' : 'text-indigo-300 hover:bg-gray-800'">
+                        <PresentationChartLineIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Coût de production</span>
+                    </router-link>
+                    <div class="mt-3 border-t border-indigo-500/30 pt-3 space-y-1">
+                        <p class="text-[10px] font-semibold tracking-[0.2em] text-indigo-200 uppercase">Gestion de perte</p>
+                        <router-link to="/losses" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/losses', { exact: true }) ? 'bg-rose-500 text-gray-900' : 'text-rose-200 hover:bg-gray-800'">
+                            <ClipboardDocumentCheckIcon class="w-4 h-4 flex-shrink-0" />
+                            <span class="ml-3">Déclaration de perte</span>
+                        </router-link>
+                        <router-link to="/losses/history" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/losses/history') ? 'bg-rose-500 text-gray-900' : 'text-rose-200 hover:bg-gray-800'">
+                            <ClockIcon class="w-4 h-4 flex-shrink-0" />
+                            <span class="ml-3">Historique des pertes</span>
+                        </router-link>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ventes & Clients -->
+            <div class="mt-3">
+                <button @click="toggleSection('ventesClients')" class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center min-w-0">
+                        <CurrencyDollarIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Ventes & Clients</span>
+                    </div>
+                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.ventesClients }" />
+                </button>
+                <div v-show="expandedSections.ventesClients && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/devis" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/devis') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <DocumentTextIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Devis</span>
+                    </router-link>
+                    <router-link to="/bon-livraison" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/bon-livraison') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <TruckIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Bon de livraison</span>
+                    </router-link>
+                    <router-link to="/facture" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/facture') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <DocumentIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Facture</span>
+                    </router-link>
+                    <router-link to="/customers" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/customers') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <UserGroupIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Clients</span>
                     </router-link>
                 </div>
             </div>
 
-            <!-- Other menu items -->
-            <div class="mt-4 space-y-1">
-                <router-link 
-                    to="/stock"
-                    class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                    :class="isActive('/stock') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
-                >
-                    <ArchiveBoxIcon class="w-5 h-5 flex-shrink-0" />
-                    <span v-if="!collapsed" class="ml-3">Gestion de stock</span>
-                </router-link>
-
-                <router-link 
-                    to="/reports"
-                    class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                    :class="isActive('/reports') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
-                >
-                    <ChartBarIcon class="w-5 h-5 flex-shrink-0" />
-                    <span v-if="!collapsed" class="ml-3">Rapports</span>
-                </router-link>
+            <!-- Achats & Fournisseurs -->
+            <div class="mt-3">
+                <button @click="toggleSection('achats')" class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center min-w-0">
+                        <ShoppingCartIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Achats & Fournisseurs</span>
+                    </div>
+                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.achats }" />
+                </button>
+                <div v-show="expandedSections.achats && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/fournisseurs" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/fournisseurs') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <BuildingOfficeIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Fournisseurs</span>
+                    </router-link>
+                    <router-link to="/bon-commande" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/bon-commande') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Bon de commande</span>
+                    </router-link>
+                    <router-link to="/reception-marchandise" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/reception-marchandise') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <TruckIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Réception de Marchandise</span>
+                    </router-link>
+                    <router-link to="/facture-fournisseur" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/facture-fournisseur') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <DocumentIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Facture fournisseur</span>
+                    </router-link>
+                    <router-link to="/historique-achats" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/historique-achats') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Historique d'achats</span>
+                    </router-link>
+                </div>
             </div>
 
-            <!-- Divider -->
-            <div class="my-4 border-t border-gray-700"></div>
+            <!-- Gestion Financière -->
+            <div class="mt-3">
+                <button @click="toggleSection('finance')" class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center min-w-0">
+                        <BanknotesIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Gestion Financière</span>
+                    </div>
+                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.finance }" />
+                </button>
+                <div v-show="expandedSections.finance && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/journal-caisse" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/journal-caisse') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <BookOpenIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Journal de caisse</span>
+                    </router-link>
+                    <router-link to="/depenses" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/depenses') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <CreditCardIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Dépenses</span>
+                    </router-link>
+                    <router-link to="/bilan" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/bilan') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <PresentationChartLineIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Bilan</span>
+                    </router-link>
+                </div>
+            </div>
 
-            <!-- Clients -->
-            <router-link 
-                to="/customers"
-                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                :class="isActive('/customers') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
-            >
-                <UserGroupIcon class="w-5 h-5 flex-shrink-0" />
-                <span v-if="!collapsed" class="ml-3">Clients</span>
-            </router-link>
+            <!-- Activités (Rendez-vous) -->
+            <div class="mt-3">
+                <button @click="toggleSection('activites')" class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center min-w-0">
+                        <CalendarDaysIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Activités</span>
+                    </div>
+                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.activites }" />
+                </button>
+                <div v-show="expandedSections.activites && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/activites" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/activites') ? 'bg-blue-500 text-gray-900' : 'text-blue-300 hover:bg-gray-800'">
+                        <CalendarDaysIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Rendez-vous</span>
+                    </router-link>
+                </div>
+            </div>
 
             <!-- Employés -->
-            <router-link 
-                to="/employees"
-                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                :class="isActive('/employees') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
-            >
-                <UsersIcon class="w-5 h-5 flex-shrink-0" />
-                <span v-if="!collapsed" class="ml-3">Employés</span>
-            </router-link>
+            <div class="mt-3">
+                <button @click="toggleSection('employees')" class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center min-w-0">
+                        <UsersIcon class="w-5 h-5 flex-shrink-0" />
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Employés</span>
+                    </div>
+                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.employees }" />
+                </button>
+                <div v-show="expandedSections.employees && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/employees" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/employees', { exact: true }) ? 'bg-purple-500 text-gray-900' : 'text-purple-300 hover:bg-gray-800'">
+                        <UsersIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Gestion des employés</span>
+                    </router-link>
+                    <router-link to="/employees/payroll" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/employees/payroll') ? 'bg-purple-500 text-gray-900' : 'text-purple-300 hover:bg-gray-800'">
+                        <CreditCardIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Paie</span>
+                    </router-link>
+                </div>
+            </div>
 
             <!-- Utilisateurs -->
             <router-link 
-                to="/utilisateurs"
+                to="/users"
                 class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
-                :class="isActive('/utilisateurs') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
+                :class="isActive('/users') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
             >
                 <KeyIcon class="w-5 h-5 flex-shrink-0" />
                 <span v-if="!collapsed" class="ml-3">Utilisateurs</span>
             </router-link>
 
-            <!-- Divider -->
-            <div class="my-4 border-t border-gray-700"></div>
+            <!-- Magasins -->
+            <router-link 
+                to="/magasins"
+                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                :class="isActive('/magasins') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
+            >
+                <BuildingOfficeIcon class="w-5 h-5 flex-shrink-0" />
+                <span v-if="!collapsed" class="ml-3">Magasins</span>
+            </router-link>
 
             <!-- Paramètres -->
             <router-link 
@@ -447,6 +284,16 @@
             >
                 <Cog6ToothIcon class="w-5 h-5 flex-shrink-0" />
                 <span v-if="!collapsed" class="ml-3">Paramètres</span>
+            </router-link>
+
+            <!-- Assistance -->
+            <router-link 
+                to="/assistance"
+                class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
+                :class="isActive('/assistance') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
+            >
+                <ChartBarIcon class="w-5 h-5 flex-shrink-0" />
+                <span v-if="!collapsed" class="ml-3">Assistance</span>
             </router-link>
 
             <!-- Logout / Exit Offline Mode -->
@@ -488,14 +335,13 @@ import {
     CreditCardIcon,
     PresentationChartLineIcon,
     BuildingOfficeIcon,
-    BuildingStorefrontIcon,
     KeyIcon,
     AdjustmentsHorizontalIcon,
     FolderIcon,
     WrenchScrewdriverIcon,
-    FireIcon,
     ClockIcon,
-    ClipboardDocumentCheckIcon
+    ClipboardDocumentCheckIcon,
+    CalendarDaysIcon
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -522,14 +368,13 @@ const sidebarClasses = computed(() => {
 
 // Collapsible sections state
 const expandedSections = reactive({
-    vente: false,
-    achat: false,
-    production: false,
-    finance: false,
     articles: false,
-    clients: false,
-    fournisseurs: false,
-    losses: false
+    production: false,
+    ventesClients: false,
+    achats: false,
+    finance: false,
+    activites: false,
+    employees: false,
 })
 
 // Toggle section expand/collapse

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ArticleController;
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\OptionController;
 use App\Http\Controllers\Api\OptionVariantController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\ProductionEntryController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
@@ -76,6 +78,20 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Employees
     Route::apiResource('employees', EmployeeController::class);
+    Route::get('/employees/{employee}/payroll-history', [PayrollController::class, 'employeeHistory']);
+    Route::get('/employees/{employee}/attendance-summary', [PayrollController::class, 'attendanceSummary']);
+
+    // Payroll
+    Route::apiResource('payrolls', PayrollController::class);
+    Route::post('/payrolls/{payroll}/process-payment', [PayrollController::class, 'processPayment']);
+    Route::get('/payroll-statistics', [PayrollController::class, 'statistics']);
+    Route::post('/payroll-preview', [PayrollController::class, 'preview']);
+    Route::post('/payroll-bulk-calculate', [PayrollController::class, 'bulkCalculate']);
+
+    // Attendance
+    Route::apiResource('attendances', AttendanceController::class);
+    Route::get('/attendances/summary/monthly', [AttendanceController::class, 'monthlySummary']);
+    Route::post('/attendances/bulk', [AttendanceController::class, 'bulk']);
 
     // Stock
     Route::get('/stock', [StockController::class, 'index']);

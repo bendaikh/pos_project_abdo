@@ -26,6 +26,7 @@ import CustomersList from '../views/customers/CustomersList.vue'
 import CustomerDetail from '../views/customers/CustomerDetail.vue'
 import EmployeesList from '../views/employees/EmployeesList.vue'
 import EmployeeDetail from '../views/employees/EmployeeDetail.vue'
+import PayrollList from '../views/employees/PayrollList.vue'
 import ReportsView from '../views/reports/ReportsView.vue'
 import SettingsView from '../views/settings/SettingsView.vue'
 
@@ -49,9 +50,19 @@ import BilanView from '../views/finance/BilanView.vue'
 // FOURNISSEURS Views
 import FournisseursList from '../views/fournisseurs/FournisseursList.vue'
 import FournisseurDetail from '../views/fournisseurs/FournisseurDetail.vue'
+import FournisseurEdit from '../views/fournisseurs/FournisseurEdit.vue'
 
 // UTILISATEURS Views
 import UtilisateursList from '../views/utilisateurs/UtilisateursList.vue'
+
+// ACTIVITES Views
+import ActivitiesList from '../views/activites/ActivitiesList.vue'
+
+// MAGASINS Views
+import MagasinsList from '../views/magasins/MagasinsList.vue'
+
+// ASSISTANCE Views
+import AssistanceList from '../views/assistance/AssistanceList.vue'
 
 const routes = [
     {
@@ -166,6 +177,11 @@ const routes = [
                 component: CustomerDetail
             },
             {
+                path: 'employees/payroll',
+                name: 'employees.payroll',
+                component: PayrollList
+            },
+            {
                 path: 'employees',
                 name: 'employees',
                 component: EmployeesList
@@ -254,11 +270,35 @@ const routes = [
                 name: 'fournisseurs.detail',
                 component: FournisseurDetail
             },
+            {
+                path: 'fournisseurs/:id/edit',
+                name: 'fournisseurs.edit',
+                component: FournisseurEdit
+            },
             // UTILISATEURS Routes
             {
-                path: 'utilisateurs',
-                name: 'utilisateurs',
-                component: UtilisateursList
+                path: 'users',
+                name: 'users',
+                component: UtilisateursList,
+                alias: '/utilisateurs'
+            },
+            // ACTIVITES Routes
+            {
+                path: 'activites',
+                name: 'activites',
+                component: ActivitiesList
+            },
+            // MAGASINS Routes
+            {
+                path: 'magasins',
+                name: 'magasins',
+                component: MagasinsList
+            },
+            // ASSISTANCE Routes
+            {
+                path: 'assistance',
+                name: 'assistance',
+                component: AssistanceList
             }
         ]
     }

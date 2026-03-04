@@ -213,8 +213,24 @@ import {
     CheckCircleIcon
 } from '@heroicons/vue/24/outline'
 
+const FACTURES_STORAGE_KEY = 'pos_sales'
+const CUSTOMERS_STORAGE_KEY = 'pos_customers'
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
+
+function loadFacturesFromStorage() {
+    const stored = localStorage.getItem(FACTURES_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+}
+
+function loadCustomersFromStorage() {
+    const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+}
+
+function saveFacturesToStorage() {
+    localStorage.setItem(FACTURES_STORAGE_KEY, JSON.stringify(facturesList.value))
+}
 
 const facturesList = ref([])
 const customers = ref([])
@@ -304,7 +320,7 @@ function removeLine(index) {
 function openForm(facture = null) {
     editingFacture.value = facture
     if (facture) {
-        form.customer_id = facture.customer_id
+        form.customer_id = String(facture.customer_id)
         form.date_echeance = facture.date_echeance
         form.tva = facture.tva || 20
         form.notes = facture.notes
@@ -331,6 +347,7 @@ function markAsPaid(facture) {
     const index = facturesList.value.findIndex(f => f.id === facture.id)
     if (index > -1) {
         facturesList.value[index].statut = 'payée'
+        saveFacturesToStorage()
     }
 }
 
@@ -342,11 +359,13 @@ function confirmDelete(facture) {
 async function saveFacture() {
     saving.value = true
     try {
-        const customer = customers.value.find(c => c.id === form.customer_id)
+        // Convert customer_id to number for proper matching
+        const customerId = parseInt(form.customer_id) || form.customer_id
+        const customer = customers.value.find(c => c.id === customerId || String(c.id) === String(customerId))
         const newFacture = {
             id: editingFacture.value?.id || Date.now(),
             numero: editingFacture.value?.numero || `FAC-${Date.now()}`,
-            customer_id: form.customer_id,
+            customer_id: customerId,
             client_name: customer?.name || 'Client inconnu',
             client_email: customer?.email || '',
             date: editingFacture.value?.date || new Date().toISOString(),
@@ -356,8 +375,11 @@ async function saveFacture() {
             montant_ttc: formTotalTTC.value,
             statut: editingFacture.value?.statut || 'brouillon',
             notes: form.notes,
-            lines: [...form.lines]
+            lines: [...form.lines],
+            total: formTotalTTC.value
         }
+
+        console.log('DEBUG FactureList saveFacture:', { customerId, selectedCustomer: customer, newFacture })
 
         if (editingFacture.value) {
             const index = facturesList.value.findIndex(f => f.id === editingFacture.value.id)
@@ -365,6 +387,7 @@ async function saveFacture() {
         } else {
             facturesList.value.unshift(newFacture)
         }
+        saveFacturesToStorage()
         showForm.value = false
     } catch (error) {
         alert('Erreur: ' + error.message)
@@ -375,22 +398,15 @@ async function saveFacture() {
 
 function deleteFacture() {
     facturesList.value = facturesList.value.filter(f => f.id !== factureToDelete.value.id)
+    saveFacturesToStorage()
     showDeleteModal.value = false
 }
 
 onMounted(async () => {
-    try {
-        const response = await customersApi.list()
-        customers.value = Array.isArray(response.data) ? response.data : response.data.data || []
-    } catch (e) {
-        console.error('Error loading customers:', e)
-    }
+    // Load customers from localStorage
+    customers.value = loadCustomersFromStorage()
 
-    // Demo data
-    facturesList.value = [
-        { id: 1, numero: 'FAC-2026-001', customer_id: 1, client_name: 'Ahmed Benali', client_email: 'ahmed@example.com', date: '2026-02-01', date_echeance: '2026-03-01', montant_ht: 12500, tva: 20, montant_ttc: 15000, statut: 'payée', lines: [] },
-        { id: 2, numero: 'FAC-2026-002', customer_id: 2, client_name: 'Sara Mansouri', client_email: 'sara@example.com', date: '2026-02-05', date_echeance: '2026-03-05', montant_ht: 7083.33, tva: 20, montant_ttc: 8500, statut: 'envoyée', lines: [] },
-        { id: 3, numero: 'FAC-2026-003', customer_id: 3, client_name: 'Mohamed Tazi', client_email: 'mohamed@example.com', date: '2026-01-15', date_echeance: '2026-02-01', montant_ht: 18333.33, tva: 20, montant_ttc: 22000, statut: 'en_retard', lines: [] },
-    ]
+    // Load factures from localStorage
+    facturesList.value = loadFacturesFromStorage()
 })
 </script>

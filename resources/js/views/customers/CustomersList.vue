@@ -1,225 +1,392 @@
 <template>
-    <div class="space-y-6">
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Gestion des Clients</h1>
-                <p class="text-gray-500">Gérez vos clients et leur historique d'achats</p>
+    <div>
+        <div v-show="!showForm" class="space-y-6">
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Gestion des Clients</h1>
+                    <p class="text-gray-500">Gérez vos clients et leur historique d'achats</p>
+                </div>
+                <button @click="openForm()" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
+                    <PlusIcon class="w-5 h-5 mr-2" />
+                    Nouveau Client
+                </button>
             </div>
-            <button @click="openForm()" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
-                <PlusIcon class="w-5 h-5 mr-2" />
-                Nouveau Client
-            </button>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-500">Total Clients</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ customers.length }}</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-500">Clients Fidèles</p>
+                    <p class="text-2xl font-bold text-primary-600">{{ loyalCustomersCount }}</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-500">Total Achats</p>
+                    <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalSpent) }}</p>
+                </div>
+                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <p class="text-sm text-gray-500">Moyenne/Client</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ formatCurrency(averageSpent) }}</p>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-wrap gap-4">
+                <input 
+                    v-model="search"
+                    type="text"
+                    placeholder="Rechercher par ID, nom, ICE, email ou téléphone..."
+                    class="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                <select v-model="filterLoyalty" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <option value="">Tous les clients</option>
+                    <option value="loyal">Clients fidèles</option>
+                    <option value="new">Nouveaux clients</option>
+                </select>
+            </div>
+
+            <!-- Customers Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID Client</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ICE</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fidélité</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Achats</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr v-for="customer in filteredCustomers" :key="customer.id" class="hover:bg-gray-50 cursor-pointer" @click="$router.push(`/customers/${customer.client_id || customer.id}`)">
+                            <td class="px-6 py-4">
+                                <span class="font-mono text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">{{ customer.client_id || `CLI-${String(customer.id).padStart(4, '0')}` }}</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-100 border border-primary-100">
+                                        <img v-if="customer.photo_url" :src="customer.photo_url" alt="Photo client" class="w-full h-full object-cover" />
+                                        <span v-else class="flex items-center justify-center w-full h-full text-xs font-semibold text-primary-600">{{ getInitials(customer.name || `${customer.nom || ''} ${customer.prenom || ''}`.trim()) }}</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ customer.name || `${customer.nom || ''} ${customer.prenom || ''}`.trim() }}</p>
+                                        <p class="text-sm text-gray-500">{{ customer.city || 'Pas de ville' }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ customer.ice || '-' }}</td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm text-gray-900">{{ customer.phone || '-' }}</p>
+                                <p class="text-sm text-gray-500">{{ customer.email || '-' }}</p>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
+                                    <span v-if="customer.loyalty_discount > 0" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                        -{{ customer.loyalty_discount }}%
+                                    </span>
+                                    <span v-else class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                                        Standard
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="font-medium text-gray-900">{{ formatCurrency(calculateCustomerTotal(customer)) }}</p>
+                                <p class="text-sm text-gray-500">{{ calculateCustomerSalesCount(customer) }} achat(s)</p>
+                            </td>
+                            <td class="px-6 py-4 text-right" @click.stop>
+                                <div class="flex items-center justify-end space-x-2">
+                                    <button @click="viewHistory(customer)" class="p-2 text-purple-400 hover:text-purple-600 rounded-lg hover:bg-purple-50" title="Historique">
+                                        <ClockIcon class="w-5 h-5" />
+                                    </button>
+                                    <button @click="openForm(customer)" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title="Modifier">
+                                        <PencilIcon class="w-5 h-5" />
+                                    </button>
+                                    <button @click="confirmDelete(customer)" class="p-2 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50" title="Supprimer">
+                                        <TrashIcon class="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredCustomers.length === 0">
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                <UserGroupIcon class="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                                Aucun client trouvé
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p class="text-sm text-gray-500">Total Clients</p>
-                <p class="text-2xl font-bold text-gray-900">{{ customers.length }}</p>
-            </div>
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p class="text-sm text-gray-500">Clients Fidèles</p>
-                <p class="text-2xl font-bold text-primary-600">{{ loyalCustomersCount }}</p>
-            </div>
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p class="text-sm text-gray-500">Total Achats</p>
-                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalSpent) }}</p>
-            </div>
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <p class="text-sm text-gray-500">Moyenne/Client</p>
-                <p class="text-2xl font-bold text-blue-600">{{ formatCurrency(averageSpent) }}</p>
-            </div>
-        </div>
-
-        <!-- Search -->
-        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-wrap gap-4">
-            <input 
-                v-model="search"
-                type="text"
-                placeholder="Rechercher par ID, nom, ICE, email ou téléphone..."
-                class="flex-1 min-w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-            <select v-model="filterLoyalty" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
-                <option value="">Tous les clients</option>
-                <option value="loyal">Clients fidèles</option>
-                <option value="new">Nouveaux clients</option>
-            </select>
-        </div>
-
-        <!-- Customers Table -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <table class="w-full">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID Client</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ICE</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fidélité</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Achats</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <tr v-for="customer in filteredCustomers" :key="customer.id" class="hover:bg-gray-50">
-                        <td class="px-6 py-4">
-                            <span class="font-mono text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">{{ customer.client_id || `CLI-${String(customer.id).padStart(4, '0')}` }}</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                                    <span class="text-gray-900 font-medium">{{ getInitials(customer.name) }}</span>
+        <!-- Customer Form Page -->
+        <div v-show="showForm" class="bg-slate-50 min-h-screen px-4 py-6">
+            <form @submit.prevent="saveCustomer" class="w-full max-w-5xl mx-auto bg-white rounded-3xl shadow-[0_25px_50px_rgba(15,23,42,0.25)] overflow-hidden max-h-[90vh] flex flex-col">
+                <div class="px-6 py-5 border-b flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.5em] text-gray-400">Client</p>
+                        <h3 class="text-2xl font-bold text-gray-900">{{ editingCustomer ? 'Modifier le client' : 'Nouvel client' }}</h3>
+                    </div>
+                    <button type="button" @click="closeCustomerForm" class="text-gray-400 hover:text-gray-600">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+                <div class="px-6 py-4 border-b flex flex-wrap gap-2">
+                    <button type="button" @click="activeCustomerTab = 'informations'" :class="['px-4 py-2 rounded-full text-sm font-semibold transition', activeCustomerTab === 'informations' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600']">
+                        <ClipboardDocumentListIcon class="w-4 h-4 inline-block mr-1" />
+                        Informations
+                    </button>
+                    <button type="button" @click="activeCustomerTab = 'historique'" :class="['px-4 py-2 rounded-full text-sm font-semibold transition', activeCustomerTab === 'historique' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600']">
+                        <ClockIcon class="w-4 h-4 inline-block mr-1" />
+                        Historique
+                    </button>
+                    <button type="button" @click="activeCustomerTab = 'fidelite'" :class="['px-4 py-2 rounded-full text-sm font-semibold transition', activeCustomerTab === 'fidelite' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600']">
+                        <GiftIcon class="w-4 h-4 inline-block mr-1" />
+                        Fidélité
+                    </button>
+                    <button type="button" @click="activeCustomerTab = 'documents'" :class="['px-4 py-2 rounded-full text-sm font-semibold transition', activeCustomerTab === 'documents' ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600']">
+                        <DocumentIcon class="w-4 h-4 inline-block mr-1" />
+                        Documents
+                    </button>
+                </div>
+                <div class="px-6 py-6 overflow-y-auto space-y-6 flex-1">
+                    <div v-show="activeCustomerTab === 'informations'" class="space-y-6">
+                        <div class="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                            <section class="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm space-y-5">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-16 h-16 rounded-xl overflow-hidden bg-primary-100">
+                                        <img v-if="customerPhotoPreview" :src="customerPhotoPreview" alt="Photo client" class="w-full h-full object-cover" />
+                                        <PhotoIcon v-else class="w-full h-full p-3 text-primary-500" />
+                                    </div>
+                                    <div>
+                                        <p class="text-xs uppercase tracking-[0.3em] text-gray-400">ID Client</p>
+                                        <p class="text-lg font-semibold text-gray-900">{{ editingCustomer?.client_id || (editingCustomer ? `CLI-${String(editingCustomer.id).padStart(4, '0')}` : 'Auto-généré') }}</p>
+                                        <p class="text-xs text-gray-500">Type : {{ form.type_client === 'entreprise' ? 'Entreprise' : 'Particulier' }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <label class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 rounded-xl cursor-pointer text-sm font-medium text-primary-600 hover:bg-primary-50">
+                                        <PhotoIcon class="w-4 h-4" />
+                                        Changer la photo
+                                        <input type="file" accept="image/*" class="sr-only" @change="handleCustomerPhotoUpload">
+                                    </label>
+                                    <button type="button" @click="customerPhotoPreview = ''" class="px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50">Supprimer</button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">Nom *</label>
+                                        <input v-model="form.nom" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom de famille">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">Prénom</label>
+                                        <input v-model="form.prenom" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Prénom">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">Type client</label>
+                                        <select v-model="form.type_client" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                            <option value="particulier">Particulier</option>
+                                            <option value="entreprise">Entreprise</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">Raison sociale</label>
+                                        <input v-model="form.raison_sociale" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom de l'entreprise">
+                                    </div>
                                 </div>
                                 <div>
-                                    <p class="font-medium text-gray-900">{{ customer.name }}</p>
-                                    <p class="text-sm text-gray-500">{{ customer.city || 'Pas de ville' }}</p>
+                                    <label class="block text-sm font-medium text-gray-600">Activité</label>
+                                    <input v-model="form.activite" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Commerce, Service, ...">
                                 </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ customer.ice || '-' }}</td>
-                        <td class="px-6 py-4">
-                            <p class="text-sm text-gray-900">{{ customer.phone || '-' }}</p>
-                            <p class="text-sm text-gray-500">{{ customer.email || '-' }}</p>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center space-x-2">
-                                <span v-if="customer.loyalty_discount > 0" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                    -{{ customer.loyalty_discount }}%
-                                </span>
-                                <span v-else class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
-                                    Standard
-                                </span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <p class="font-medium text-gray-900">{{ formatCurrency(customer.total_spent || 0) }}</p>
-                            <p class="text-sm text-gray-500">{{ customer.completed_sales_count || 0 }} achats</p>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <div class="flex items-center justify-end space-x-2">
-                                <router-link :to="`/customers/${customer.client_id || customer.id}`" class="p-2 text-blue-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" title="Voir détails">
-                                    <EyeIcon class="w-5 h-5" />
-                                </router-link>
-                                <button @click="viewHistory(customer)" class="p-2 text-purple-400 hover:text-purple-600 rounded-lg hover:bg-purple-50" title="Historique">
-                                    <ClockIcon class="w-5 h-5" />
-                                </button>
-                                <button @click="openForm(customer)" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title="Modifier">
-                                    <PencilIcon class="w-5 h-5" />
-                                </button>
-                                <button @click="confirmDelete(customer)" class="p-2 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50" title="Supprimer">
-                                    <TrashIcon class="w-5 h-5" />
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr v-if="filteredCustomers.length === 0">
-                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
-                            <UserGroupIcon class="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                            Aucun client trouvé
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                            </section>
+                            <section class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-5">
+                                <h4 class="text-md font-semibold text-gray-800">Coordonnées</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">Téléphone</label>
+                                        <input v-model="form.phone" type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="+212 600 000 000">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">Email</label>
+                                        <input v-model="form.email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="email@client.com">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">Ville</label>
+                                        <input v-model="form.city" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ville">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">Pays</label>
+                                        <input v-model="form.country" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Pays">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-600">Adresse</label>
+                                    <textarea v-model="form.address" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Adresse complète"></textarea>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">ICE</label>
+                                        <input v-model="form.ice" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="000000000000000">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-600">IF</label>
+                                        <input v-model="form.if" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="000000000000000">
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                    <div v-show="activeCustomerTab === 'historique'" class="space-y-4">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <article class="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-700">Historique des achats</h4>
+                                <div v-if="editingCustomer && customerHistory && customerHistory.length" class="space-y-3">
+                                    <div v-for="purchase in customerHistory.slice(0, 4)" :key="purchase.id" class="flex items-center justify-between text-xs text-gray-600">
+                                        <div>
+                                            <p class="text-sm text-gray-900">{{ purchase.transaction_id || `TX-${purchase.id}` }}</p>
+                                            <p>{{ formatDate(purchase.date) }}</p>
+                                        </div>
+                                        <p class="font-semibold text-gray-900">{{ formatCurrency(purchase.total) }}</p>
+                                    </div>
+                                </div>
+                                <p v-else class="text-xs text-gray-500">Aucun achat enregistré</p>
+                            </article>
+                            <article v-if="editingCustomer && customerHistory && customerHistory.length" class="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-700">Résumé récent</h4>
+                                <div class="space-y-3">
+                                    <div v-for="purchase in customerHistory.slice(0, 2)" :key="purchase.id" class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs text-gray-500">{{ formatDate(purchase.date) }}</p>
+                                            <p class="text-sm font-semibold text-gray-900">Vente</p>
+                                        </div>
+                                        <p class="text-sm font-semibold text-primary-600">{{ formatCurrency(purchase.total) }}</p>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                    <div v-show="activeCustomerTab === 'fidelite'" class="space-y-4">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <article class="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-700">Fidélité & avantages</h4>
+                                <div v-if="editingCustomer" class="grid gap-3">
+                                    <div class="bg-gray-50 border border-gray-200 rounded-2xl p-3">
+                                        <p class="text-xs text-gray-500">Points accumulés</p>
+                                        <p class="text-lg font-semibold text-gray-900">{{ form.loyalty_points || 0 }}</p>
+                                        <p class="text-xs text-gray-400">Points fidélité</p>
+                                    </div>
+                                    <div class="bg-gray-50 border border-gray-200 rounded-2xl p-3">
+                                        <p class="text-xs text-gray-500">Remise</p>
+                                        <p class="text-lg font-semibold text-gray-900">{{ form.loyalty_discount || 0 }}%</p>
+                                        <p class="text-xs text-gray-400">Réduction appliquée</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500">Points fidélité</label>
+                                        <input v-model.number="form.loyalty_points" type="number" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-500">Remise (%)</label>
+                                        <input v-model.number="form.loyalty_discount" type="number" min="0" max="100" step="0.5" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    </div>
+                                </div>
+                            </article>
+                            <article class="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-700">Notes internes</h4>
+                                <textarea v-model="form.note_interne" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ajoutez un commentaire, avantage spécial ou condition de traitement..."></textarea>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-600">Avantages client</label>
+                                    <input v-model="form.avantages" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: livraison prioritaire">
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                    <div v-show="activeCustomerTab === 'documents'" class="space-y-4">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <!-- CIN Document -->
+                            <article class="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-700">Carte d'Identité (CIN)</h4>
+                                <div v-if="form.documents?.cin?.name || customerDocuments.cin" class="space-y-2">
+                                    <div class="bg-green-50 rounded border border-green-200 p-3 flex items-center justify-between">
+                                        <div class="flex items-center space-x-2">
+                                            <DocumentIcon class="w-5 h-5 text-green-600" />
+                                            <span class="text-sm text-gray-700 font-medium truncate">{{ form.documents?.cin?.name || 'Document chargé' }}</span>
+                                        </div>
+                                        <button type="button" v-if="customerDocuments.cin" @click="downloadFile(customerDocuments.cin)" class="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+                                            <ArrowDownTrayIcon class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <button type="button" @click="() => { form.documents.cin = null; customerDocuments.cin = null }" class="text-xs text-red-600 hover:text-red-700 font-medium">
+                                        Supprimer le document
+                                    </button>
+                                </div>
+                                <label class="block cursor-pointer">
+                                    <span class="text-xs text-gray-600 font-medium">{{ form.documents?.cin?.name ? 'Remplacer le document' : 'Charger un document' }}</span>
+                                    <input type="file" @change="(e) => handleDocumentUpload(e, 'cin')" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="w-full mt-2 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+                                </label>
+                            </article>
 
-        <!-- Customer Form Modal -->
-        <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showForm = false"></div>
-            <div class="relative bg-white rounded-xl p-6 max-w-2xl w-full mx-4 shadow-xl z-10 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    {{ editingCustomer ? 'Modifier le client' : 'Nouveau client' }}
-                </h3>
-                
-                <form @submit.prevent="saveCustomer" class="space-y-4">
-                    <!-- ID Client (readonly for existing) -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">ID Client</label>
-                            <input 
-                                :value="editingCustomer ? (editingCustomer.client_id || `CLI-${String(editingCustomer.id).padStart(4, '0')}`) : 'Auto-généré'"
-                                type="text" 
-                                disabled 
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-                            >
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
-                            <input v-model="form.name" type="text" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom complet">
-                        </div>
-                    </div>
+                            <!-- Registre de Commerce -->
+                            <article class="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-700">Registre de Commerce</h4>
+                                <div v-if="form.documents?.registre_commerce?.name || customerDocuments.registre_commerce" class="space-y-2">
+                                    <div class="bg-green-50 rounded border border-green-200 p-3 flex items-center justify-between">
+                                        <div class="flex items-center space-x-2">
+                                            <DocumentIcon class="w-5 h-5 text-green-600" />
+                                            <span class="text-sm text-gray-700 font-medium truncate">{{ form.documents?.registre_commerce?.name || 'Document chargé' }}</span>
+                                        </div>
+                                        <button type="button" v-if="customerDocuments.registre_commerce" @click="downloadFile(customerDocuments.registre_commerce)" class="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+                                            <ArrowDownTrayIcon class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <button type="button" @click="() => { form.documents.registre_commerce = null; customerDocuments.registre_commerce = null }" class="text-xs text-red-600 hover:text-red-700 font-medium">
+                                        Supprimer le document
+                                    </button>
+                                </div>
+                                <label class="block cursor-pointer">
+                                    <span class="text-xs text-gray-600 font-medium">{{ form.documents?.registre_commerce?.name ? 'Remplacer le document' : 'Charger un document' }}</span>
+                                    <input type="file" @change="(e) => handleDocumentUpload(e, 'registre_commerce')" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="w-full mt-2 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+                                </label>
+                            </article>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">ICE (Identifiant Commun de l'Entreprise)</label>
-                            <input v-model="form.ice" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="000000000000000">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-                            <input v-model="form.phone" type="tel" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="+212 600 000 000">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Ville</label>
-                            <input v-model="form.city" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ville">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Pays</label>
-                            <input v-model="form.country" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Pays">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-                        <textarea v-model="form.address" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Adresse complète"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input v-model="form.email" type="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="email@example.com">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Observations</label>
-                        <textarea v-model="form.observations" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Notes et observations sur le client..."></textarea>
-                    </div>
-
-                    <!-- Fidélité / Remise -->
-                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <h4 class="font-medium text-gray-900 mb-3 flex items-center">
-                            <GiftIcon class="w-5 h-5 mr-2 text-primary-500" />
-                            Fidélité / Remise
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Remise fidélité (%)</label>
-                                <input v-model.number="form.loyalty_discount" type="number" min="0" max="100" step="0.5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="0">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Points de fidélité</label>
-                                <input v-model.number="form.loyalty_points" type="number" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="0">
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <label class="flex items-center">
-                                <input type="checkbox" v-model="form.is_vip" class="mr-2 text-primary-500 rounded">
-                                <span class="text-sm text-gray-700">Client VIP</span>
-                            </label>
+                            <!-- Attestation TVA -->
+                            <article class="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                                <h4 class="text-sm font-semibold text-gray-700">Attestation TVA</h4>
+                                <div v-if="form.documents?.attestation_tva?.name || customerDocuments.attestation_tva" class="space-y-2">
+                                    <div class="bg-green-50 rounded border border-green-200 p-3 flex items-center justify-between">
+                                        <div class="flex items-center space-x-2">
+                                            <DocumentIcon class="w-5 h-5 text-green-600" />
+                                            <span class="text-sm text-gray-700 font-medium truncate">{{ form.documents?.attestation_tva?.name || 'Document chargé' }}</span>
+                                        </div>
+                                        <button type="button" v-if="customerDocuments.attestation_tva" @click="downloadFile(customerDocuments.attestation_tva)" class="text-green-600 hover:text-green-700 text-sm font-medium flex items-center">
+                                            <ArrowDownTrayIcon class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <button type="button" @click="() => { form.documents.attestation_tva = null; customerDocuments.attestation_tva = null }" class="text-xs text-red-600 hover:text-red-700 font-medium">
+                                        Supprimer le document
+                                    </button>
+                                </div>
+                                <label class="block cursor-pointer">
+                                    <span class="text-xs text-gray-600 font-medium">{{ form.documents?.attestation_tva?.name ? 'Remplacer le document' : 'Charger un document' }}</span>
+                                    <input type="file" @change="(e) => handleDocumentUpload(e, 'attestation_tva')" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="w-full mt-2 px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+                                </label>
+                            </article>
                         </div>
                     </div>
-                    
-                    <div class="flex space-x-3 pt-4">
-                        <button type="button" @click="showForm = false" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                            Annuler
-                        </button>
-                        <button type="submit" :disabled="saving" class="flex-1 px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50">
-                            Enregistrer
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+                    <button type="button" @click="closeCustomerForm" class="px-5 py-2 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100">Annuler</button>
+                    <button type="submit" :disabled="saving" class="px-5 py-2 bg-primary-500 text-white font-semibold rounded-xl hover:bg-primary-600 disabled:opacity-60">Enregistrer</button>
+                </div>
+            </form>
         </div>
 
         <!-- History Modal -->
@@ -305,11 +472,18 @@ import {
     UserGroupIcon,
     GiftIcon,
     XMarkIcon,
-    EyeIcon
+    PhotoIcon,
+    ClipboardDocumentListIcon,
+    CalendarDaysIcon,
+    DocumentIcon,
+    ArrowDownTrayIcon
 } from '@heroicons/vue/24/outline'
 
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
+
+const CUSTOMERS_STORAGE_KEY = 'pos_customers'
+const SALES_STORAGE_KEY = 'pos_sales'
 
 const customers = ref([])
 const search = ref('')
@@ -321,34 +495,85 @@ const editingCustomer = ref(null)
 const customerToDelete = ref(null)
 const selectedCustomer = ref(null)
 const customerHistory = ref([])
+const customerDocuments = ref({})
 const saving = ref(false)
 
-const form = reactive({ 
-    name: '', 
-    email: '', 
-    phone: '', 
-    address: '', 
-    city: '', 
-    country: '', 
+function saveCustomersToStorage() {
+    localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(customers.value))
+}
+
+function loadCustomersFromStorage() {
+    const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY)
+    if (stored) {
+        customers.value = JSON.parse(stored)
+        return true
+    }
+    return false
+}
+
+function calculateCustomerTotal(customer) {
+    const sales = loadSalesFromStorage()
+    if (!sales || !customer.id) return 0
+    return sales
+        .filter(sale => sale.customer_id === customer.id)
+        .reduce((sum, sale) => sum + (sale.total || 0), 0)
+}
+
+function calculateCustomerSalesCount(customer) {
+    const sales = loadSalesFromStorage()
+    if (!sales || !customer.id) return 0
+    return sales.filter(sale => sale.customer_id === customer.id).length
+}
+
+function loadSalesFromStorage() {
+    const stored = localStorage.getItem(SALES_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+}
+
+const defaultCustomerForm = () => ({
+    nom: '',
+    prenom: '',
+    raison_sociale: '',
+    activite: '',
+    type_client: 'particulier',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    country: '',
     ice: '',
-    observations: '',
-    loyalty_discount: 0,
+    if: '',
+    note_interne: '',
     loyalty_points: 0,
-    is_vip: false
+    loyalty_discount: 0,
+    avantages: '',
+    photo: null,
+    documents: {
+        cin: null,
+        registre_commerce: null,
+        attestation_tva: null
+    }
 })
+
+const form = reactive(defaultCustomerForm())
+const activeCustomerTab = ref('informations')
+const customerPhotoPreview = ref('')
 
 const filteredCustomers = computed(() => {
     let result = customers.value
     
     if (search.value) {
         const query = search.value.toLowerCase()
-        result = result.filter(c => 
-            c.name.toLowerCase().includes(query) ||
-            c.email?.toLowerCase().includes(query) ||
-            c.phone?.includes(query) ||
-            c.ice?.includes(query) ||
-            c.client_id?.toLowerCase().includes(query)
-        )
+        result = result.filter(c => {
+            const name = (c.name || `${c.nom || ''} ${c.prenom || ''}`).trim().toLowerCase()
+            return (
+                (name && name.includes(query)) ||
+                c.email?.toLowerCase().includes(query) ||
+                c.phone?.includes(query) ||
+                c.ice?.includes(query) ||
+                c.client_id?.toLowerCase().includes(query)
+            )
+        })
     }
     
     if (filterLoyalty.value === 'loyal') {
@@ -361,11 +586,17 @@ const filteredCustomers = computed(() => {
 })
 
 const loyalCustomersCount = computed(() => customers.value.filter(c => c.loyalty_discount > 0 || c.is_vip).length)
-const totalSpent = computed(() => customers.value.reduce((sum, c) => sum + (c.total_spent || 0), 0))
+const totalSpent = computed(() => {
+    const sales = loadSalesFromStorage()
+    if (!sales || !Array.isArray(sales)) return 0
+    return sales.reduce((sum, sale) => sum + (sale.total || 0), 0)
+})
 const averageSpent = computed(() => customers.value.length > 0 ? totalSpent.value / customers.value.length : 0)
 
-function getInitials(name) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+function getInitials(name = '') {
+    const fragments = (name || '').trim().split(' ').filter(Boolean)
+    if (!fragments.length) return ''
+    return fragments.map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
 function formatDate(date) {
@@ -373,39 +604,118 @@ function formatDate(date) {
     return new Date(date).toLocaleDateString('fr-FR')
 }
 
+function resetCustomerForm() {
+    Object.assign(form, defaultCustomerForm())
+    customerPhotoPreview.value = ''
+    activeCustomerTab.value = 'informations'
+}
+
+function closeCustomerForm() {
+    showForm.value = false
+    editingCustomer.value = null
+    resetCustomerForm()
+}
+
+function handleCustomerPhotoUpload(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    form.photo = file
+    
+    // Convert image to base64 for persistent storage
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        customerPhotoPreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+}
+
+function extractFileName(path) {
+    if (!path) return 'document'
+    if (typeof path === 'object') {
+        return path.name || 'document'
+    }
+    return path.split('/').pop().replace(/\.pdf|\.doc|\.docx|\.jpg|\.jpeg|\.png/i, '')
+}
+
+function downloadFile(url) {
+    const source = typeof url === 'string' ? url : url?.url
+    const filename = typeof url === 'object' ? url?.name || extractFileName(source) : extractFileName(source)
+    if (source) {
+        const link = document.createElement('a')
+        link.href = source
+        link.download = filename
+        link.click()
+    }
+}
+
+function handleDocumentUpload(event, docType) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        if (!form.documents) {
+            form.documents = {}
+        }
+        // Store only file name and type, not the base64 content (too large for localStorage)
+        form.documents[docType] = {
+            name: file.name,
+            type: file.type,
+            size: file.size
+        }
+        // Store the base64 in memory only (in customerDocuments) for download
+        customerDocuments.value[docType] = {
+            name: file.name,
+            url: e.target.result,
+            type: file.type
+        }
+    }
+    reader.readAsDataURL(file)
+}
+
 function openForm(customer = null) {
     editingCustomer.value = customer
+    resetCustomerForm()
+    customerDocuments.value = {} // Reset memory-only document storage
     if (customer) {
-        form.name = customer.name || ''
-        form.email = customer.email || ''
+        // Load customer data into form
+        form.nom = customer.nom || customer.name || ''
+        form.prenom = customer.prenom || ''
+        form.raison_sociale = customer.raison_sociale || ''
+        form.activite = customer.activite || customer.activity || ''
+        form.type_client = customer.type_client || 'particulier'
         form.phone = customer.phone || ''
+        form.email = customer.email || ''
         form.address = customer.address || ''
         form.city = customer.city || ''
         form.country = customer.country || ''
         form.ice = customer.ice || ''
-        form.observations = customer.observations || ''
+        form.if = customer.if || ''
+        form.note_interne = customer.note_interne || ''
         form.loyalty_discount = customer.loyalty_discount || 0
         form.loyalty_points = customer.loyalty_points || 0
-        form.is_vip = customer.is_vip || false
-    } else {
-        Object.keys(form).forEach(key => {
-            if (typeof form[key] === 'boolean') form[key] = false
-            else if (typeof form[key] === 'number') form[key] = 0
-            else form[key] = ''
-        })
+        form.avantages = customer.avantages || ''
+        form.documents = customer.documents || { cin: null, registre_commerce: null, attestation_tva: null }
+        customerPhotoPreview.value = customer.photo_url || ''
+        // Note: customerDocuments stays empty for loaded customers (files don't persist across sessions)
+        // Users can upload files again in the current session
+        
+        // Load customer sales history
+        const sales = loadSalesFromStorage()
+        customerHistory.value = sales
+            .filter(sale => sale.customer_id === customer.id)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
     }
     showForm.value = true
 }
 
 function viewHistory(customer) {
     selectedCustomer.value = customer
-    // Demo history data
-    customerHistory.value = [
-        { id: 1, date: '2026-02-08', transaction_id: 'TRX-20260208-001', items_count: 5, total: 1250 },
-        { id: 2, date: '2026-02-05', transaction_id: 'TRX-20260205-003', items_count: 3, total: 850 },
-        { id: 3, date: '2026-01-28', transaction_id: 'TRX-20260128-007', items_count: 8, total: 2100 },
-        { id: 4, date: '2026-01-15', transaction_id: 'TRX-20260115-002', items_count: 2, total: 450 },
-    ]
+    // Load actual sales from storage
+    const sales = loadSalesFromStorage()
+    customerHistory.value = sales
+        .filter(sale => sale.customer_id === customer.id)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
     showHistoryModal.value = true
 }
 
@@ -417,17 +727,31 @@ function confirmDelete(customer) {
 async function saveCustomer() {
     saving.value = true
     try {
-        if (editingCustomer.value) {
-            const response = await customersApi.update(editingCustomer.value.id, form)
-            const index = customers.value.findIndex(c => c.id === editingCustomer.value.id)
-            if (index > -1) customers.value[index] = response.data
-        } else {
-            const response = await customersApi.create(form)
-            customers.value.unshift(response.data)
+        const { photo, ...rest } = form
+        const payload = {
+            ...rest,
+            id: editingCustomer.value?.id || Date.now(),
+            name: `${form.nom} ${form.prenom}`.trim(),
+            nom: form.nom,
+            prenom: form.prenom,
+            photo_url: customerPhotoPreview.value || null
         }
-        showForm.value = false
+        console.log('DEBUG saveCustomer:', { photoPreview: customerPhotoPreview.value, payload: payload })
+        if (editingCustomer.value) {
+            const index = customers.value.findIndex(c => c.id === editingCustomer.value.id)
+            if (index > -1) {
+                customers.value[index] = {
+                    ...customers.value[index],
+                    ...payload
+                }
+            }
+        } else {
+            customers.value.unshift(payload)
+        }
+        saveCustomersToStorage()
+        closeCustomerForm()
     } catch (error) {
-        alert('Erreur: ' + (error.response?.data?.message || error.message))
+        alert('Erreur: ' + error.message)
     } finally {
         saving.value = false
     }
@@ -435,8 +759,8 @@ async function saveCustomer() {
 
 async function deleteCustomer() {
     try {
-        await customersApi.delete(customerToDelete.value.id)
         customers.value = customers.value.filter(c => c.id !== customerToDelete.value.id)
+        saveCustomersToStorage()
         showDeleteModal.value = false
     } catch (error) {
         alert('Erreur lors de la suppression')
@@ -444,17 +768,19 @@ async function deleteCustomer() {
 }
 
 onMounted(async () => {
+    // Try loading from localStorage first
+    const hasLocalData = loadCustomersFromStorage()
+    if (hasLocalData) {
+        return
+    }
+    
+    // Fallback to API
     try {
         const response = await customersApi.list({ with_stats: true })
         customers.value = Array.isArray(response.data) ? response.data : response.data.data || []
+        saveCustomersToStorage()
     } catch (error) {
         console.error('Error loading customers:', error)
-        // Demo data
-        customers.value = [
-            { id: 1, client_id: 'CLI-0001', name: 'Ahmed Benali', ice: '001234567890123', phone: '0612345678', email: 'ahmed@example.com', city: 'Casablanca', country: 'Maroc', loyalty_discount: 10, loyalty_points: 250, is_vip: true, completed_sales_count: 15, total_spent: 45000 },
-            { id: 2, client_id: 'CLI-0002', name: 'Sara Mansouri', ice: '', phone: '0698765432', email: 'sara@example.com', city: 'Rabat', country: 'Maroc', loyalty_discount: 5, loyalty_points: 120, is_vip: false, completed_sales_count: 8, total_spent: 22000 },
-            { id: 3, client_id: 'CLI-0003', name: 'Mohamed Tazi', ice: '009876543210123', phone: '0655443322', email: 'mohamed@example.com', city: 'Marrakech', country: 'Maroc', loyalty_discount: 0, loyalty_points: 50, is_vip: false, completed_sales_count: 3, total_spent: 8500 },
-        ]
     }
 })
 </script>

@@ -237,6 +237,8 @@ import {
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
+const RECEPTIONS_STORAGE_KEY = 'pos_receptions'
+
 const receptionsList = ref([])
 const search = ref('')
 const statusFilter = ref('')
@@ -245,6 +247,28 @@ const showDeleteModal = ref(false)
 const editingReception = ref(null)
 const receptionToDelete = ref(null)
 const saving = ref(false)
+
+function saveReceptionsToStorage() {
+    try {
+        localStorage.setItem(RECEPTIONS_STORAGE_KEY, JSON.stringify(receptionsList.value))
+    } catch (error) {
+        console.error('Error saving receptions to localStorage:', error)
+    }
+}
+
+function loadReceptionsFromStorage() {
+    try {
+        const stored = localStorage.getItem(RECEPTIONS_STORAGE_KEY)
+        if (stored) {
+            receptionsList.value = JSON.parse(stored)
+            return true
+        }
+        return false
+    } catch (error) {
+        console.error('Error loading receptions from localStorage:', error)
+        return false
+    }
+}
 
 const form = reactive({
     fournisseur_id: '',
@@ -333,6 +357,7 @@ function validateReception(reception) {
     const index = receptionsList.value.findIndex(r => r.id === reception.id)
     if (index > -1) {
         receptionsList.value[index].statut = 'validée'
+        saveReceptionsToStorage()
     }
 }
 
@@ -340,6 +365,7 @@ function returnToSupplier(reception) {
     const index = receptionsList.value.findIndex(r => r.id === reception.id)
     if (index > -1) {
         receptionsList.value[index].statut = 'retour'
+        saveReceptionsToStorage()
     }
 }
 
@@ -370,6 +396,7 @@ async function saveReception() {
         }
 
         receptionsList.value.unshift(newReception)
+        saveReceptionsToStorage()
         showForm.value = false
     } catch (error) {
         alert('Erreur: ' + error.message)
@@ -380,22 +407,48 @@ async function saveReception() {
 
 function deleteReception() {
     receptionsList.value = receptionsList.value.filter(r => r.id !== receptionToDelete.value.id)
+    saveReceptionsToStorage()
     showDeleteModal.value = false
 }
 
 onMounted(async () => {
-    // Demo fournisseurs
-    fournisseurs.value = [
-        { id: 1, name: 'Fournisseur ABC', ice: '001234567890001', address: '23, Rue de Commerce, Casablanca' },
-        { id: 2, name: 'Distributeur XYZ', ice: '001234567890002', address: '45, Avenue Mohammed V, Rabat' },
-        { id: 3, name: 'Import Express', ice: '001234567890003', address: '78, Boulevard Zerktouni, Casablanca' },
-    ]
+    // Load real fournisseurs from localStorage
+    try {
+        const stored = localStorage.getItem('pos_fournisseurs')
+        if (stored) {
+            const parsed = JSON.parse(stored)
+            fournisseurs.value = parsed.map(f => ({
+                id: f.id,
+                name: f.name || `${f.nom} ${f.prenom}`.trim(),
+                email: f.email || '',
+                ice: f.ice || '',
+                address: f.adresse || f.address || ''
+            }))
+        } else {
+            // Fallback to demo if no localStorage data
+            fournisseurs.value = [
+                { id: 1, name: 'Fournisseur ABC', ice: '001234567890001', address: '23, Rue de Commerce, Casablanca' },
+                { id: 2, name: 'Distributeur XYZ', ice: '001234567890002', address: '45, Avenue Mohammed V, Rabat' },
+                { id: 3, name: 'Import Express', ice: '001234567890003', address: '78, Boulevard Zerktouni, Casablanca' },
+            ]
+        }
+    } catch (error) {
+        console.error('Error loading fournisseurs:', error)
+        fournisseurs.value = []
+    }
 
-    // Demo data
-    receptionsList.value = [
-        { id: 1, numero: 'REC-2026-001', bon_commande_id: 1, bon_commande: 'BC-2026-001', fournisseur_name: 'Fournisseur ABC', date_reception: '2026-02-10', nb_articles: 48, montant_total: 24800, statut: 'validée', lines: [] },
-        { id: 2, numero: 'REC-2026-002', bon_commande_id: 2, bon_commande: 'BC-2026-002', fournisseur_name: 'Distributeur XYZ', date_reception: '2026-02-11', nb_articles: 30, montant_total: 18500, statut: 'en_attente', lines: [] },
-        { id: 3, numero: 'REC-2026-003', bon_commande_id: 3, bon_commande: 'BC-2026-003', fournisseur_name: 'Import Express', date_reception: '2026-02-09', nb_articles: 95, montant_total: 42750, statut: 'retour', lines: [] },
-    ]
+    // Load receptions from localStorage first
+    const loadedFromStorage = loadReceptionsFromStorage()
+    
+    // Only use demo data if no stored receptions exist
+    if (!loadedFromStorage) {
+        receptionsList.value = [
+            { id: 1, numero: 'REC-2026-001', bon_commande_id: 1, bon_commande: 'BC-2026-001', fournisseur_id: 1, fournisseur_name: 'Fournisseur ABC', date_reception: '2026-02-10', nb_articles: 48, montant_total: 24800, statut: 'validée', lines: [] },
+            { id: 2, numero: 'REC-2026-002', bon_commande_id: 2, bon_commande: 'BC-2026-002', fournisseur_id: 2, fournisseur_name: 'Distributeur XYZ', date_reception: '2026-02-11', nb_articles: 30, montant_total: 18500, statut: 'en_attente', lines: [] },
+            { id: 3, numero: 'REC-2026-003', bon_commande_id: 3, bon_commande: 'BC-2026-003', fournisseur_id: 3, fournisseur_name: 'Import Express', date_reception: '2026-02-09', nb_articles: 95, montant_total: 42750, statut: 'retour', lines: [] },
+        ]
+        // Save the demo data to localStorage so it persists
+        saveReceptionsToStorage()
+    }
 })
 </script>

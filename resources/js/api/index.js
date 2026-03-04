@@ -140,6 +140,32 @@ export const employeesApi = {
     create: (data) => api.post('/employees', data),
     update: (id, data) => api.put(`/employees/${id}`, data),
     delete: (id) => api.delete(`/employees/${id}`),
+    payrollHistory: (id, params = {}) => api.get(`/employees/${id}/payroll-history`, { params }),
+    attendanceSummary: (id, params = {}) => api.get(`/employees/${id}/attendance-summary`, { params }),
+}
+
+// Payroll API
+export const payrollApi = {
+    list: (params = {}) => api.get('/payrolls', { params }),
+    get: (id) => api.get(`/payrolls/${id}`),
+    store: (data) => api.post('/payrolls', data),
+    update: (id, data) => api.put(`/payrolls/${id}`, data),
+    delete: (id) => api.delete(`/payrolls/${id}`),
+    processPayment: (id, data) => api.post(`/payrolls/${id}/process-payment`, data),
+    statistics: (params = {}) => api.get('/payroll-statistics', { params }),
+    preview: (data) => api.post('/payroll-preview', data),
+    bulkCalculate: (data) => api.post('/payroll-bulk-calculate', data),
+}
+
+// Attendance API
+export const attendanceApi = {
+    list: (params = {}) => api.get('/attendances', { params }),
+    get: (id) => api.get(`/attendances/${id}`),
+    store: (data) => api.post('/attendances', data),
+    update: (id, data) => api.put(`/attendances/${id}`, data),
+    delete: (id) => api.delete(`/attendances/${id}`),
+    bulk: (data) => api.post('/attendances/bulk', data),
+    monthlySummary: (params = {}) => api.get('/attendances/summary/monthly', { params }),
 }
 
 // Stock API
@@ -187,4 +213,13 @@ export const reportsApi = {
     categories: (params = {}) => api.get('/reports/categories', { params }),
     payments: (params = {}) => api.get('/reports/payments', { params }),
     daily: (date) => api.get('/reports/daily', { params: { date } }),
+}
+
+// Fournisseurs API
+export const fournisseursApi = {
+    list: (params = {}) => api.get('/fournisseurs', { params }),
+    get: (id) => api.get(`/fournisseurs/${id}`),
+    create: (data) => api.post('/fournisseurs', data),
+    update: (id, data) => api.put(`/fournisseurs/${id}`, data),
+    delete: (id) => api.delete(`/fournisseurs/${id}`),
 }

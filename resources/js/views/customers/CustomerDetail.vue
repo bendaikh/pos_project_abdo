@@ -1,65 +1,65 @@
 <template>
-    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-6">
+    <div class="min-h-screen bg-gray-50 p-6">
         <!-- Breadcrumb -->
         <div class="flex items-center space-x-2 text-sm mb-6">
-            <router-link to="/dashboard" class="text-primary-400 hover:text-primary-300 flex items-center">
+            <router-link to="/dashboard" class="text-primary-600 hover:text-primary-700 flex items-center">
                 <HomeIcon class="w-4 h-4 mr-1" />
                 Accueil
             </router-link>
-            <ChevronRightIcon class="w-4 h-4 text-gray-500" />
-            <router-link to="/customers" class="text-primary-400 hover:text-primary-300">
+            <ChevronRightIcon class="w-4 h-4 text-gray-400" />
+            <router-link to="/customers" class="text-primary-600 hover:text-primary-700">
                 Clients
             </router-link>
-            <ChevronRightIcon class="w-4 h-4 text-gray-500" />
-            <span class="text-gray-400">Fiche client</span>
+            <ChevronRightIcon class="w-4 h-4 text-gray-400" />
+            <span class="text-gray-600">Fiche client</span>
         </div>
 
         <!-- Main Card -->
-        <div class="bg-gray-800 bg-opacity-80 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
+            <div class="bg-gradient-to-r from-primary-50 to-primary-100 border-b border-gray-200 px-6 py-6 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <UserIcon class="w-8 h-8 text-primary-400" />
-                    <h1 class="text-2xl font-bold text-primary-400">Fiche client</h1>
+                    <UserCircleIcon class="w-8 h-8 text-primary-600" />
+                    <h1 class="text-2xl font-bold text-gray-900">{{ client.name || 'Client' }}</h1>
                 </div>
                 <div class="flex space-x-3">
-                    <button @click="editClient" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
+                    <button @click="editClient" class="px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition flex items-center">
                         <PencilIcon class="w-5 h-5 mr-2" />
                         Éditer
                     </button>
-                    <button @click="confirmDelete" class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 flex items-center">
+                    <button @click="confirmDelete" class="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition flex items-center">
                         <TrashIcon class="w-5 h-5 mr-2" />
                         Supprimer
                     </button>
                 </div>
             </div>
 
-            <!-- Client Profile Section -->
-            <div class="p-6 border-b border-gray-700">
+            <!-- Profile Section -->
+            <div v-if="client.id" class="p-6 border-b border-gray-200">
                 <div class="flex items-start space-x-6">
                     <!-- Avatar -->
-                    <div class="w-32 h-32 bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-gray-600">
-                        <img v-if="client.avatar" :src="client.avatar" :alt="client.name" class="w-full h-full object-cover" />
-                        <UserIcon v-else class="w-16 h-16 text-gray-500" />
+                    <div class="w-40 h-40 bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-primary-200 shadow-sm">
+                        <img v-if="client.photo_url || client.avatar" :key="`${client.id}-${client.photo_url}`" :src="client.photo_url || client.avatar" :alt="client.name" class="w-full h-full object-cover" onerror="console.log('Image failed to load:', this.src)" />
+                        <UserCircleIcon v-else class="w-20 h-20 text-primary-400" />
                     </div>
                     
-                    <!-- Client Info -->
-                    <div class="flex-1 space-y-3">
+                    <!-- Info -->
+                    <div class="flex-1 space-y-4">
                         <div>
-                            <h2 class="text-3xl font-bold text-primary-300">{{ client.name }}</h2>
-                            <p class="text-gray-400 mt-1">ID Client : <span class="text-primary-400 font-mono">#{{ client.id }}</span></p>
+                            <h2 class="text-3xl font-bold text-gray-900">{{ client.name }}</h2>
+                            <p class="text-gray-600 mt-1">ID : <span class="font-mono text-gray-900">#{{ client.id }}</span></p>
                         </div>
                         
-                        <div v-if="client.entreprise" class="space-y-1">
-                            <p class="text-gray-400">Entreprise : <span class="text-white">{{ client.entreprise }}</span></p>
-                            <p class="text-gray-400">Raison sociale : <span class="text-white">{{ client.raison_sociale || 'N/A' }}</span></p>
+                        <div class="space-y-2">
+                            <p class="text-gray-700"><span class="font-medium">Type :</span> <span v-if="client.type_client" class="text-gray-900">{{ client.type_client === 'entreprise' ? 'Entreprise' : 'Particulier' }}</span><span v-else class="text-gray-400 italic">Non spécifié</span></p>
+                            <p v-if="client.raison_sociale" class="text-gray-700"><span class="font-medium">Raison sociale :</span> <span class="text-gray-900">{{ client.raison_sociale }}</span></p>
                         </div>
 
-                        <div class="flex items-center space-x-4">
-                            <span :class="getStatusBadgeClass(client.statut)" class="px-3 py-1 text-sm font-medium rounded-full">
-                                {{ client.statut }}
+                        <div class="flex items-center space-x-3">
+                            <span :class="getStatusBadgeClass(client.status)" class="px-3 py-1 text-sm font-medium rounded-full">
+                                {{ getStatusLabel(client.status) }}
                             </span>
-                            <span v-if="client.fidele" class="px-3 py-1 bg-yellow-900 bg-opacity-50 text-yellow-400 text-sm font-medium rounded-full border border-yellow-700">
+                            <span v-if="client.is_vip || client.loyalty_discount > 0" class="px-3 py-1 bg-yellow-100 text-yellow-700 text-sm font-medium rounded-full border border-yellow-300">
                                 ⭐ Client Fidèle
                             </span>
                         </div>
@@ -67,158 +67,239 @@
                 </div>
             </div>
 
-            <!-- Coordonnées Section -->
-            <div class="p-6 border-b border-gray-700">
-                <h3 class="text-xl font-bold text-primary-400 mb-4">Coordonnées</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="flex items-center space-x-3">
-                        <PhoneIcon class="w-5 h-5 text-primary-400 flex-shrink-0" />
-                        <div>
-                            <p class="text-gray-400 text-sm">Téléphone:</p>
-                            <p class="text-white font-medium">{{ client.telephone || 'N/A' }}</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        <EnvelopeIcon class="w-5 h-5 text-primary-400 flex-shrink-0" />
-                        <div>
-                            <p class="text-gray-400 text-sm">Email:</p>
-                            <p class="text-white font-medium">{{ client.email || 'N/A' }}</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        <MapPinIcon class="w-5 h-5 text-primary-400 flex-shrink-0" />
-                        <div>
-                            <p class="text-gray-400 text-sm">Adresse:</p>
-                            <p class="text-white font-medium">{{ client.adresse || 'N/A' }}</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        <BuildingOfficeIcon class="w-5 h-5 text-primary-400 flex-shrink-0" />
-                        <div>
-                            <p class="text-gray-400 text-sm">Ville:</p>
-                            <p class="text-white font-medium">{{ client.ville || 'N/A' }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Informations complémentaires -->
-            <div class="p-6 border-b border-gray-700">
-                <h3 class="text-xl font-bold text-primary-400 mb-4">Informations complémentaires</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-gray-700 bg-opacity-50 rounded-lg p-4 border border-gray-600">
-                        <p class="text-gray-400 text-sm mb-1">ICE</p>
-                        <p class="text-white font-medium text-lg">{{ client.ice || 'N/A' }}</p>
-                    </div>
-                    <div class="bg-gray-700 bg-opacity-50 rounded-lg p-4 border border-gray-600">
-                        <p class="text-gray-400 text-sm mb-1">Reg. Commercial</p>
-                        <p class="text-white font-medium text-lg">{{ client.reg_commercial || 'N/A' }}</p>
-                    </div>
-                    <div class="bg-gray-700 bg-opacity-50 rounded-lg p-4 border border-gray-600">
-                        <p class="text-gray-400 text-sm mb-1">TVA</p>
-                        <p class="text-white font-medium text-lg">{{ client.tva || 'N/A' }}</p>
-                    </div>
-                </div>
-
-                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-gray-700 bg-opacity-30 rounded-lg p-4">
-                        <p class="text-gray-400 text-sm mb-1">Total des achats</p>
-                        <p class="text-primary-300 font-bold text-2xl">{{ formatCurrency(client.total_achats) }}</p>
-                    </div>
-                    <div class="bg-gray-700 bg-opacity-30 rounded-lg p-4">
-                        <p class="text-gray-400 text-sm mb-1">Nombre de commandes</p>
-                        <p class="text-primary-300 font-bold text-2xl">{{ client.nombre_commandes || 0 }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notes Section -->
-            <div class="p-6 border-b border-gray-700">
-                <h3 class="text-xl font-bold text-primary-400 mb-4 flex items-center justify-between">
-                    <span>Notes</span>
-                    <button @click="addNote" class="text-sm px-3 py-1 bg-primary-600 text-gray-900 rounded-lg hover:bg-primary-500">
-                        <PlusIcon class="w-4 h-4 inline mr-1" />
-                        Ajouter
+            <!-- Tabs -->
+            <div class="border-b border-gray-200">
+                <div class="flex">
+                    <button
+                        @click="activeTab = 'informations'"
+                        :class="activeTab === 'informations' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-600 hover:text-gray-900'"
+                        class="px-6 py-4 font-medium transition"
+                    >
+                        Informations
                     </button>
-                </h3>
-                <div class="space-y-3">
-                    <div v-for="note in client.notes" :key="note.id" class="bg-gray-700 bg-opacity-30 rounded-lg p-4 border border-gray-600">
-                        <div class="flex items-start justify-between mb-2">
-                            <div class="flex items-center space-x-2">
-                                <DocumentTextIcon class="w-5 h-5 text-primary-400" />
-                                <span class="text-primary-300 text-sm">{{ formatDate(note.date) }}</span>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button @click="editNote(note)" class="text-gray-400 hover:text-primary-400">
-                                    <PencilIcon class="w-4 h-4" />
-                                </button>
-                                <button @click="deleteNote(note)" class="text-gray-400 hover:text-red-400">
-                                    <TrashIcon class="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                        <p class="text-gray-300 text-sm">{{ note.content }}</p>
-                    </div>
-                    <div v-if="!client.notes || client.notes.length === 0" class="text-center py-8 text-gray-500">
-                        Aucune note disponible
-                    </div>
+                    <button
+                        @click="activeTab = 'coordonnees'"
+                        :class="activeTab === 'coordonnees' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-600 hover:text-gray-900'"
+                        class="px-6 py-4 font-medium transition"
+                    >
+                        Coordonnées
+                    </button>
+                    <button
+                        @click="activeTab = 'documents'"
+                        :class="activeTab === 'documents' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-600 hover:text-gray-900'"
+                        class="px-6 py-4 font-medium transition"
+                    >
+                        Documents
+                    </button>
+                    <button
+                        @click="activeTab = 'achats'"
+                        :class="activeTab === 'achats' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-600 hover:text-gray-900'"
+                        class="px-6 py-4 font-medium transition"
+                    >
+                        Historique des Achats
+                    </button>
                 </div>
             </div>
 
-            <!-- Historique des commandes -->
+            <!-- Tab Content -->
             <div class="p-6">
-                <h3 class="text-xl font-bold text-primary-400 mb-4 flex items-center">
-                    <ClipboardDocumentListIcon class="w-6 h-6 mr-2" />
-                    Historique des commandes
-                </h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-700">
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">N° Commande</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Date</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Type</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Total (Dhs)</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Statut</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-700">
-                            <tr v-for="commande in client.commandes" :key="commande.id" class="hover:bg-gray-700 hover:bg-opacity-30">
-                                <td class="px-4 py-3 text-sm font-medium text-primary-300">#{{ commande.numero }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-300">{{ formatDate(commande.date) }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-300">{{ commande.type }}</td>
-                                <td class="px-4 py-3 text-sm font-medium text-white">{{ formatCurrency(commande.total) }}</td>
-                                <td class="px-4 py-3">
-                                    <span :class="getCommandeStatusClass(commande.statut)" class="px-2 py-1 text-xs font-medium rounded-full">
-                                        {{ commande.statut }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr v-if="!client.commandes || client.commandes.length === 0">
-                                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                                    Aucune commande pour ce client
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <!-- Informations Tab -->
+                <div v-if="activeTab === 'informations'" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">ICE</p>
+                            <p class="text-gray-900 font-semibold text-lg"><span v-if="client.ice">{{ client.ice }}</span><span v-else class="text-gray-400 italic">Non renseigné</span></p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">IF</p>
+                            <p class="text-gray-900 font-semibold text-lg"><span v-if="client.if">{{ client.if }}</span><span v-else class="text-gray-400 italic">Non renseigné</span></p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">Activité</p>
+                            <p class="text-gray-900 font-semibold text-lg"><span v-if="client.activite">{{ client.activite }}</span><span v-else class="text-gray-400 italic">Non renseignée</span></p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-primary-50 rounded-lg p-4 border border-primary-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">Total des achats</p>
+                            <p class="text-primary-600 font-bold text-2xl">{{ formatCurrency(client.total_achats || 0) }}</p>
+                        </div>
+                        <div class="bg-primary-50 rounded-lg p-4 border border-primary-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">Nombre d'achats</p>
+                            <p class="text-primary-600 font-bold text-2xl">{{ client.nombre_commandes || 0 }}</p>
+                        </div>
+                        <div class="bg-primary-50 rounded-lg p-4 border border-primary-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">Remise fidélité</p>
+                            <p class="text-primary-600 font-bold text-2xl">{{ client.loyalty_discount || 0 }}%</p>
+                        </div>
+                    </div>
                 </div>
-                <div v-if="client.commandes && client.commandes.length > 0" class="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
-                    <span class="text-gray-400">Total des achats:</span>
-                    <span class="text-primary-300 font-bold text-xl">{{ formatCurrency(client.total_achats) }}</span>
+
+                <!-- Coordonnées Tab -->
+                <div v-if="activeTab === 'coordonnees'" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex items-start space-x-3">
+                            <PhoneIcon class="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" />
+                            <div>
+                                <p class="text-gray-600 text-sm font-medium">Téléphone</p>
+                                <p class="text-gray-900 font-medium"><span v-if="client.phone">{{ client.phone }}</span><span v-else class="text-gray-400 italic">Non renseigné</span></p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <EnvelopeIcon class="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" />
+                            <div>
+                                <p class="text-gray-600 text-sm font-medium">Email</p>
+                                <p class="text-gray-900 font-medium"><span v-if="client.email">{{ client.email }}</span><span v-else class="text-gray-400 italic">Non renseigné</span></p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <MapPinIcon class="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" />
+                            <div>
+                                <p class="text-gray-600 text-sm font-medium">Adresse</p>
+                                <p class="text-gray-900 font-medium"><span v-if="client.address || client.adresse">{{ client.address || client.adresse }}</span><span v-else class="text-gray-400 italic">Non renseignée</span></p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <BuildingOfficeIcon class="w-5 h-5 text-primary-600 flex-shrink-0 mt-1" />
+                            <div>
+                                <p class="text-gray-600 text-sm font-medium">Ville</p>
+                                <p class="text-gray-900 font-medium"><span v-if="client.city || client.ville">{{ client.city || client.ville }}</span><span v-else class="text-gray-400 italic">Non renseignée</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="client.note_interne" class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <p class="text-gray-600 text-sm font-medium mb-2">Notes internes</p>
+                        <p class="text-gray-900">{{ client.note_interne }}</p>
+                    </div>
+                </div>
+
+                <!-- Documents Tab -->
+                <div v-if="activeTab === 'documents'" class="space-y-6">
+                    <!-- CIN Document -->
+                    <div>
+                        <p class="text-gray-700 font-medium mb-3">Carte d'Identité Nationale (CIN)</p>
+                        <div v-if="client.documents?.cin" class="bg-white rounded border border-gray-300 p-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <DocumentIcon class="w-6 h-6 text-primary-600" />
+                                <a :href="getFileUrl(client.documents.cin)" target="_blank" rel="noreferrer" class="text-primary-600 hover:text-primary-700 font-medium">
+                                    {{ extractFileName(client.documents.cin) }}
+                                </a>
+                            </div>
+                            <button @click="downloadFile(client.documents.cin)" class="text-gray-600 hover:text-gray-900 transition">
+                                <ArrowDownTrayIcon class="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div v-else class="bg-white rounded border-2 border-dashed border-gray-300 p-6 text-center">
+                            <DocumentIcon class="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                            <p class="text-gray-600">Aucun document CIN disponible</p>
+                        </div>
+                    </div>
+
+                    <!-- Registre de Commerce -->
+                    <div>
+                        <p class="text-gray-700 font-medium mb-3">Registre de Commerce</p>
+                        <div v-if="client.documents?.registre_commerce" class="bg-white rounded border border-gray-300 p-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <DocumentIcon class="w-6 h-6 text-primary-600" />
+                                <a :href="getFileUrl(client.documents.registre_commerce)" target="_blank" rel="noreferrer" class="text-primary-600 hover:text-primary-700 font-medium">
+                                    {{ extractFileName(client.documents.registre_commerce) }}
+                                </a>
+                            </div>
+                            <button @click="downloadFile(client.documents.registre_commerce)" class="text-gray-600 hover:text-gray-900 transition">
+                                <ArrowDownTrayIcon class="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div v-else class="bg-white rounded border-2 border-dashed border-gray-300 p-6 text-center">
+                            <DocumentIcon class="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                            <p class="text-gray-600">Aucun registre de commerce disponible</p>
+                        </div>
+                    </div>
+
+                    <!-- Attestation TVA -->
+                    <div>
+                        <p class="text-gray-700 font-medium mb-3">Attestation TVA</p>
+                        <div v-if="client.documents?.attestation_tva" class="bg-white rounded border border-gray-300 p-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <DocumentIcon class="w-6 h-6 text-primary-600" />
+                                <a :href="getFileUrl(client.documents.attestation_tva)" target="_blank" rel="noreferrer" class="text-primary-600 hover:text-primary-700 font-medium">
+                                    {{ extractFileName(client.documents.attestation_tva) }}
+                                </a>
+                            </div>
+                            <button @click="downloadFile(client.documents.attestation_tva)" class="text-gray-600 hover:text-gray-900 transition">
+                                <ArrowDownTrayIcon class="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div v-else class="bg-white rounded border-2 border-dashed border-gray-300 p-6 text-center">
+                            <DocumentIcon class="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                            <p class="text-gray-600">Aucune attestation TVA disponible</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historique des Achats Tab -->
+                <div v-if="activeTab === 'achats'" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">Total des achats</p>
+                            <p class="text-gray-900 font-bold text-2xl">{{ formatCurrency(client.total_achats || 0) }}</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">Nombre d'achats</p>
+                            <p class="text-gray-900 font-bold text-2xl">{{ client.nombre_commandes || 0 }}</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <p class="text-gray-600 text-sm mb-1 font-medium">Moyenne par achat</p>
+                            <p class="text-gray-900 font-bold text-2xl">{{ formatCurrency(client.nombre_commandes > 0 ? client.total_achats / client.nombre_commandes : 0) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Date</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">N° Transaction</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Articles</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Montant</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <tr v-for="commande in client.commandes || []" :key="commande.id" class="hover:bg-gray-50 transition">
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ formatDate(commande.date) }}</td>
+                                    <td class="px-4 py-3 text-sm font-mono text-primary-600">{{ commande.numero }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600">{{ commande.items_count || 0 }} article(s)</td>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ formatCurrency(commande.total || 0) }}</td>
+                                    <td class="px-4 py-3">
+                                        <span :class="getCommandeStatusClass(commande.statut)" class="px-2 py-1 text-xs font-medium rounded-full">
+                                            {{ commande.statut }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr v-if="!client.commandes || client.commandes.length === 0">
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                        Aucun achat enregistré
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Delete Confirmation Modal -->
-        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
-            <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-                <h3 class="text-xl font-bold text-red-400 mb-3">Supprimer le client</h3>
-                <p class="text-gray-300 mb-6">Êtes-vous sûr de vouloir supprimer le client <span class="font-bold text-white">{{ client.name }}</span> ? Cette action est irréversible.</p>
+        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-white border border-gray-200 rounded-xl p-6 max-w-md w-full mx-4 shadow-lg">
+                <h3 class="text-xl font-bold text-red-600 mb-3">Supprimer le client</h3>
+                <p class="text-gray-700 mb-6">Êtes-vous sûr de vouloir supprimer <span class="font-bold">{{ client.name }}</span> ? Cette action est irréversible.</p>
                 <div class="flex space-x-3">
-                    <button @click="showDeleteModal = false" class="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 border border-gray-600">
+                    <button @click="showDeleteModal = false" class="flex-1 px-4 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 border border-gray-300 font-medium transition">
                         Annuler
                     </button>
-                    <button @click="deleteClient" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    <button @click="deleteClient" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition">
                         Supprimer
                     </button>
                 </div>
@@ -228,22 +309,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useSettingsStore } from '../../stores/settings'
 import {
     HomeIcon,
     ChevronRightIcon,
-    UserIcon,
+    UserCircleIcon,
     PencilIcon,
     TrashIcon,
     PhoneIcon,
     EnvelopeIcon,
     MapPinIcon,
     BuildingOfficeIcon,
-    DocumentTextIcon,
-    ClipboardDocumentListIcon,
-    PlusIcon
+    DocumentIcon,
+    ArrowDownTrayIcon
 } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
@@ -251,31 +331,81 @@ const route = useRoute()
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
+const CUSTOMERS_STORAGE_KEY = 'pos_customers'
+const SALES_STORAGE_KEY = 'pos_sales'
+
 const client = ref({})
 const showDeleteModal = ref(false)
+const activeTab = ref('informations')
+
+function loadCustomersFromStorage() {
+    const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+}
+
+function loadSalesFromStorage() {
+    const stored = localStorage.getItem(SALES_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+}
 
 function formatDate(date) {
     if (!date) return 'N/A'
     return new Date(date).toLocaleDateString('fr-FR')
 }
 
-function getStatusBadgeClass(statut) {
-    const classes = {
-        'Actif': 'bg-green-900 bg-opacity-50 text-green-400 border border-green-700',
-        'Inactif': 'bg-gray-700 bg-opacity-50 text-gray-400 border border-gray-600',
-        'Suspendu': 'bg-red-900 bg-opacity-50 text-red-400 border border-red-700'
+function extractFileName(path) {
+    if (!path) return 'document'
+    if (typeof path === 'object') {
+        return path.name || 'document'
     }
-    return classes[statut] || 'bg-gray-700 bg-opacity-50 text-gray-400 border border-gray-600'
+    return path.split('/').pop().replace(/\.pdf|\.doc|\.docx/i, '')
+}
+
+function downloadFile(url) {
+    const source = typeof url === 'string' ? url : url?.url
+    const filename = typeof url === 'object' ? url?.name || extractFileName(source) : extractFileName(source)
+    if (source) {
+        const link = document.createElement('a')
+        link.href = source
+        link.download = filename
+        link.click()
+    }
+}
+
+function getFileUrl(file) {
+    if (!file) return ''
+    return typeof file === 'string' ? file : file?.url || ''
+}
+
+function getStatusBadgeClass(status) {
+    const classes = {
+        'active': 'bg-green-100 text-green-800 border border-green-300',
+        'inactive': 'bg-gray-100 text-gray-800 border border-gray-300',
+        'suspended': 'bg-red-100 text-red-800 border border-red-300',
+        'Actif': 'bg-green-100 text-green-800 border border-green-300',
+        'Inactif': 'bg-gray-100 text-gray-800 border border-gray-300',
+        'Suspendu': 'bg-red-100 text-red-800 border border-red-300'
+    }
+    return classes[status] || 'bg-gray-100 text-gray-800 border border-gray-300'
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'active': 'Actif',
+        'inactive': 'Inactif',
+        'suspended': 'Suspendu'
+    }
+    return labels[status] || status
 }
 
 function getCommandeStatusClass(statut) {
     const classes = {
-        'Livrée': 'bg-green-900 bg-opacity-50 text-green-400',
-        'En cours': 'bg-blue-900 bg-opacity-50 text-blue-400',
-        'En attente': 'bg-yellow-900 bg-opacity-50 text-yellow-400',
-        'Annulée': 'bg-red-900 bg-opacity-50 text-red-400'
+        'Livrée': 'bg-green-100 text-green-800',
+        'En cours': 'bg-blue-100 text-blue-800',
+        'En attente': 'bg-yellow-100 text-yellow-800',
+        'Annulée': 'bg-red-100 text-red-800'
     }
-    return classes[statut] || 'bg-gray-700 bg-opacity-50 text-gray-400'
+    return classes[statut] || 'bg-gray-100 text-gray-800'
 }
 
 function editClient() {
@@ -287,56 +417,58 @@ function confirmDelete() {
 }
 
 function deleteClient() {
-    // Delete logic here
-    showDeleteModal.value = false
-    router.push('/customers')
+    try {
+        const storedCustomers = loadCustomersFromStorage()
+        const filteredCustomers = storedCustomers.filter(c => String(c.id) !== String(route.params.id))
+        localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(filteredCustomers))
+        router.push('/customers')
+    } catch (error) {
+        console.error('Error deleting customer:', error)
+    }
 }
 
-function addNote() {
-    alert('Ajouter une note')
-}
-
-function editNote(note) {
-    alert('Éditer la note: ' + note.id)
-}
-
-function deleteNote(note) {
-    const index = client.value.notes.findIndex(n => n.id === note.id)
-    if (index > -1) {
-        client.value.notes.splice(index, 1)
+function loadCustomerData() {
+    const customerId = parseInt(route.params.id) || route.params.id
+    const customers = loadCustomersFromStorage()
+    const sales = loadSalesFromStorage()
+    
+    const foundCustomer = customers.find(c => String(c.id) === String(customerId) || String(c.client_id) === String(route.params.id))
+    
+    if (foundCustomer) {
+        // Use the actual customer ID for matching, not the modified one
+        const actualCustomerId = foundCustomer.id
+        const customerSales = sales.filter(sale => String(sale.customer_id) === String(actualCustomerId))
+        const totalSpent = customerSales.reduce((sum, sale) => sum + (sale.total || 0), 0)
+        
+        console.log('DEBUG CustomerDetail:', { customerId, actualCustomerId, foundCustomerName: foundCustomer.name, salesCount: customerSales.length, totalSpent, sales: customerSales })
+        
+        client.value = {
+            ...foundCustomer,
+            id: actualCustomerId,
+            name: foundCustomer.name || `${foundCustomer.nom || ''} ${foundCustomer.prenom || ''}`.trim(),
+            total_achats: totalSpent,
+            nombre_commandes: customerSales.length,
+            commandes: customerSales.map((sale, idx) => ({
+                id: sale.id || idx + 1,
+                numero: String(idx + 1).padStart(5, '0'),
+                date: sale.date,
+                type: 'Facture',
+                items_count: sale.items_count || 0,
+                total: sale.total,
+                statut: sale.status || 'Livrée'
+            }))
+        }
+    } else {
+        client.value = {}
+        console.log('DEBUG CustomerDetail: Customer not found', { customerId, availableCustomerIds: customers.map(c => c.id) })
     }
 }
 
 onMounted(() => {
-    // Demo data - In production, fetch from API using route.params.id
-    client.value = {
-        id: 'C00054',
-        name: 'Ahmed Rahmani',
-        avatar: null,
-        telephone: '+212 665-543210',
-        email: 'ahmed.rahmani@email.com',
-        entreprise: 'ElectroComp SARL',
-        raison_sociale: 'ElectroComp SARL',
-        adresse: '56, Rue des Technologies, Casablanca',
-        ville: 'Casablanca',
-        ice: '87654321',
-        reg_commercial: '87654321',
-        tva: '1234567890',
-        statut: 'Actif',
-        fidele: true,
-        total_achats: 119150.00,
-        nombre_commandes: 8,
-        notes: [
-            { id: 1, date: '2024-03-05', content: 'Livraison partielle effectuée. Casque sans fil manquant, à recevoir au plus vite selon Ahmed Rahmani.' },
-            { id: 2, date: '2024-02-15', content: 'Client préfère les paiements par virement bancaire.' }
-        ],
-        commandes: [
-            { id: 1, numero: '00322', date: '2024-03-14', type: 'Facture', total: 3990.00, statut: 'Livrée' },
-            { id: 2, numero: '00316', date: '2024-03-05', type: 'Devis', total: 2720.00, statut: 'En cours' },
-            { id: 3, numero: '00305', date: '2024-02-28', type: 'Bon de livraison', total: 5205.00, statut: 'Livrée' },
-            { id: 4, numero: '00289', date: '2024-02-15', type: 'Facture', total: 8950.00, statut: 'Livrée' },
-            { id: 5, numero: '00267', date: '2024-02-01', type: 'Facture', total: 12400.00, statut: 'Livrée' }
-        ]
-    }
+    loadCustomerData()
+})
+
+watch(() => route.params.id, () => {
+    loadCustomerData()
 })
 </script>

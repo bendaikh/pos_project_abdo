@@ -1323,6 +1323,7 @@ async function saveSale() {
 
 async function completeSale(payments) {
     const offlineStore = useOfflineStore()
+    const SALES_STORAGE_KEY = 'pos_sales'
     
     try {
         const data = cartStore.getCartData()
@@ -1332,20 +1333,43 @@ async function completeSale(payments) {
             status: 'completed',
         }
 
-        // If offline, save to pending queue
-        if (!offlineStore.isOnline) {
-            const result = await offlineStore.savePendingSale(saleData)
-            if (result.success) {
-                cartStore.clearCart()
-                showPaymentModal.value = false
+        // Check if customer_id is from localStorage (large timestamp number > 1 billion)
+        const isLocalStorageCustomer = data.customer_id > 1000000000
+
+        // If offline or using localStorage customer, save to localStorage directly
+        if (!offlineStore.isOnline || isLocalStorageCustomer) {
+            // Save to localStorage for customers page
+            const existingSales = localStorage.getItem(SALES_STORAGE_KEY)
+            const sales = existingSales ? JSON.parse(existingSales) : []
+            const completeSaleData = {
+                id: Date.now(),
+                customer_id: data.customer_id,
+                items_count: data.items_count || data.items?.length || 0,
+                subtotal: data.subtotal || 0,
+                tax: data.tax || 0,
+                total: data.total || 0,
+                discount_amount: data.discount_amount || 0,
+                discount_percent: data.discount_percent || 0,
+                payment_method: payments?.[0]?.type || 'cash',
+                status: 'completed',
+                date: new Date().toISOString(),
+            }
+            console.log('DEBUG PosView saveSale:', completeSaleData)
+            sales.push(completeSaleData)
+            localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales))
+            
+            cartStore.clearCart()
+            showPaymentModal.value = false
+            
+            if (!offlineStore.isOnline) {
                 alert('Vente sauvegardée hors ligne! Elle sera synchronisée automatiquement.')
             } else {
-                throw new Error('Erreur lors de la sauvegarde hors ligne')
+                alert('Vente complétée avec succès!')
             }
             return
         }
 
-        // If online, process normally
+        // If online with API customer, process normally
         if (!cartStore.currentSaleId) {
             const response = await salesApi.create(data)
             cartStore.setSaleId(response.data.id)
@@ -1358,6 +1382,17 @@ async function completeSale(payments) {
 
         // Complete sale
         await salesApi.complete(cartStore.currentSaleId)
+
+        // Save to localStorage for customers page
+        const existingSales = localStorage.getItem(SALES_STORAGE_KEY)
+        const sales = existingSales ? JSON.parse(existingSales) : []
+        const completeSaleData = {
+            id: cartStore.currentSaleId,
+            ...saleData,
+            date: new Date().toISOString(),
+        }
+        sales.push(completeSaleData)
+        localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales))
 
         // Clear cart
         cartStore.clearCart()

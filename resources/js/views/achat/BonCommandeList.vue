@@ -138,6 +138,12 @@
                         </div>
                     </div>
 
+                    <!-- Date Livraison Prévue -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date Livraison Prévue</label>
+                        <input v-model="form.date_livraison_prevue" type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    </div>
+
                     <!-- Fournisseur (recherche) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Fournisseur (recherche) *</label>
@@ -249,6 +255,8 @@ import {
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
+const COMMANDES_STORAGE_KEY = 'pos_bon_commandes'
+
 const commandesList = ref([])
 const fournisseurs = ref([])
 const search = ref('')
@@ -259,9 +267,34 @@ const editingCommande = ref(null)
 const commandeToDelete = ref(null)
 const saving = ref(false)
 
+// Function to save commandes to localStorage
+function saveCommandesToStorage() {
+    try {
+        localStorage.setItem(COMMANDES_STORAGE_KEY, JSON.stringify(commandesList.value))
+    } catch (error) {
+        console.error('Error saving commandes to localStorage:', error)
+    }
+}
+
+// Function to load commandes from localStorage
+function loadCommandesFromStorage() {
+    try {
+        const stored = localStorage.getItem(COMMANDES_STORAGE_KEY)
+        if (stored) {
+            commandesList.value = JSON.parse(stored)
+            return true
+        }
+        return false
+    } catch (error) {
+        console.error('Error loading commandes from localStorage:', error)
+        return false
+    }
+}
+
 const form = reactive({
     fournisseur_id: '',
     date_commande: new Date().toISOString().split('T')[0],
+    date_livraison_prevue: '',
     statut: 'brouillon',
     lines: [{ id: '', nom: '', quantite: 1, prix_unitaire: 0 }]
 })
@@ -335,11 +368,13 @@ function openForm(commande = null) {
     if (commande) {
         form.fournisseur_id = commande.fournisseur_id
         form.date_commande = commande.date || new Date().toISOString().split('T')[0]
+        form.date_livraison_prevue = commande.date_livraison_prevue || ''
         form.statut = commande.statut || 'brouillon'
         form.lines = commande.lines?.length ? [...commande.lines] : [{ id: '', nom: '', quantite: 1, prix_unitaire: 0 }]
     } else {
         form.fournisseur_id = ''
         form.date_commande = new Date().toISOString().split('T')[0]
+        form.date_livraison_prevue = ''
         form.statut = 'brouillon'
         form.lines = [{ id: '', nom: '', quantite: 1, prix_unitaire: 0 }]
     }
@@ -358,6 +393,7 @@ function markAsReceived(commande) {
     const index = commandesList.value.findIndex(c => c.id === commande.id)
     if (index > -1) {
         commandesList.value[index].statut = 'reçue'
+        saveCommandesToStorage()
     }
 }
 
@@ -377,6 +413,7 @@ async function saveCommande() {
             fournisseur_name: fournisseur?.name || 'Fournisseur inconnu',
             fournisseur_email: fournisseur?.email || '',
             date: form.date_commande,
+            date_livraison_prevue: form.date_livraison_prevue || '',
             nb_articles: form.lines.reduce((sum, l) => sum + l.quantite, 0),
             montant_total: formTotal.value,
             statut: form.statut,
@@ -389,6 +426,10 @@ async function saveCommande() {
         } else {
             commandesList.value.unshift(newCommande)
         }
+        
+        // Save to localStorage
+        saveCommandesToStorage()
+        
         showForm.value = false
     } catch (error) {
         alert('Erreur: ' + error.message)
@@ -399,22 +440,48 @@ async function saveCommande() {
 
 function deleteCommande() {
     commandesList.value = commandesList.value.filter(c => c.id !== commandeToDelete.value.id)
+    saveCommandesToStorage()
     showDeleteModal.value = false
 }
 
 onMounted(async () => {
-    // Demo fournisseurs
-    fournisseurs.value = [
-        { id: 1, name: 'Fournisseur ABC', email: 'contact@abc.com', ice: '001234567890001', address: '23, Rue de Commerce, Casablanca' },
-        { id: 2, name: 'Distributeur XYZ', email: 'info@xyz.com', ice: '001234567890002', address: '45, Avenue Mohammed V, Rabat' },
-        { id: 3, name: 'Import Express', email: 'commande@importexpress.com', ice: '001234567890003', address: '78, Boulevard Zerktouni, Casablanca' },
-    ]
+    // Load real fournisseurs from localStorage
+    try {
+        const stored = localStorage.getItem('pos_fournisseurs')
+        if (stored) {
+            const parsed = JSON.parse(stored)
+            fournisseurs.value = parsed.map(f => ({
+                id: f.id,
+                name: f.name || `${f.nom} ${f.prenom}`.trim(),
+                email: f.email || '',
+                ice: f.ice || '',
+                address: f.adresse || f.address || ''
+            }))
+        } else {
+            // Fallback to demo if no localStorage data
+            fournisseurs.value = [
+                { id: 1, name: 'Fournisseur ABC', email: 'contact@abc.com', ice: '001234567890001', address: '23, Rue de Commerce, Casablanca' },
+                { id: 2, name: 'Distributeur XYZ', email: 'info@xyz.com', ice: '001234567890002', address: '45, Avenue Mohammed V, Rabat' },
+                { id: 3, name: 'Import Express', email: 'commande@importexpress.com', ice: '001234567890003', address: '78, Boulevard Zerktouni, Casablanca' },
+            ]
+        }
+    } catch (error) {
+        console.error('Error loading fournisseurs:', error)
+        fournisseurs.value = []
+    }
 
-    // Demo data
-    commandesList.value = [
-        { id: 1, numero: 'BC-2026-001', fournisseur_id: 1, fournisseur_name: 'Fournisseur ABC', fournisseur_email: 'contact@abc.com', date: '2026-02-01', date_livraison_prevue: '2026-02-15', nb_articles: 50, montant_total: 25000, statut: 'reçue', lines: [] },
-        { id: 2, numero: 'BC-2026-002', fournisseur_id: 2, fournisseur_name: 'Distributeur XYZ', fournisseur_email: 'info@xyz.com', date: '2026-02-05', date_livraison_prevue: '2026-02-20', nb_articles: 30, montant_total: 18500, statut: 'en_cours', lines: [] },
-        { id: 3, numero: 'BC-2026-003', fournisseur_id: 3, fournisseur_name: 'Import Express', fournisseur_email: 'commande@importexpress.com', date: '2026-02-08', date_livraison_prevue: '2026-02-25', nb_articles: 100, montant_total: 45000, statut: 'envoyée', lines: [] },
-    ]
+    // Load commandes from localStorage first
+    const loadedFromStorage = loadCommandesFromStorage()
+    
+    // Only use demo data if no stored commandes exist
+    if (!loadedFromStorage) {
+        commandesList.value = [
+            { id: 1, numero: 'BC-2026-001', fournisseur_id: 1, fournisseur_name: 'Fournisseur ABC', fournisseur_email: 'contact@abc.com', date: '2026-02-01', date_livraison_prevue: '2026-02-15', nb_articles: 50, montant_total: 25000, statut: 'reçue', lines: [] },
+            { id: 2, numero: 'BC-2026-002', fournisseur_id: 2, fournisseur_name: 'Distributeur XYZ', fournisseur_email: 'info@xyz.com', date: '2026-02-05', date_livraison_prevue: '2026-02-20', nb_articles: 30, montant_total: 18500, statut: 'en_cours', lines: [] },
+            { id: 3, numero: 'BC-2026-003', fournisseur_id: 3, fournisseur_name: 'Import Express', fournisseur_email: 'commande@importexpress.com', date: '2026-02-08', date_livraison_prevue: '2026-02-25', nb_articles: 100, montant_total: 45000, statut: 'envoyée', lines: [] },
+        ]
+        // Save the demo data to localStorage so it persists
+        saveCommandesToStorage()
+    }
 })
 </script>
