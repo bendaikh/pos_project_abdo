@@ -58,6 +58,11 @@ import UtilisateursList from '../views/utilisateurs/UtilisateursList.vue'
 // ACTIVITES Views
 import ActivitiesList from '../views/activites/ActivitiesList.vue'
 
+// AGENDA Views
+import CalendarView from '../views/agenda/CalendarView.vue'
+import AppointmentsList from '../views/agenda/AppointmentsList.vue'
+import TasksList from '../views/agenda/TasksList.vue'
+
 // MAGASINS Views
 import MagasinsList from '../views/magasins/MagasinsList.vue'
 
@@ -287,6 +292,22 @@ const routes = [
                 path: 'activites',
                 name: 'activites',
                 component: ActivitiesList
+            },
+            // AGENDA Routes
+            {
+                path: 'agenda',
+                name: 'agenda-calendar',
+                component: CalendarView
+            },
+            {
+                path: 'agenda/appointments',
+                name: 'agenda-appointments',
+                component: AppointmentsList
+            },
+            {
+                path: 'agenda/tasks',
+                name: 'agenda-tasks',
+                component: TasksList
             },
             // MAGASINS Routes
             {

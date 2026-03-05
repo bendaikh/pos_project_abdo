@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\TaskAutomationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -54,7 +55,7 @@ class StockMovement extends Model
             $article->decrementStock($quantity);
         }
 
-        return self::create([
+        $movement = self::create([
             'article_id' => $article->id,
             'user_id' => $userId ?? auth()->id(),
             'sale_id' => $saleId,
@@ -64,6 +65,10 @@ class StockMovement extends Model
             'stock_after' => $article->fresh()->stock_quantity,
             'reason' => $reason,
         ]);
+
+        app(TaskAutomationService::class)->syncLowStockTasks();
+
+        return $movement;
     }
 
     public function scopeByType($query, string $type)

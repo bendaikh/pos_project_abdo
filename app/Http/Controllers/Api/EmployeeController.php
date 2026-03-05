@@ -13,7 +13,7 @@ class EmployeeController extends Controller
     {
         $query = Employee::with(['user', 'commission']);
 
-        if ($request->has('status')) {
+        if ($request->has('status') && $request->status !== '') {
             $query->where('status', $request->status);
         }
 
@@ -29,9 +29,15 @@ class EmployeeController extends Controller
             });
         }
 
-        $employees = $query->orderBy('name')->paginate($request->get('per_page', 20));
+        $query->orderBy('name');
+        $paginate = $request->boolean('paginate', true);
+        $employees = $paginate
+            ? $query->paginate($request->get('per_page', 20))
+            : $query->get();
 
-        return response()->json($employees);
+        return response()
+            ->json($employees)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     public function store(Request $request): JsonResponse

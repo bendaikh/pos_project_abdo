@@ -218,19 +218,27 @@
                 </div>
             </div>
 
-            <!-- Activités (Rendez-vous) -->
+            <!-- Agenda -->
             <div class="mt-3">
-                <button @click="toggleSection('activites')" class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors">
+                <button @click="toggleSection('agenda')" class="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-yellow-400 uppercase tracking-wider rounded-lg hover:bg-gray-800 transition-colors">
                     <div class="flex items-center min-w-0">
                         <CalendarDaysIcon class="w-5 h-5 flex-shrink-0" />
-                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Activités</span>
+                        <span v-if="!collapsed" class="ml-2 whitespace-nowrap">Agenda</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.activites }" />
+                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.agenda }" />
                 </button>
-                <div v-show="expandedSections.activites && !collapsed" class="mt-1 space-y-1 overflow-hidden">
-                    <router-link to="/activites" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/activites') ? 'bg-blue-500 text-gray-900' : 'text-blue-300 hover:bg-gray-800'">
+                <div v-show="expandedSections.agenda && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/agenda" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/agenda') ? 'bg-blue-500 text-gray-900' : 'text-blue-300 hover:bg-gray-800'">
+                        <CalendarDaysIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Calendrier</span>
+                    </router-link>
+                    <router-link to="/agenda/appointments" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/agenda/appointments') ? 'bg-blue-500 text-gray-900' : 'text-blue-300 hover:bg-gray-800'">
                         <CalendarDaysIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Rendez-vous</span>
+                    </router-link>
+                    <router-link to="/agenda/tasks" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/agenda/tasks') ? 'bg-blue-500 text-gray-900' : 'text-blue-300 hover:bg-gray-800'">
+                        <CalendarDaysIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Tâches</span>
                     </router-link>
                 </div>
             </div>
@@ -373,7 +381,7 @@ const expandedSections = reactive({
     ventesClients: false,
     achats: false,
     finance: false,
-    activites: false,
+    agenda: false,
     employees: false,
 })
 

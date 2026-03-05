@@ -7,6 +7,7 @@ use App\Models\Article;
 use App\Models\MaterialConsumption;
 use App\Models\ProductionEntry;
 use App\Models\ProductionEntryItem;
+use App\Services\TaskAutomationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -93,6 +94,10 @@ class ProductionEntryController extends Controller
             return $entry;
         });
 
+        if ($entry->status === 'validated') {
+            app(TaskAutomationService::class)->syncLowStockTasks();
+        }
+
         return response()->json($entry->load(['items.article', 'user']), 201);
     }
 
@@ -137,6 +142,10 @@ class ProductionEntryController extends Controller
             return $productionEntry;
         });
 
+        if ($entry->status === 'validated') {
+            app(TaskAutomationService::class)->syncLowStockTasks();
+        }
+
         return response()->json($entry->load(['items.article', 'user']));
     }
 
@@ -150,6 +159,8 @@ class ProductionEntryController extends Controller
             $this->applyProduction($productionEntry);
             return $productionEntry;
         });
+
+        app(TaskAutomationService::class)->syncLowStockTasks();
 
         return response()->json($entry->load(['items.article', 'consumptions.article', 'user']));
     }

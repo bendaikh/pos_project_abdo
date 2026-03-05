@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Article;
+use App\Services\TaskAutomationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -216,6 +217,8 @@ class ArticleController extends Controller
                 return $article;
             });
 
+            app(TaskAutomationService::class)->syncLowStockTasks();
+
             return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos', 'bomItems.component']), 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -276,7 +279,7 @@ class ArticleController extends Controller
                 'bom_items.*.unit_cost' => 'nullable|numeric|min:0',
             ]);
 
-            return DB::transaction(function () use ($validated, $article) {
+            $updatedArticle = DB::transaction(function () use ($validated, $article) {
                 if (isset($validated['options'])) {
                     $article->options()->sync($validated['options']);
                     unset($validated['options']);
@@ -345,8 +348,12 @@ class ArticleController extends Controller
 
                 $article->update($validated);
 
-                return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos', 'bomItems.component']));
+                return $article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos', 'bomItems.component']);
             });
+
+            app(TaskAutomationService::class)->syncLowStockTasks();
+
+            return response()->json($updatedArticle);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {

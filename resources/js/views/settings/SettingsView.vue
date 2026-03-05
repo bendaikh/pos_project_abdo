@@ -345,10 +345,18 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Automatisation -->
+                <div v-show="activeTab === 'automation'" class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <CogIcon class="w-5 h-5 mr-2 text-primary-500" />
+                        Tâches automatiques
+                    </h2>
+                    <p class="text-gray-600 mb-4">Créez automatiquement des tâches selon des conditions. Configurez les règles ci-dessous.</p>
+                    <AutomationRules />
+                </div>
             </div>
         </div>
-
-        <!-- Save Button -->
         <div class="flex justify-end space-x-3">
             <button 
                 @click="resetSettings"
@@ -371,6 +379,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { settingsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
+import AutomationRules from './AutomationRules.vue'
 import {
     BuildingStorefrontIcon,
     ComputerDesktopIcon,
@@ -379,7 +388,8 @@ import {
     PhotoIcon,
     ReceiptPercentIcon,
     BanknotesIcon,
-    CreditCardIcon
+    CreditCardIcon,
+    CogIcon
 } from '@heroicons/vue/24/outline'
 
 const settingsStore = useSettingsStore()
@@ -395,6 +405,7 @@ const tabs = [
     { id: 'taxes', label: 'Taxes' },
     { id: 'commissions', label: 'Commissions' },
     { id: 'subscription', label: 'Abonnement' },
+    { id: 'automation', label: 'Automatisation' },
 ]
 
 const settings = reactive({

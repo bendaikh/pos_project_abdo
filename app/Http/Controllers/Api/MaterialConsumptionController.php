@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\MaterialConsumption;
+use App\Services\TaskAutomationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -93,6 +94,8 @@ class MaterialConsumptionController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
         });
+
+        app(TaskAutomationService::class)->syncLowStockTasks();
 
         return response()->json($consumption->load(['article', 'producedArticle', 'user']), 201);
     }

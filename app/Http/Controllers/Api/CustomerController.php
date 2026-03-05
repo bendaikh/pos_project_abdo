@@ -14,7 +14,11 @@ class CustomerController extends Controller
         $query = Customer::query();
 
         if ($request->has('active')) {
-            $query->active();
+            if ($request->boolean('active')) {
+                $query->active();
+            } else {
+                $query->where('is_active', false);
+            }
         }
 
         if ($request->has('search')) {
@@ -35,9 +39,15 @@ class CustomerController extends Controller
             }], 'total');
         }
 
-        $customers = $query->orderBy('name')->paginate($request->get('per_page', 20));
+        $query->orderBy('name');
+        $paginate = $request->boolean('paginate', true);
+        $customers = $paginate
+            ? $query->paginate($request->get('per_page', 20))
+            : $query->get();
 
-        return response()->json($customers);
+        return response()
+            ->json($customers)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     public function store(Request $request): JsonResponse

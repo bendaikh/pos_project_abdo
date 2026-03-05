@@ -19,6 +19,9 @@ use App\Http\Controllers\Api\StockController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\MaterialConsumptionController;
 use App\Http\Controllers\Api\LossController;
+use App\Http\Controllers\Api\AutomationRuleController;
+use App\Http\Controllers\Api\AppointmentController;
+use App\Http\Controllers\Api\TaskController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -127,4 +130,28 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/categories', [ReportController::class, 'categories']);
     Route::get('/reports/payments', [ReportController::class, 'payments']);
     Route::get('/reports/daily', [ReportController::class, 'daily']);
+
+    // Appointments
+    Route::get('/appointments/upcoming', [AppointmentController::class, 'upcoming']);
+    Route::get('/appointments/statistics', [AppointmentController::class, 'statistics']);
+    Route::get('/appointments/needing-reminders', [AppointmentController::class, 'needingReminders']);
+    Route::post('/appointments/{appointment}/mark-reminder-sent', [AppointmentController::class, 'markReminderSent']);
+    Route::apiResource('appointments', AppointmentController::class);
+
+    // Tasks
+    Route::get('/tasks/pending', [TaskController::class, 'pending']);
+    Route::get('/tasks/overdue', [TaskController::class, 'overdue']);
+    Route::get('/tasks/statistics', [TaskController::class, 'statistics']);
+    Route::get('/tasks/needing-reminders', [TaskController::class, 'needingReminders']);
+    Route::post('/tasks/run-automation', [TaskController::class, 'runAutomation']);
+    Route::post('/tasks/{task}/mark-completed', [TaskController::class, 'markCompleted']);
+    Route::post('/tasks/{task}/mark-reminder-sent', [TaskController::class, 'markReminderSent']);
+    Route::delete('/tasks/{task}/attachments', [TaskController::class, 'deleteAttachment']);
+    Route::apiResource('tasks', TaskController::class);
+
+    // Automation Rules
+    Route::get('/automation-rules/articles', [AutomationRuleController::class, 'getArticles']);
+    Route::get('/automation-rules/employees', [AutomationRuleController::class, 'getEmployees']);
+    Route::post('/automation-rules/{automationRule}/trigger', [AutomationRuleController::class, 'trigger']);
+    Route::apiResource('automation-rules', AutomationRuleController::class);
 });
