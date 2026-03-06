@@ -14,7 +14,7 @@ class AttendanceController extends Controller
     /**
      * List attendances
      * GET /api/attendances?employee_id=1&date=2026-03-01
-     */
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([

@@ -66,7 +66,12 @@ class StockMovement extends Model
             'reason' => $reason,
         ]);
 
-        app(TaskAutomationService::class)->syncLowStockTasks();
+        // Try to sync low stock tasks, but don't fail if tables don't exist
+        try {
+            app(TaskAutomationService::class)->syncLowStockTasks();
+        } catch (\Exception $e) {
+            \Log::warning('Could not sync low stock tasks: ' . $e->getMessage());
+        }
 
         return $movement;
     }

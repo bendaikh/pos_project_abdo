@@ -217,7 +217,12 @@ class ArticleController extends Controller
                 return $article;
             });
 
-            app(TaskAutomationService::class)->syncLowStockTasks();
+            // Try to sync low stock tasks, but don't fail if tables don't exist
+            try {
+                app(TaskAutomationService::class)->syncLowStockTasks();
+            } catch (\Exception $e) {
+                \Log::warning('Could not sync low stock tasks: ' . $e->getMessage());
+            }
 
             return response()->json($article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos', 'bomItems.component']), 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -351,7 +356,12 @@ class ArticleController extends Controller
                 return $article->load(['category', 'subcategory', 'options.variants', 'variants', 'photos', 'bomItems.component']);
             });
 
-            app(TaskAutomationService::class)->syncLowStockTasks();
+            // Try to sync low stock tasks, but don't fail if tables don't exist
+            try {
+                app(TaskAutomationService::class)->syncLowStockTasks();
+            } catch (\Exception $e) {
+                \Log::warning('Could not sync low stock tasks: ' . $e->getMessage());
+            }
 
             return response()->json($updatedArticle);
         } catch (\Illuminate\Validation\ValidationException $e) {

@@ -95,7 +95,11 @@ class ProductionEntryController extends Controller
         });
 
         if ($entry->status === 'validated') {
-            app(TaskAutomationService::class)->syncLowStockTasks();
+            try {
+                app(TaskAutomationService::class)->syncLowStockTasks();
+            } catch (\Exception $e) {
+                \Log::warning('Could not sync low stock tasks: ' . $e->getMessage());
+            }
         }
 
         return response()->json($entry->load(['items.article', 'user']), 201);
@@ -143,7 +147,11 @@ class ProductionEntryController extends Controller
         });
 
         if ($entry->status === 'validated') {
-            app(TaskAutomationService::class)->syncLowStockTasks();
+            try {
+                app(TaskAutomationService::class)->syncLowStockTasks();
+            } catch (\Exception $e) {
+                \Log::warning('Could not sync low stock tasks: ' . $e->getMessage());
+            }
         }
 
         return response()->json($entry->load(['items.article', 'user']));
@@ -160,7 +168,11 @@ class ProductionEntryController extends Controller
             return $productionEntry;
         });
 
-        app(TaskAutomationService::class)->syncLowStockTasks();
+        try {
+            app(TaskAutomationService::class)->syncLowStockTasks();
+        } catch (\Exception $e) {
+            \Log::warning('Could not sync low stock tasks: ' . $e->getMessage());
+        }
 
         return response()->json($entry->load(['items.article', 'consumptions.article', 'user']));
     }

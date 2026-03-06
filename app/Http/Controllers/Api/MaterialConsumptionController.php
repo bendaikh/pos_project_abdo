@@ -95,8 +95,12 @@ class MaterialConsumptionController extends Controller
             ]);
         });
 
-        app(TaskAutomationService::class)->syncLowStockTasks();
+        try {
+            app(TaskAutomationService::class)->syncLowStockTasks();
+        } catch (\Exception $e) {
+            \Log::warning('Could not sync low stock tasks: ' . $e->getMessage());
+        }
 
-        return response()->json($consumption->load(['article', 'producedArticle', 'user']), 201);
+        return response()->json($consumption->load(['article', 'user']), 201);
     }
 }
