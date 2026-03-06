@@ -215,6 +215,10 @@
                         <PresentationChartLineIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Bilan</span>
                     </router-link>
+                    <router-link to="/suivi-encaissement" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/suivi-encaissement') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <BanknotesIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Suivi Encaissement</span>
+                    </router-link>
                 </div>
             </div>
 

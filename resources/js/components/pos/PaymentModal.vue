@@ -134,7 +134,7 @@ const paymentTypes = [
     { value: 'cash', label: 'Espèces', icon: BanknotesIcon },
     { value: 'card', label: 'Carte', icon: CreditCardIcon },
     { value: 'mobile', label: 'Mobile', icon: DevicePhoneMobileIcon },
-    { value: 'check', label: 'Chèque', icon: DocumentTextIcon },
+    { value: 'cheque', label: 'Chèque', icon: DocumentTextIcon },
     { value: 'other', label: 'Autre', icon: EllipsisHorizontalIcon },
 ]
 

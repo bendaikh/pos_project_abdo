@@ -1326,10 +1326,21 @@ async function completeSale(payments) {
     const SALES_STORAGE_KEY = 'pos_sales'
     
     try {
+        const normalizePaymentType = (type) => {
+            if (type === 'check') return 'cheque'
+            if (['simple_transfer', 'instant_transfer', 'transfer'].includes(type)) return 'virement'
+            return type
+        }
+
+        const normalizedPayments = (payments || []).map((payment) => ({
+            ...payment,
+            payment_type: normalizePaymentType(payment.payment_type || payment.type),
+        }))
+
         const data = cartStore.getCartData()
         const saleData = {
             ...data,
-            payments: payments, // Multiple payments
+            payments: normalizedPayments, // Multiple payments
             status: 'completed',
         }
 
@@ -1350,7 +1361,7 @@ async function completeSale(payments) {
                 total: data.total || 0,
                 discount_amount: data.discount_amount || 0,
                 discount_percent: data.discount_percent || 0,
-                payment_method: payments?.[0]?.type || 'cash',
+                payment_method: normalizedPayments?.[0]?.payment_type || 'cash',
                 status: 'completed',
                 date: new Date().toISOString(),
             }
@@ -1376,7 +1387,7 @@ async function completeSale(payments) {
         }
 
         // Add all payments
-        for (const payment of payments) {
+        for (const payment of normalizedPayments) {
             await salesApi.addPayment(cartStore.currentSaleId, payment)
         }
 

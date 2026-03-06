@@ -136,20 +136,20 @@
                         <template v-if="['simple_transfer', 'check', 'credit'].includes(selectedMethod.id)">
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Numéro Transaction/Chèque *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ transactionLabel }}{{ requiresTransaction ? ' *' : '' }}</label>
                                     <input 
                                         v-model="paymentForm.transaction_number"
                                         type="text"
-                                        placeholder="N° de chèque/RIB"
+                                        :placeholder="transactionPlaceholder"
                                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                     >
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">N° Pièce (justificatif) *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ pieceLabel }}</label>
                                     <input 
                                         v-model="paymentForm.piece_number"
                                         type="text"
-                                        placeholder="N° pièce d'identité"
+                                        :placeholder="piecePlaceholder"
                                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                     >
                                 </div>
@@ -165,24 +165,28 @@
                                     >
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Banque</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Banque {{ requiresBankName ? '*' : '' }}</label>
                                     <input 
                                         v-model="paymentForm.bank_name"
                                         type="text"
-                                        placeholder="Nom de la banque"
+                                        :placeholder="bankPlaceholder"
                                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                     >
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance *</label>
                                 <input 
                                     v-model="paymentForm.due_date"
                                     type="date"
+                                    :min="paymentForm.issue_date || undefined"
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                 >
                             </div>
+                            <p class="text-xs text-orange-700 mt-2">
+                                Ce mode de paiement est différé et sera suivi dans le module Encaissement.
+                            </p>
                         </template>
 
                         <!-- Notes -->
@@ -262,7 +266,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useSettingsStore } from '../../stores/settings'
 import {
     XMarkIcon,
@@ -286,42 +290,49 @@ const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 const paymentMethods = [
     {
         id: 'cash',
+        paymentType: 'cash',
         label: 'Espèce',
         description: 'Paiement en liquide',
         icon: '💵'
     },
     {
         id: 'card',
+        paymentType: 'card',
         label: 'Carte',
         description: 'Carte bancaire',
         icon: '💳'
     },
     {
         id: 'mobile',
+        paymentType: 'mobile',
         label: 'Mobile',
         description: 'Paiement mobile',
         icon: '📱'
     },
     {
         id: 'instant_transfer',
+        paymentType: 'virement',
         label: 'Virement Instantané',
         description: 'Transfert bancaire rapide',
         icon: '⚡'
     },
     {
         id: 'simple_transfer',
+        paymentType: 'virement',
         label: 'Virement Simple',
         description: 'Transfert bancaire standard',
         icon: '🏦'
     },
     {
         id: 'check',
+        paymentType: 'cheque',
         label: 'Chèque',
         description: 'Paiement par chèque',
         icon: '📄'
     },
     {
         id: 'credit',
+        paymentType: 'credit',
         label: 'Crédit (LCN)',
         description: 'Lettre de change',
         icon: '📋'
@@ -380,8 +391,30 @@ const canAddPayment = computed(() => {
         return !!paymentForm.value.transaction_number
     }
     
-    if (['simple_transfer', 'check', 'credit'].includes(selectedMethod.value.id)) {
-        return !!(paymentForm.value.transaction_number && paymentForm.value.piece_number && paymentForm.value.issue_date)
+    if (selectedMethod.value.id === 'simple_transfer') {
+        return !!(
+            paymentForm.value.transaction_number &&
+            paymentForm.value.bank_name &&
+            paymentForm.value.issue_date &&
+            paymentForm.value.due_date
+        )
+    }
+
+    if (selectedMethod.value.id === 'check') {
+        return !!(
+            paymentForm.value.transaction_number &&
+            paymentForm.value.bank_name &&
+            paymentForm.value.issue_date &&
+            paymentForm.value.due_date
+        )
+    }
+
+    if (selectedMethod.value.id === 'credit') {
+        return !!(
+            paymentForm.value.piece_number &&
+            paymentForm.value.issue_date &&
+            paymentForm.value.due_date
+        )
     }
     
     return false
@@ -391,12 +424,38 @@ const canConfirmPayments = computed(() => {
     return payments.value.length > 0 && remaining.value <= 0
 })
 
+const transactionLabel = computed(() => {
+    if (selectedMethod.value?.id === 'check') return 'N° de chèque'
+    if (selectedMethod.value?.id === 'simple_transfer') return 'N° de transaction'
+    return 'Référence dossier'
+})
+const requiresTransaction = computed(() => ['simple_transfer', 'check'].includes(selectedMethod.value?.id))
+
+const transactionPlaceholder = computed(() => {
+    if (selectedMethod.value?.id === 'check') return 'N° chèque'
+    if (selectedMethod.value?.id === 'simple_transfer') return 'N° opération bancaire'
+    return 'Référence crédit (optionnel)'
+})
+
+const pieceLabel = computed(() => {
+    if (selectedMethod.value?.id === 'credit') return 'N° effet / LCN *'
+    return 'N° pièce (optionnel)'
+})
+
+const piecePlaceholder = computed(() => {
+    if (selectedMethod.value?.id === 'credit') return 'N° effet / lettre de change'
+    return 'CIN / justificatif'
+})
+
+const requiresBankName = computed(() => ['simple_transfer', 'check'].includes(selectedMethod.value?.id))
+const bankPlaceholder = computed(() => selectedMethod.value?.id === 'credit' ? 'Banque (optionnel)' : 'Nom de la banque')
+
 function selectMethod(method) {
     selectedMethod.value = method
-    paymentForm.value.payment_type = method.id
+    paymentForm.value.payment_type = method.paymentType
     paymentForm.value = {
         ...paymentForm.value,
-        payment_type: method.id,
+        payment_type: method.paymentType,
         amount: 0,
         received_amount: null,
         transaction_number: '',
@@ -412,7 +471,7 @@ function addPayment() {
     if (!canAddPayment.value) return
 
     const payment = {
-        payment_type: selectedMethod.value.id,
+        payment_type: selectedMethod.value.paymentType,
         amount: paymentForm.value.amount,
         received_amount: paymentForm.value.received_amount,
         change_amount: selectedMethod.value.id === 'cash' ? calculateChange.value : 0,
@@ -421,7 +480,9 @@ function addPayment() {
         issue_date: paymentForm.value.issue_date,
         bank_name: paymentForm.value.bank_name,
         due_date: paymentForm.value.due_date,
-        reference: paymentForm.value.transaction_number || paymentForm.value.piece_number,
+        reference: selectedMethod.value.id === 'credit'
+            ? paymentForm.value.piece_number
+            : paymentForm.value.transaction_number || paymentForm.value.piece_number,
         notes: paymentForm.value.notes
     }
 
@@ -437,7 +498,7 @@ function removePayment(index) {
 }
 
 function getMethodLabel(type) {
-    const method = paymentMethods.find(m => m.id === type)
+    const method = paymentMethods.find(m => m.id === type || m.paymentType === type)
     return method ? method.label : type
 }
 

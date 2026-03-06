@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\OptionController;
 use App\Http\Controllers\Api\OptionVariantController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PaymentCollectionController;
 use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\ProductionEntryController;
 use App\Http\Controllers\Api\ReportController;
@@ -154,4 +155,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/automation-rules/employees', [AutomationRuleController::class, 'getEmployees']);
     Route::post('/automation-rules/{automationRule}/trigger', [AutomationRuleController::class, 'trigger']);
     Route::apiResource('automation-rules', AutomationRuleController::class);
+
+    // Payment Collections (Suivi Encaissement)
+    Route::get('/payment-collections/deferred', [PaymentCollectionController::class, 'deferredPayments']);
+    Route::get('/payment-collections/statistics', [PaymentCollectionController::class, 'statistics']);
+    Route::get('/payment-collections/upcoming', [PaymentCollectionController::class, 'upcomingCollections']);
+    Route::get('/payment-collections/{payment}/history', [PaymentCollectionController::class, 'collectionHistory']);
+    Route::post('/payment-collections/{payment}/mark-collected', [PaymentCollectionController::class, 'markAsCollected']);
+    Route::post('/payment-collections/{payment}/schedule', [PaymentCollectionController::class, 'scheduleCollection']);
+    Route::post('/payment-collections/{payment}/reschedule', [PaymentCollectionController::class, 'rescheduleCollection']);
+    Route::post('/payment-collections/{payment}/status', [PaymentCollectionController::class, 'changeStatus']);
 });

@@ -63,6 +63,9 @@ import CalendarView from '../views/agenda/CalendarView.vue'
 import AppointmentsList from '../views/agenda/AppointmentsList.vue'
 import TasksList from '../views/agenda/TasksList.vue'
 
+// SUIVI ENCAISSEMENT Views
+import SuiviEncaissement from '../views/SuiviEncaissement.vue'
+
 // MAGASINS Views
 import MagasinsList from '../views/magasins/MagasinsList.vue'
 
@@ -308,6 +311,12 @@ const routes = [
                 path: 'agenda/tasks',
                 name: 'agenda-tasks',
                 component: TasksList
+            },
+            // SUIVI ENCAISSEMENT Routes
+            {
+                path: 'suivi-encaissement',
+                name: 'suivi-encaissement',
+                component: SuiviEncaissement
             },
             // MAGASINS Routes
             {
