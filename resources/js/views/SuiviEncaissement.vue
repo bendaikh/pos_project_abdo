@@ -112,7 +112,7 @@
             <td class="px-4 py-3 text-gray-600">{{ payment.sale?.reference || '-' }}</td>
             <td class="px-4 py-3">
               <span :class="getPaymentTypeClass(payment.payment_type)" class="px-2 py-1 rounded text-xs font-semibold">
-                {{ getPaymentTypeName(payment.payment_type) }}
+                {{ getPaymentTypeName(payment) }}
               </span>
             </td>
             <td class="px-4 py-3 text-gray-600">{{ payment.piece_number || payment.transaction_number || '-' }}</td>
@@ -406,7 +406,11 @@ const formatDate = (value) => {
   return new Intl.DateTimeFormat('fr-FR').format(new Date(value))
 }
 
-const getPaymentTypeName = (type) => {
+const getPaymentTypeName = (payment) => {
+  const type = payment?.payment_type
+  const notes = String(payment?.notes || '')
+  if (type === 'virement' && notes.includes('[VIREMENT_SIMPLE]')) return 'Virement simple'
+  if (type === 'virement' && notes.includes('[VIREMENT_INSTANT]')) return 'Virement instantané'
   const names = {
     cheque: 'Chèque',
     check: 'Chèque',

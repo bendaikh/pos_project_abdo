@@ -70,7 +70,7 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-100 border border-primary-100">
-                                        <img v-if="customer.photo_url" :src="customer.photo_url" alt="Photo client" class="w-full h-full object-cover" />
+                                        <img v-if="customer.photo_url" :src="resolveCustomerPhotoUrl(customer.photo_url)" alt="Photo client" class="w-full h-full object-cover" />
                                         <span v-else class="flex items-center justify-center w-full h-full text-xs font-semibold text-primary-600">{{ getInitials(customer.name || `${customer.nom || ''} ${customer.prenom || ''}`.trim()) }}</span>
                                     </div>
                                     <div>
@@ -159,7 +159,7 @@
                             <section class="bg-gray-50 border border-gray-200 rounded-2xl p-5 shadow-sm space-y-5">
                                 <div class="flex items-center gap-4">
                                     <div class="w-16 h-16 rounded-xl overflow-hidden bg-primary-100">
-                                        <img v-if="customerPhotoPreview" :src="customerPhotoPreview" alt="Photo client" class="w-full h-full object-cover" />
+                                        <img v-if="customerPhotoPreview" :src="resolveCustomerPhotoUrl(customerPhotoPreview)" alt="Photo client" class="w-full h-full object-cover" />
                                         <PhotoIcon v-else class="w-full h-full p-3 text-primary-500" />
                                     </div>
                                     <div>
@@ -481,9 +481,8 @@ import {
 
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
-
-const CUSTOMERS_STORAGE_KEY = 'pos_customers'
-const SALES_STORAGE_KEY = 'pos_sales'
+const MAX_CUSTOMER_PHOTO_FILE_SIZE = 4 * 1024 * 1024
+const MAX_CUSTOMER_PHOTO_DATA_URL_LENGTH = 8_000_000
 
 const customers = ref([])
 const search = ref('')
@@ -498,36 +497,12 @@ const customerHistory = ref([])
 const customerDocuments = ref({})
 const saving = ref(false)
 
-function saveCustomersToStorage() {
-    localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(customers.value))
-}
-
-function loadCustomersFromStorage() {
-    const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY)
-    if (stored) {
-        customers.value = JSON.parse(stored)
-        return true
-    }
-    return false
-}
-
 function calculateCustomerTotal(customer) {
-    const sales = loadSalesFromStorage()
-    if (!sales || !customer.id) return 0
-    return sales
-        .filter(sale => sale.customer_id === customer.id)
-        .reduce((sum, sale) => sum + (sale.total || 0), 0)
+    return Number(customer?.total_spent || 0)
 }
 
 function calculateCustomerSalesCount(customer) {
-    const sales = loadSalesFromStorage()
-    if (!sales || !customer.id) return 0
-    return sales.filter(sale => sale.customer_id === customer.id).length
-}
-
-function loadSalesFromStorage() {
-    const stored = localStorage.getItem(SALES_STORAGE_KEY)
-    return stored ? JSON.parse(stored) : []
+    return Number(customer?.completed_sales_count || 0)
 }
 
 const defaultCustomerForm = () => ({
@@ -587,16 +562,66 @@ const filteredCustomers = computed(() => {
 
 const loyalCustomersCount = computed(() => customers.value.filter(c => c.loyalty_discount > 0 || c.is_vip).length)
 const totalSpent = computed(() => {
-    const sales = loadSalesFromStorage()
-    if (!sales || !Array.isArray(sales)) return 0
-    return sales.reduce((sum, sale) => sum + (sale.total || 0), 0)
+    return customers.value.reduce((sum, customer) => sum + Number(customer?.total_spent || 0), 0)
 })
 const averageSpent = computed(() => customers.value.length > 0 ? totalSpent.value / customers.value.length : 0)
+
+function buildCustomerPayload() {
+    const fullName = `${form.nom || ''} ${form.prenom || ''}`.trim()
+    return {
+        name: fullName || form.raison_sociale || 'Client',
+        email: form.email || null,
+        phone: form.phone || null,
+        activity: form.activite || null,
+        address: form.address || null,
+        city: form.city || null,
+        country: form.country || null,
+        photo_url: customerPhotoPreview.value || null,
+        notes: form.note_interne || null,
+    }
+}
+
+function mapSalesHistory(responseData) {
+    const rows = Array.isArray(responseData?.data) ? responseData.data : (Array.isArray(responseData) ? responseData : [])
+    return rows.map((sale) => ({
+        id: sale.id,
+        date: sale.created_at || sale.date || null,
+        transaction_id: sale.reference || sale.order_number || `TX-${sale.id}`,
+        items_count: Array.isArray(sale.items) ? sale.items.length : Number(sale.items_count || 0),
+        total: Number(sale.total || 0),
+    }))
+}
+
+async function fetchCustomers() {
+    const response = await customersApi.list({ with_stats: true, paginate: false, active: true })
+    customers.value = Array.isArray(response.data) ? response.data : (response.data?.data || [])
+}
 
 function getInitials(name = '') {
     const fragments = (name || '').trim().split(' ').filter(Boolean)
     if (!fragments.length) return ''
     return fragments.map(n => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function resolveCustomerPhotoUrl(value) {
+    const url = String(value || '').trim()
+    if (!url) return ''
+    if (
+        url.startsWith('data:image/')
+        || url.startsWith('blob:')
+        || url.startsWith('http://')
+        || url.startsWith('https://')
+        || url.startsWith('//')
+    ) {
+        return url
+    }
+    if (url.startsWith('/')) {
+        return `${window.location.origin}${url}`
+    }
+    if (url.startsWith('storage/')) {
+        return `${window.location.origin}/${url}`
+    }
+    return `${window.location.origin}/storage/${url}`
 }
 
 function formatDate(date) {
@@ -616,17 +641,81 @@ function closeCustomerForm() {
     resetCustomerForm()
 }
 
-function handleCustomerPhotoUpload(event) {
+function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (e) => resolve(String(e.target?.result || ''))
+        reader.onerror = () => reject(new Error('Impossible de lire l\'image'))
+        reader.readAsDataURL(file)
+    })
+}
+
+function loadImageElement(dataUrl) {
+    return new Promise((resolve, reject) => {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = () => reject(new Error('Image invalide'))
+        image.src = dataUrl
+    })
+}
+
+async function optimizeImageForUpload(file) {
+    const sourceDataUrl = await readFileAsDataUrl(file)
+    const image = await loadImageElement(sourceDataUrl)
+
+    const maxDimension = 1024
+    const sourceWidth = image.naturalWidth || image.width
+    const sourceHeight = image.naturalHeight || image.height
+    const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight))
+    const width = Math.max(1, Math.round(sourceWidth * scale))
+    const height = Math.max(1, Math.round(sourceHeight * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+
+    const context = canvas.getContext('2d')
+    if (!context) return sourceDataUrl
+
+    context.drawImage(image, 0, 0, width, height)
+
+    const targetType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+    const optimizedDataUrl = canvas.toDataURL(targetType, targetType === 'image/jpeg' ? 0.85 : undefined)
+
+    return optimizedDataUrl.length > sourceDataUrl.length ? sourceDataUrl : optimizedDataUrl
+}
+
+async function handleCustomerPhotoUpload(event) {
     const file = event.target.files?.[0]
     if (!file) return
-    form.photo = file
-    
-    // Convert image to base64 for persistent storage
-    const reader = new FileReader()
-    reader.onload = (e) => {
-        customerPhotoPreview.value = e.target.result
+
+    if (!file.type.startsWith('image/')) {
+        alert('Veuillez sélectionner une image valide (PNG, JPG, WebP...).')
+        event.target.value = ''
+        return
     }
-    reader.readAsDataURL(file)
+
+    if (file.size > MAX_CUSTOMER_PHOTO_FILE_SIZE) {
+        alert('Image trop volumineuse. Taille maximale autorisée: 4 Mo.')
+        event.target.value = ''
+        return
+    }
+
+    form.photo = file
+
+    try {
+        const optimizedDataUrl = await optimizeImageForUpload(file)
+        if (optimizedDataUrl.length > MAX_CUSTOMER_PHOTO_DATA_URL_LENGTH) {
+            alert('Image trop lourde pour le serveur. Réduisez la taille de l\'image.')
+            return
+        }
+        customerPhotoPreview.value = optimizedDataUrl
+    } catch (error) {
+        console.error('Customer photo processing error:', error)
+        alert('Impossible de traiter cette image.')
+    } finally {
+        event.target.value = ''
+    }
 }
 
 function extractFileName(path) {
@@ -673,7 +762,7 @@ function handleDocumentUpload(event, docType) {
     reader.readAsDataURL(file)
 }
 
-function openForm(customer = null) {
+async function openForm(customer = null) {
     editingCustomer.value = customer
     resetCustomerForm()
     customerDocuments.value = {} // Reset memory-only document storage
@@ -700,22 +789,26 @@ function openForm(customer = null) {
         // Note: customerDocuments stays empty for loaded customers (files don't persist across sessions)
         // Users can upload files again in the current session
         
-        // Load customer sales history
-        const sales = loadSalesFromStorage()
-        customerHistory.value = sales
-            .filter(sale => sale.customer_id === customer.id)
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
+        try {
+            const historyResponse = await customersApi.history(customer.id)
+            customerHistory.value = mapSalesHistory(historyResponse.data)
+        } catch (error) {
+            customerHistory.value = []
+            console.error('Error loading customer history:', error)
+        }
     }
     showForm.value = true
 }
 
-function viewHistory(customer) {
+async function viewHistory(customer) {
     selectedCustomer.value = customer
-    // Load actual sales from storage
-    const sales = loadSalesFromStorage()
-    customerHistory.value = sales
-        .filter(sale => sale.customer_id === customer.id)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
+    try {
+        const historyResponse = await customersApi.history(customer.id)
+        customerHistory.value = mapSalesHistory(historyResponse.data)
+    } catch (error) {
+        customerHistory.value = []
+        console.error('Error loading customer history:', error)
+    }
     showHistoryModal.value = true
 }
 
@@ -727,31 +820,16 @@ function confirmDelete(customer) {
 async function saveCustomer() {
     saving.value = true
     try {
-        const { photo, ...rest } = form
-        const payload = {
-            ...rest,
-            id: editingCustomer.value?.id || Date.now(),
-            name: `${form.nom} ${form.prenom}`.trim(),
-            nom: form.nom,
-            prenom: form.prenom,
-            photo_url: customerPhotoPreview.value || null
-        }
-        console.log('DEBUG saveCustomer:', { photoPreview: customerPhotoPreview.value, payload: payload })
+        const payload = buildCustomerPayload()
         if (editingCustomer.value) {
-            const index = customers.value.findIndex(c => c.id === editingCustomer.value.id)
-            if (index > -1) {
-                customers.value[index] = {
-                    ...customers.value[index],
-                    ...payload
-                }
-            }
+            await customersApi.update(editingCustomer.value.id, payload)
         } else {
-            customers.value.unshift(payload)
+            await customersApi.create(payload)
         }
-        saveCustomersToStorage()
+        await fetchCustomers()
         closeCustomerForm()
     } catch (error) {
-        alert('Erreur: ' + error.message)
+        alert(error.response?.data?.message || 'Erreur lors de l\'enregistrement du client')
     } finally {
         saving.value = false
     }
@@ -759,8 +837,8 @@ async function saveCustomer() {
 
 async function deleteCustomer() {
     try {
-        customers.value = customers.value.filter(c => c.id !== customerToDelete.value.id)
-        saveCustomersToStorage()
+        await customersApi.delete(customerToDelete.value.id)
+        await fetchCustomers()
         showDeleteModal.value = false
     } catch (error) {
         alert('Erreur lors de la suppression')
@@ -768,17 +846,8 @@ async function deleteCustomer() {
 }
 
 onMounted(async () => {
-    // Try loading from localStorage first
-    const hasLocalData = loadCustomersFromStorage()
-    if (hasLocalData) {
-        return
-    }
-    
-    // Fallback to API
     try {
-        const response = await customersApi.list({ with_stats: true })
-        customers.value = Array.isArray(response.data) ? response.data : response.data.data || []
-        saveCustomersToStorage()
+        await fetchCustomers()
     } catch (error) {
         console.error('Error loading customers:', error)
     }

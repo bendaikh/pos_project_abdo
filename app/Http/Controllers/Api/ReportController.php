@@ -148,8 +148,28 @@ class ReportController extends Controller
         $toDate = $request->get('to_date', Carbon::now()->toDateString());
 
         $paymentStats = Payment::join('sales', 'payments.sale_id', '=', 'sales.id')
-            ->where('sales.status', 'completed')
-            ->whereBetween('payments.created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+            ->whereNotIn('sales.status', ['cancelled', 'refunded'])
+            ->where(function ($query) {
+                $query
+                    ->where(function ($immediate) {
+                        $immediate
+                            ->where(function ($typeQuery) {
+                                $typeQuery->where('payments.is_deferred', false)->orWhereNull('payments.is_deferred');
+                            })
+                            ->where('payments.payment_status', 'completed');
+                    })
+                    ->orWhere(function ($deferred) {
+                        $deferred
+                            ->where('payments.is_deferred', true)
+                            ->where('payments.payment_status', 'completed')
+                            ->where('payments.collection_status', 'collected')
+                            ->whereNotNull('payments.collected_at');
+                    });
+            })
+            ->whereBetween(
+                DB::raw("DATE(CASE WHEN payments.is_deferred = 1 THEN payments.collected_at ELSE payments.created_at END)"),
+                [$fromDate, $toDate]
+            )
             ->select(
                 'payments.payment_type',
                 DB::raw('COUNT(*) as count'),
@@ -165,6 +185,9 @@ class ReportController extends Controller
             'cash' => 'Espèces',
             'card' => 'Carte',
             'check' => 'Chèque',
+            'cheque' => 'Chèque',
+            'virement' => 'Virement',
+            'credit' => 'Crédit',
             'mobile' => 'Mobile',
             'other' => 'Autre',
         ];
@@ -223,7 +246,27 @@ class ReportController extends Controller
             'date' => $date,
             'summary' => [
                 'total_sales' => $completedSales->count(),
-                'total_revenue' => $completedSales->sum('total'),
+                'total_revenue' => Payment::join('sales', 'payments.sale_id', '=', 'sales.id')
+                    ->whereDate(DB::raw("CASE WHEN payments.is_deferred = 1 THEN payments.collected_at ELSE payments.created_at END"), $date)
+                    ->whereNotIn('sales.status', ['cancelled', 'refunded'])
+                    ->where(function ($query) {
+                        $query
+                            ->where(function ($immediate) {
+                                $immediate
+                                    ->where(function ($typeQuery) {
+                                        $typeQuery->where('payments.is_deferred', false)->orWhereNull('payments.is_deferred');
+                                    })
+                                    ->where('payments.payment_status', 'completed');
+                            })
+                            ->orWhere(function ($deferred) {
+                                $deferred
+                                    ->where('payments.is_deferred', true)
+                                    ->where('payments.payment_status', 'completed')
+                                    ->where('payments.collection_status', 'collected')
+                                    ->whereNotNull('payments.collected_at');
+                            });
+                    })
+                    ->sum('payments.amount'),
                 'pending_sales' => $sales->where('status', 'pending')->count(),
                 'cancelled_sales' => $sales->where('status', 'cancelled')->count(),
             ],

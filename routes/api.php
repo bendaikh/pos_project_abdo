@@ -68,6 +68,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sales
     Route::get('/sales/pending', [SaleController::class, 'pending']);
+    Route::get('/sales/{sale}/journal', [SaleController::class, 'journal']);
+    Route::get('/sales/{sale}/returns', [SaleController::class, 'returns']);
+    Route::post('/sales/{sale}/returns', [SaleController::class, 'storeReturn']);
+    Route::post('/sales/{sale}/status', [SaleController::class, 'updateOrderStatus']);
     Route::post('/sales/{sale}/complete', [SaleController::class, 'complete']);
     Route::post('/sales/{sale}/cancel', [SaleController::class, 'cancel']);
     Route::apiResource('sales', SaleController::class);

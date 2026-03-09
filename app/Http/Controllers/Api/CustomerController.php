@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CustomerController extends Controller
 {
@@ -56,13 +57,17 @@ class CustomerController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:50',
+            'activity' => 'nullable|string|max:255',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'country' => 'nullable|string|max:100',
+            'photo_url' => 'nullable|string|max:8000000',
+            'photo' => 'nullable|string|max:8000000',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
 
+        $validated = $this->normalizePhotoPayload($validated);
         $customer = Customer::create($validated);
 
         return response()->json($customer, 201);
@@ -87,13 +92,17 @@ class CustomerController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:50',
+            'activity' => 'nullable|string|max:255',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'country' => 'nullable|string|max:100',
+            'photo_url' => 'nullable|string|max:8000000',
+            'photo' => 'nullable|string|max:8000000',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
 
+        $validated = $this->normalizePhotoPayload($validated);
         $customer->update($validated);
 
         return response()->json($customer);
@@ -114,5 +123,40 @@ class CustomerController extends Controller
         $customer->delete();
 
         return response()->json(null, 204);
+    }
+
+    private function normalizePhotoPayload(array $validated): array
+    {
+        $photoUrl = $validated['photo_url'] ?? null;
+        $legacyPhoto = $validated['photo'] ?? null;
+
+        if (($photoUrl === null || $photoUrl === '') && $legacyPhoto !== null && $legacyPhoto !== '') {
+            $photoUrl = $legacyPhoto;
+        }
+
+        unset($validated['photo']);
+
+        if ($photoUrl === null || $photoUrl === '') {
+            $validated['photo_url'] = null;
+            return $validated;
+        }
+
+        $photoUrl = trim((string) $photoUrl);
+
+        $isHttpUrl = filter_var($photoUrl, FILTER_VALIDATE_URL) !== false;
+        $isDataImage = str_starts_with($photoUrl, 'data:image/');
+        $isRelativePath = str_starts_with($photoUrl, '/')
+            || str_starts_with($photoUrl, 'storage/')
+            || str_starts_with($photoUrl, 'uploads/');
+
+        if (!$isHttpUrl && !$isDataImage && !$isRelativePath) {
+            throw ValidationException::withMessages([
+                'photo_url' => ['Format image client invalide'],
+            ]);
+        }
+
+        $validated['photo_url'] = $photoUrl;
+
+        return $validated;
     }
 }

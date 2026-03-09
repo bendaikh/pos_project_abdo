@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use Carbon\Carbon;
@@ -20,9 +21,9 @@ class DashboardController extends Controller
         $today = Carbon::today();
         $yesterday = Carbon::yesterday();
 
-        // Today's sales
-        $todaySales = Sale::completed()->today()->sum('total');
-        $yesterdaySales = Sale::completed()->whereDate('created_at', $yesterday)->sum('total');
+        // Cash-in: only effectively collected money.
+        $todaySales = $this->collectedAmountForDate($today);
+        $yesterdaySales = $this->collectedAmountForDate($yesterday);
         $salesChange = $yesterdaySales > 0 
             ? round((($todaySales - $yesterdaySales) / $yesterdaySales) * 100, 1) 
             : 0;
@@ -30,8 +31,8 @@ class DashboardController extends Controller
         // Low stock alerts
         $lowStockCount = Article::lowStock()->count();
 
-        // Today's transactions
-        $todayTransactions = Sale::completed()->today()->count();
+        // Transactions that actually generated collected money today.
+        $todayTransactions = $this->collectedTransactionsForDate($today);
         $pendingOrders = Sale::pending()->count();
 
         // New customers today
@@ -62,32 +63,14 @@ class DashboardController extends Controller
         $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
 
-        // Current period
-        $currentPeriodSales = Sale::completed()
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('SUM(total) as total')
-            )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->keyBy('date');
+        // Current period based on collected payments.
+        $currentPeriodSales = $this->collectedTotalsByDate($startDate, $endDate);
 
         // Previous period for comparison
         $previousStart = Carbon::now()->subDays($days * 2 - 1)->startOfDay();
         $previousEnd = Carbon::now()->subDays($days)->endOfDay();
 
-        $previousPeriodSales = Sale::completed()
-            ->whereBetween('created_at', [$previousStart, $previousEnd])
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('SUM(total) as total')
-            )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->keyBy('date');
+        $previousPeriodSales = $this->collectedTotalsByDate($previousStart, $previousEnd);
 
         // Build chart data
         $labels = [];
@@ -195,5 +178,61 @@ class DashboardController extends Controller
             });
 
         return response()->json($lowStockArticles);
+    }
+
+    private function collectedAmountForDate(Carbon $date): float
+    {
+        return (float) $this->baseCollectedPaymentsQuery()
+            ->whereDate(DB::raw("CASE WHEN payments.is_deferred = 1 THEN payments.collected_at ELSE payments.created_at END"), $date->toDateString())
+            ->sum('payments.amount');
+    }
+
+    private function collectedTransactionsForDate(Carbon $date): int
+    {
+        return (int) $this->baseCollectedPaymentsQuery()
+            ->whereDate(DB::raw("CASE WHEN payments.is_deferred = 1 THEN payments.collected_at ELSE payments.created_at END"), $date->toDateString())
+            ->distinct('payments.sale_id')
+            ->count('payments.sale_id');
+    }
+
+    private function collectedTotalsByDate(Carbon $startDate, Carbon $endDate)
+    {
+        return $this->baseCollectedPaymentsQuery()
+            ->whereBetween(
+                DB::raw("DATE(CASE WHEN payments.is_deferred = 1 THEN payments.collected_at ELSE payments.created_at END)"),
+                [$startDate->toDateString(), $endDate->toDateString()]
+            )
+            ->select(
+                DB::raw("DATE(CASE WHEN payments.is_deferred = 1 THEN payments.collected_at ELSE payments.created_at END) as date"),
+                DB::raw('SUM(payments.amount) as total')
+            )
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+    }
+
+    private function baseCollectedPaymentsQuery()
+    {
+        return Payment::query()
+            ->join('sales', 'payments.sale_id', '=', 'sales.id')
+            ->whereNotIn('sales.status', ['cancelled', 'refunded'])
+            ->where(function ($query) {
+                $query
+                    ->where(function ($immediate) {
+                        $immediate
+                            ->where(function ($typeQuery) {
+                                $typeQuery->where('payments.is_deferred', false)->orWhereNull('payments.is_deferred');
+                            })
+                            ->where('payments.payment_status', 'completed');
+                    })
+                    ->orWhere(function ($deferred) {
+                        $deferred
+                            ->where('payments.is_deferred', true)
+                            ->where('payments.payment_status', 'completed')
+                            ->where('payments.collection_status', 'collected')
+                            ->whereNotNull('payments.collected_at');
+                    });
+            });
     }
 }

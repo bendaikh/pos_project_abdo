@@ -91,6 +91,7 @@ class Payment extends Model
     {
         $this->update([
             'collection_status' => 'collected',
+            'payment_status' => 'completed',
             'collected_at' => now(),
             'collected_by' => $collectedBy ?? auth()->user()?->name,
             'collection_notes' => $notes,

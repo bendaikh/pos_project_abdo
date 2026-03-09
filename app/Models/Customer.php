@@ -14,9 +14,11 @@ class Customer extends Model
         'name',
         'email',
         'phone',
+        'activity',
         'address',
         'city',
         'country',
+        'photo_url',
         'notes',
         'is_active',
     ];

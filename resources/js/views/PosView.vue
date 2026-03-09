@@ -767,10 +767,9 @@ import { storeToRefs } from 'pinia'
 import { useCartStore } from '../stores/cart'
 import { useArticlesStore } from '../stores/articles'
 import { useSettingsStore } from '../stores/settings'
-import { useCustomersStore } from '../stores/customers'
 import { useOfflineStore } from '../stores/offline'
 import { useUiStore } from '../stores/ui'
-import { salesApi, optionsApi, articlesApi } from '../api'
+import { salesApi, optionsApi, articlesApi, customersApi } from '../api'
 import PaymentMultiModal from '../components/pos/PaymentMultiModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
 import OptionsModal from '../components/pos/OptionsModal.vue'
@@ -790,7 +789,6 @@ import {
 const cartStore = useCartStore()
 const articlesStore = useArticlesStore()
 const settingsStore = useSettingsStore()
-const customersStore = useCustomersStore()
 const uiStore = useUiStore()
 const { appSidebarOpen } = storeToRefs(uiStore)
 const { posCategoryDisplayMode } = storeToRefs(settingsStore)
@@ -822,6 +820,8 @@ const editOptionsPrice = ref(0)
 const searchQuery = ref('')
 const selectedCategoryId = ref('all')
 const customerSearch = ref('')
+const posCustomers = ref([])
+const posCustomersLoading = ref(false)
 const ticketNotes = ref('')
 const discountAmount = ref(0)
 const discountPercent = ref(0)
@@ -905,12 +905,63 @@ const serviceMode = computed({
 })
 
 const filteredCustomers = computed(() => {
-    const query = customerSearch.value.toLowerCase()
-    if (!query) return customersStore.customers
-    return customersStore.customers.filter(c => 
-        c.name.toLowerCase().includes(query)
-    )
+    const query = customerSearch.value.trim().toLowerCase()
+    const list = Array.isArray(posCustomers.value) ? posCustomers.value : []
+    if (!query) return list.slice(0, 20)
+    return list
+        .filter((customer) => {
+            const name = String(customer?.name || '').toLowerCase()
+            const phone = String(customer?.phone || '').toLowerCase()
+            return name.includes(query) || phone.includes(query)
+        })
+        .slice(0, 20)
 })
+
+function normalizePosCustomer(customer) {
+    if (!customer) return null
+    const fullName = `${customer.nom || ''} ${customer.prenom || ''}`.trim()
+    return {
+        ...customer,
+        id: customer.id,
+        name: customer.name || fullName || customer.raison_sociale || 'Client',
+        phone: customer.phone || customer.telephone || customer.mobile || '',
+    }
+}
+
+function syncSelectedCustomerWithLiveList() {
+    if (!cartStore.customerId) return
+    const matchedCustomer = posCustomers.value.find((customer) => Number(customer.id) === Number(cartStore.customerId))
+    if (!matchedCustomer) {
+        cartStore.setCustomer(null, 'Client Anonyme')
+        return
+    }
+    if (cartStore.customerName !== matchedCustomer.name) {
+        cartStore.setCustomer(matchedCustomer.id, matchedCustomer.name)
+    }
+}
+
+async function fetchPosCustomers() {
+    if (posCustomersLoading.value) return
+    posCustomersLoading.value = true
+    try {
+        const response = await customersApi.list({
+            paginate: false,
+            active: true,
+            with_stats: true,
+            _ts: Date.now(), // cache-busting to avoid stale SW/api cache
+        })
+        const payload = response.data
+        const rawCustomers = Array.isArray(payload) ? payload : (payload?.data || [])
+        posCustomers.value = rawCustomers.map(normalizePosCustomer).filter(Boolean)
+        syncSelectedCustomerWithLiveList()
+    } catch (error) {
+        console.error('Failed to fetch POS customers:', error)
+        posCustomers.value = []
+        cartStore.setCustomer(null, 'Client Anonyme')
+    } finally {
+        posCustomersLoading.value = false
+    }
+}
 
 const filteredArticles = computed(() => {
     let articles = articlesStore.articles
@@ -1328,7 +1379,6 @@ async function completeSale(payments) {
     try {
         const normalizePaymentType = (type) => {
             if (type === 'check') return 'cheque'
-            if (['simple_transfer', 'instant_transfer', 'transfer'].includes(type)) return 'virement'
             return type
         }
 
@@ -1589,6 +1639,11 @@ watch([searchQuery, selectedCategoryId], () => {
     currentPage.value = 1
 })
 
+watch(showCustomerSelector, async (open) => {
+    if (!open) return
+    await fetchPosCustomers()
+})
+
 watch(isMobile, (value) => {
     if (value) {
         isCartExpanded.value = false
@@ -1717,7 +1772,7 @@ onMounted(async () => {
     handleFullscreenChange()
     await settingsStore.fetchSettings()
     await articlesStore.refresh()
-    await customersStore.fetchCustomers()
+    await fetchPosCustomers()
 })
 
 onUnmounted(() => {

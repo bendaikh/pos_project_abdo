@@ -34,6 +34,9 @@ import SettingsView from '../views/settings/SettingsView.vue'
 import DevisList from '../views/vente/DevisList.vue'
 import BonLivraisonList from '../views/vente/BonLivraisonList.vue'
 import FactureList from '../views/vente/FactureList.vue'
+import CommandesList from '../views/vente/CommandesList.vue'
+import CommandeForm from '../views/vente/CommandeForm.vue'
+import CommandeDetail from '../views/vente/CommandeDetail.vue'
 
 // ACHAT Views
 import BonCommandeList from '../views/achat/BonCommandeList.vue'
@@ -224,6 +227,21 @@ const routes = [
                 path: 'facture',
                 name: 'facture',
                 component: FactureList
+            },
+            {
+                path: 'commandes',
+                name: 'commandes',
+                component: CommandesList
+            },
+            {
+                path: 'commandes/create',
+                name: 'commandes.create',
+                component: CommandeForm
+            },
+            {
+                path: 'commandes/:id',
+                name: 'commandes.detail',
+                component: CommandeDetail
             },
             // ACHAT Routes
             {

@@ -117,11 +117,17 @@ export const salesApi = {
     get: (id) => api.get(`/sales/${id}`),
     create: (data) => api.post('/sales', data),
     update: (id, data) => api.put(`/sales/${id}`, data),
+    updateStatus: (id, data) => api.post(`/sales/${id}/status`, data),
+    journal: (id) => api.get(`/sales/${id}/journal`),
+    returns: (id) => api.get(`/sales/${id}/returns`),
+    addReturn: (id, data) => api.post(`/sales/${id}/returns`, data),
     complete: (id) => api.post(`/sales/${id}/complete`),
     cancel: (id) => api.post(`/sales/${id}/cancel`),
     delete: (id) => api.delete(`/sales/${id}`),
     addPayment: (saleId, data) => api.post(`/sales/${saleId}/payments`, data),
 }
+
+export const commandesApi = salesApi
 
 // Customers API
 export const customersApi = {

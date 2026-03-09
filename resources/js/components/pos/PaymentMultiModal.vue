@@ -470,8 +470,16 @@ function selectMethod(method) {
 function addPayment() {
     if (!canAddPayment.value) return
 
+    const apiPaymentType = ['simple_transfer', 'instant_transfer', 'check'].includes(selectedMethod.value.id)
+        ? selectedMethod.value.id
+        : selectedMethod.value.paymentType
+    const transferMode = selectedMethod.value.id === 'simple_transfer'
+        ? 'simple'
+        : (selectedMethod.value.id === 'instant_transfer' ? 'instant' : null)
+
     const payment = {
-        payment_type: selectedMethod.value.paymentType,
+        payment_type: apiPaymentType,
+        transfer_mode: transferMode,
         amount: paymentForm.value.amount,
         received_amount: paymentForm.value.received_amount,
         change_amount: selectedMethod.value.id === 'cash' ? calculateChange.value : 0,

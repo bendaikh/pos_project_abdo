@@ -21,7 +21,7 @@
                         {{ stats.today_sales?.change_percent > 0 ? '+' : '' }}{{ stats.today_sales?.change_percent }}%
                     </span>
                 </div>
-                <p class="mt-4 text-sm text-gray-500">Ventes aujourd'hui</p>
+                <p class="mt-4 text-sm text-gray-500">Encaissements aujourd'hui</p>
                 <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(stats.today_sales?.amount || 0) }}</p>
             </div>
 

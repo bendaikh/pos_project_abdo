@@ -7,12 +7,32 @@ export const useCustomersStore = defineStore('customers', () => {
     const loading = ref(false)
     const CUSTOMERS_STORAGE_KEY = 'pos_customers'
 
+    function normalizeCustomer(customer) {
+        if (!customer) return null
+        const fullName = `${customer.nom || ''} ${customer.prenom || ''}`.trim()
+        return {
+            ...customer,
+            id: customer.id,
+            name: customer.name || fullName || customer.raison_sociale || 'Client',
+            phone: customer.phone || customer.telephone || customer.mobile || '',
+        }
+    }
+
+    function saveCustomersToStorage() {
+        try {
+            localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(customers.value))
+        } catch (error) {
+            console.error('Error saving customers to storage:', error)
+        }
+    }
+
     // Load customers from localStorage
     function loadCustomersFromStorage() {
         try {
             const stored = localStorage.getItem(CUSTOMERS_STORAGE_KEY)
             if (stored) {
-                customers.value = JSON.parse(stored)
+                const parsed = JSON.parse(stored)
+                customers.value = Array.isArray(parsed) ? parsed.map(normalizeCustomer).filter(Boolean) : []
                 return true
             }
         } catch (error) {
@@ -22,23 +42,17 @@ export const useCustomersStore = defineStore('customers', () => {
     }
 
     // Fetch customers from API
-    async function fetchCustomers() {
-        // Try localStorage first
-        if (loadCustomersFromStorage()) {
-            console.log(`Loaded ${customers.value.length} customers from localStorage`)
-            return
-        }
-
+    async function fetchCustomers({ force = false } = {}) {
         if (loading.value) return
-        if (customers.value.length > 0) return // Already loaded
+        if (!force && customers.value.length > 0) return
 
         loading.value = true
         try {
-            const response = await customersApi.list({ limit: 100 })
+            const response = await customersApi.list({ paginate: false, active: true })
             const payload = response.data
-            customers.value = Array.isArray(payload) ? payload : payload?.data || []
-            // Save to localStorage for offline access
-            localStorage.setItem(CUSTOMERS_STORAGE_KEY, JSON.stringify(customers.value))
+            const rawCustomers = Array.isArray(payload) ? payload : payload?.data || []
+            customers.value = rawCustomers.map(normalizeCustomer).filter(Boolean)
+            saveCustomersToStorage()
             console.log(`Loaded ${customers.value.length} customers`)
         } catch (error) {
             console.error('Failed to load customers:', error)
@@ -52,6 +66,7 @@ export const useCustomersStore = defineStore('customers', () => {
         customers,
         loading,
         fetchCustomers,
-        loadCustomersFromStorage
+        loadCustomersFromStorage,
+        normalizeCustomer,
     }
 })

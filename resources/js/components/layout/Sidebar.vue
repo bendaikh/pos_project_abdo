@@ -141,6 +141,10 @@
                     <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.ventesClients }" />
                 </button>
                 <div v-show="expandedSections.ventesClients && !collapsed" class="mt-1 space-y-1 overflow-hidden">
+                    <router-link to="/commandes" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/commandes') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <ClipboardDocumentListIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Commandes clients</span>
+                    </router-link>
                     <router-link to="/devis" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/devis') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
                         <DocumentTextIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Devis</span>

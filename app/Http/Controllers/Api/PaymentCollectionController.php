@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\PaymentCollection;
+use App\Models\Sale;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -91,6 +92,7 @@ class PaymentCollectionController extends Controller
 
         $payment->update(['payment_status' => 'completed']);
         $this->syncCashBalanceForStatusChange($payment, $oldStatus, 'collected');
+        $this->syncSalePaymentStatus($payment->sale);
 
         return response()->json([
             'message' => 'Payment marked as collected',
@@ -191,6 +193,7 @@ class PaymentCollectionController extends Controller
         }
 
         $this->syncCashBalanceForStatusChange($payment, $oldStatus, $status);
+        $this->syncSalePaymentStatus($payment->sale);
         $payment->refresh()->load(['collections', 'sale.customer']);
 
         return response()->json([
@@ -274,6 +277,41 @@ class PaymentCollectionController extends Controller
         // If a collected payment is moved back to pending/cancelled, remove it from caisse.
         if ($oldStatus === 'collected' && in_array($newStatus, ['pending', 'cancelled'], true)) {
             Setting::set('cash_balance', $currentBalance - $amount, 'number', 'finance');
+        }
+    }
+
+    private function syncSalePaymentStatus(?Sale $sale): void
+    {
+        if (!$sale) return;
+
+        $collectedAmount = (float) $sale->payments()
+            ->where(function ($query) {
+                $query
+                    ->where(function ($immediate) {
+                        $immediate
+                            ->where(function ($typeQuery) {
+                                $typeQuery->where('is_deferred', false)->orWhereNull('is_deferred');
+                            })
+                            ->where('payment_status', 'completed');
+                    })
+                    ->orWhere(function ($deferred) {
+                        $deferred
+                            ->where('is_deferred', true)
+                            ->where('payment_status', 'completed')
+                            ->where('collection_status', 'collected');
+                    });
+            })
+            ->sum('amount');
+
+        $status = 'unpaid';
+        if ($collectedAmount >= (float) $sale->total) {
+            $status = 'paid';
+        } elseif ($collectedAmount > 0) {
+            $status = 'partial';
+        }
+
+        if ($sale->payment_status !== $status) {
+            $sale->update(['payment_status' => $status]);
         }
     }
 }

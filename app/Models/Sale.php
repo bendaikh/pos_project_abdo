@@ -13,6 +13,7 @@ class Sale extends Model
 
     protected $fillable = [
         'reference',
+        'order_number',
         'user_id',
         'customer_id',
         'employee_id',
@@ -23,8 +24,13 @@ class Sale extends Model
         'tax_amount',
         'total',
         'status',
+        'order_status',
         'payment_status',
         'delivery_mode',
+        'origin',
+        'customer_activity',
+        'pickup_date',
+        'delivery_address',
         'notes',
     ];
 
@@ -35,6 +41,7 @@ class Sale extends Model
         'tax_rate' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'total' => 'decimal:2',
+        'pickup_date' => 'date',
     ];
 
     protected static function boot()
@@ -46,6 +53,13 @@ class Sale extends Model
                 $sale->reference = self::generateReference();
             }
         });
+
+        static::created(function ($sale) {
+            if (empty($sale->order_number)) {
+                $sale->order_number = self::generateOrderNumber($sale->id);
+                $sale->saveQuietly();
+            }
+        });
     }
 
     public static function generateReference(): string
@@ -53,6 +67,16 @@ class Sale extends Model
         $lastSale = self::latest('id')->first();
         $nextId = $lastSale ? $lastSale->id + 1 : 1;
         return 'TRX-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+    }
+
+    public static function generateOrderNumber(?int $id = null): string
+    {
+        $nextId = $id;
+        if (!$nextId) {
+            $lastSale = self::latest('id')->first();
+            $nextId = $lastSale ? $lastSale->id + 1 : 1;
+        }
+        return 'CMD-' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
     }
 
     public function user(): BelongsTo
@@ -83,6 +107,16 @@ class Sale extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(SaleLog::class);
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SaleItemReturn::class);
     }
 
     public function calculateTotals(): void

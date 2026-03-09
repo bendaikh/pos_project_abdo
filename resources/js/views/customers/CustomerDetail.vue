@@ -39,7 +39,7 @@
                 <div class="flex items-start space-x-6">
                     <!-- Avatar -->
                     <div class="w-40 h-40 bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-primary-200 shadow-sm">
-                        <img v-if="client.photo_url || client.avatar" :key="`${client.id}-${client.photo_url}`" :src="client.photo_url || client.avatar" :alt="client.name" class="w-full h-full object-cover" onerror="console.log('Image failed to load:', this.src)" />
+                        <img v-if="client.photo_url || client.avatar" :key="`${client.id}-${client.photo_url}`" :src="resolveCustomerPhotoUrl(client.photo_url || client.avatar)" :alt="client.name" class="w-full h-full object-cover" onerror="console.log('Image failed to load:', this.src)" />
                         <UserCircleIcon v-else class="w-20 h-20 text-primary-400" />
                     </div>
                     
@@ -351,6 +351,27 @@ function loadSalesFromStorage() {
 function formatDate(date) {
     if (!date) return 'N/A'
     return new Date(date).toLocaleDateString('fr-FR')
+}
+
+function resolveCustomerPhotoUrl(value) {
+    const url = String(value || '').trim()
+    if (!url) return ''
+    if (
+        url.startsWith('data:image/')
+        || url.startsWith('blob:')
+        || url.startsWith('http://')
+        || url.startsWith('https://')
+        || url.startsWith('//')
+    ) {
+        return url
+    }
+    if (url.startsWith('/')) {
+        return `${window.location.origin}${url}`
+    }
+    if (url.startsWith('storage/')) {
+        return `${window.location.origin}/${url}`
+    }
+    return `${window.location.origin}/storage/${url}`
 }
 
 function extractFileName(path) {
