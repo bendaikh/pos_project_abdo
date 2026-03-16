@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class Payment extends Model
 {
@@ -13,7 +14,9 @@ class Payment extends Model
 
     protected $fillable = [
         'sale_id',
+        'customer_id',
         'payment_type',
+        'transfer_mode',
         'amount',
         'received_amount',
         'change_amount',
@@ -24,11 +27,15 @@ class Payment extends Model
         'bank_name',
         'due_date',
         'payment_status',
+        'paid_at',
+        'confirmed_at',
         'is_deferred',
         'collection_status',
         'collected_at',
         'collected_by',
         'collection_notes',
+        'created_by',
+        'validated_by',
         'notes',
     ];
 
@@ -38,6 +45,8 @@ class Payment extends Model
         'change_amount' => 'decimal:2',
         'issue_date' => 'date',
         'due_date' => 'date',
+        'paid_at' => 'datetime',
+        'confirmed_at' => 'datetime',
         'collected_at' => 'datetime',
         'is_deferred' => 'boolean',
     ];
@@ -45,6 +54,11 @@ class Payment extends Model
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function collections(): HasMany
@@ -55,6 +69,16 @@ class Payment extends Model
     public function reminders(): HasMany
     {
         return $this->hasMany(PaymentReminder::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function validator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'validated_by');
     }
 
     public function scopeByType($query, string $type)
@@ -84,18 +108,24 @@ class Payment extends Model
 
     public function isDeferred(): bool
     {
-        return in_array($this->payment_type, ['check', 'cheque', 'virement', 'credit']);
+        if (in_array($this->payment_type, ['check', 'cheque', 'credit'], true)) {
+            return true;
+        }
+
+        return $this->payment_type === 'virement' && $this->transfer_mode !== 'instant';
     }
 
     public function markAsCollected(?string $collectedBy = null, ?string $notes = null): void
     {
-        $this->update([
+        $this->update(self::persistable([
             'collection_status' => 'collected',
             'payment_status' => 'completed',
+            'confirmed_at' => now(),
             'collected_at' => now(),
             'collected_by' => $collectedBy ?? auth()->user()?->name,
             'collection_notes' => $notes,
-        ]);
+            'validated_by' => auth()->id(),
+        ]));
 
         // Record the collection action
         PaymentCollection::create([
@@ -109,9 +139,12 @@ class Payment extends Model
 
     public function scheduleCollection(string $scheduledDate, ?string $notes = null): void
     {
-        $this->update([
+        $this->update(self::persistable([
             'collection_status' => 'pending',
-        ]);
+            'payment_status' => 'pending',
+            'confirmed_at' => null,
+            'validated_by' => null,
+        ]));
 
         PaymentCollection::create([
             'payment_id' => $this->id,
@@ -133,5 +166,27 @@ class Payment extends Model
             'scheduled_date' => $newDate,
             'notes' => $notes ?? 'Rescheduled collection',
         ]);
+    }
+
+    public static function supportsColumn(string $column): bool
+    {
+        static $cache = [];
+        $table = (new static())->getTable();
+        $key = $table . ':' . $column;
+
+        if (!array_key_exists($key, $cache)) {
+            $cache[$key] = Schema::hasColumn($table, $column);
+        }
+
+        return $cache[$key];
+    }
+
+    public static function persistable(array $attributes): array
+    {
+        return array_filter(
+            $attributes,
+            fn ($value, $key) => static::supportsColumn((string) $key),
+            ARRAY_FILTER_USE_BOTH
+        );
     }
 }

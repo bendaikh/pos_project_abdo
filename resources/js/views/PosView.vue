@@ -288,6 +288,15 @@
                                         <span>{{ mode.label }}</span>
                                     </button>
                                 </div>
+                                <div v-if="shouldShowDeliveryAgentSelect" class="mt-3">
+                                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Livreur</label>
+                                    <select v-model="selectedDeliveryAgentId" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">{{ deliveryAgentPlaceholder }}</option>
+                                        <option v-for="agent in visibleDeliveryAgents" :key="agent.id" :value="String(agent.id)">
+                                            {{ formatDeliveryAgentLabel(agent) }}{{ agent.phone ? ` · ${agent.phone}` : '' }}
+                                        </option>
+                                    </select>
+                                </div>
                             </div>
                             <!-- Articles header -->
                             <div class="px-4 py-2 border-b border-gray-200 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">
@@ -369,6 +378,14 @@
                                     :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600'">
                                     <span>{{ mode.icon }}</span><span>{{ mode.label }}</span>
                                 </button>
+                            </div>
+                            <div v-if="shouldShowDeliveryAgentSelect" class="mt-2">
+                                <select v-model="selectedDeliveryAgentId" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">{{ deliveryAgentPlaceholder }}</option>
+                                    <option v-for="agent in visibleDeliveryAgents" :key="agent.id" :value="String(agent.id)">
+                                        {{ formatDeliveryAgentLabel(agent) }}
+                                    </option>
+                                </select>
                             </div>
                         </div>
 
@@ -769,7 +786,7 @@ import { useArticlesStore } from '../stores/articles'
 import { useSettingsStore } from '../stores/settings'
 import { useOfflineStore } from '../stores/offline'
 import { useUiStore } from '../stores/ui'
-import { salesApi, optionsApi, articlesApi, customersApi } from '../api'
+import { salesApi, optionsApi, articlesApi, customersApi, deliveryAgentsApi } from '../api'
 import PaymentMultiModal from '../components/pos/PaymentMultiModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
 import OptionsModal from '../components/pos/OptionsModal.vue'
@@ -822,6 +839,8 @@ const selectedCategoryId = ref('all')
 const customerSearch = ref('')
 const posCustomers = ref([])
 const posCustomersLoading = ref(false)
+const deliveryAgents = ref([])
+const deliveryAgentsLoading = ref(false)
 const ticketNotes = ref('')
 const discountAmount = ref(0)
 const discountPercent = ref(0)
@@ -904,6 +923,49 @@ const serviceMode = computed({
     set: (value) => cartStore.setDeliveryMode(value),
 })
 
+const shouldShowDeliveryAgentSelect = computed(() => ['delivery', 'glovo'].includes(serviceMode.value))
+
+const visibleDeliveryAgents = computed(() => {
+    if (serviceMode.value === 'delivery') {
+        return deliveryAgents.value.filter((agent) => agent.type === 'internal')
+    }
+
+    if (!shouldShowDeliveryAgentSelect.value) {
+        return []
+    }
+
+    const targetPlatform = normalizePlatformKey(serviceMode.value)
+
+    return deliveryAgents.value.filter((agent) => (
+        agent.type === 'platform'
+        && normalizePlatformKey(agent.platform_name) === targetPlatform
+    ))
+})
+
+const deliveryAgentPlaceholder = computed(() => {
+    if (serviceMode.value === 'delivery') {
+        return visibleDeliveryAgents.value.length ? 'Choisir un livreur' : 'Aucun livreur interne disponible'
+    }
+
+    if (serviceMode.value === 'glovo') {
+        return visibleDeliveryAgents.value.length ? 'Choisir un livreur Glovo' : 'Aucun livreur Glovo disponible'
+    }
+
+    return 'Aucun livreur'
+})
+
+const selectedDeliveryAgentId = computed({
+    get: () => cartStore.deliveryAgentId || '',
+    set: (value) => {
+        const selectedAgent = visibleDeliveryAgents.value.find((agent) => String(agent.id) === String(value))
+        cartStore.setDeliveryAgent(selectedAgent ? {
+            id: selectedAgent.id,
+            label: formatDeliveryAgentLabel(selectedAgent),
+            name: selectedAgent.name,
+        } : null)
+    },
+})
+
 const filteredCustomers = computed(() => {
     const query = customerSearch.value.trim().toLowerCase()
     const list = Array.isArray(posCustomers.value) ? posCustomers.value : []
@@ -925,6 +987,44 @@ function normalizePosCustomer(customer) {
         id: customer.id,
         name: customer.name || fullName || customer.raison_sociale || 'Client',
         phone: customer.phone || customer.telephone || customer.mobile || '',
+    }
+}
+
+function formatDeliveryAgentLabel(agent) {
+    if (!agent) return ''
+    if (agent.type === 'platform' && agent.platform_name) {
+        return agent.name && agent.name !== agent.platform_name
+            ? `${agent.name} · ${agent.platform_name}`
+            : agent.platform_name
+    }
+
+    return agent.name
+}
+
+function normalizePlatformKey(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]+/g, '')
+}
+
+async function fetchDeliveryAgents() {
+    if (deliveryAgentsLoading.value) return
+    deliveryAgentsLoading.value = true
+
+    try {
+        const response = await deliveryAgentsApi.list({
+            paginate: false,
+            active: true,
+        })
+        const payload = response.data
+        const rows = Array.isArray(payload) ? payload : (payload?.data || [])
+        deliveryAgents.value = rows
+    } catch (error) {
+        console.error('Failed to fetch delivery agents:', error)
+        deliveryAgents.value = []
+    } finally {
+        deliveryAgentsLoading.value = false
     }
 }
 
@@ -1430,10 +1530,14 @@ async function completeSale(payments) {
             return
         }
 
-        // If online with API customer, process normally
+        // If online with API customer, process normally.
+        // Always sync the pending sale with the current cart before adding payments
+        // so backend totals match the cart total used in the payment modal.
         if (!cartStore.currentSaleId) {
             const response = await salesApi.create(data)
             cartStore.setSaleId(response.data.id)
+        } else {
+            await salesApi.update(cartStore.currentSaleId, data)
         }
 
         // Add all payments
@@ -1462,6 +1566,16 @@ async function completeSale(payments) {
         alert('Vente complétée avec succès!')
     } catch (error) {
         console.error('Failed to complete sale:', error)
+        if (cartStore.currentSaleId) {
+            try {
+                const { data } = await salesApi.get(cartStore.currentSaleId)
+                if (!Array.isArray(data?.payments) || data.payments.length === 0) {
+                    cartStore.setSaleId(null)
+                }
+            } catch {
+                cartStore.setSaleId(null)
+            }
+        }
         alert('Erreur lors du paiement: ' + (error.response?.data?.message || error.message))
     }
 }
@@ -1655,6 +1769,33 @@ watch(isMobile, (value) => {
     }
 })
 
+watch(serviceMode, () => {
+    if (!shouldShowDeliveryAgentSelect.value) {
+        cartStore.setDeliveryAgent(null)
+        return
+    }
+
+    const matchesCurrentAgent = visibleDeliveryAgents.value.some(
+        (agent) => String(agent.id) === String(cartStore.deliveryAgentId || '')
+    )
+
+    if (!matchesCurrentAgent) {
+        cartStore.setDeliveryAgent(null)
+    }
+})
+
+watch(visibleDeliveryAgents, (agents) => {
+    if (!shouldShowDeliveryAgentSelect.value) return
+
+    const matchesCurrentAgent = agents.some(
+        (agent) => String(agent.id) === String(cartStore.deliveryAgentId || '')
+    )
+
+    if (!matchesCurrentAgent) {
+        cartStore.setDeliveryAgent(null)
+    }
+})
+
 watch([filteredArticles, itemsPerPage], () => {
     if (currentPage.value > totalPages.value) {
         currentPage.value = totalPages.value
@@ -1773,6 +1914,7 @@ onMounted(async () => {
     await settingsStore.fetchSettings()
     await articlesStore.refresh()
     await fetchPosCustomers()
+    await fetchDeliveryAgents()
 })
 
 onUnmounted(() => {

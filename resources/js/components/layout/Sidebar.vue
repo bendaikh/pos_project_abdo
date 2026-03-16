@@ -153,6 +153,10 @@
                         <TruckIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Bon de livraison</span>
                     </router-link>
+                    <router-link to="/livreurs" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/livreurs') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
+                        <TruckIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Livreurs</span>
+                    </router-link>
                     <router-link to="/facture" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/facture') ? 'bg-teal-500 text-gray-900' : 'text-teal-300 hover:bg-gray-800'">
                         <DocumentIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Facture</span>

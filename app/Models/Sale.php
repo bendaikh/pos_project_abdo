@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\SalePaymentWorkflowService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class Sale extends Model
 {
@@ -17,15 +19,23 @@ class Sale extends Model
         'user_id',
         'customer_id',
         'employee_id',
+        'delivery_agent_id',
+        'delivery_agent_name_snapshot',
+        'delivery_platform_name_snapshot',
         'subtotal',
         'discount_amount',
         'discount_percent',
         'tax_rate',
         'tax_amount',
         'total',
+        'delivery_commission_type',
+        'delivery_commission_value_snapshot',
+        'delivery_commission_amount',
+        'delivery_commission_calculated_at',
         'status',
         'order_status',
         'payment_status',
+        'payment_status_code',
         'delivery_mode',
         'origin',
         'customer_activity',
@@ -41,6 +51,9 @@ class Sale extends Model
         'tax_rate' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'total' => 'decimal:2',
+        'delivery_commission_value_snapshot' => 'decimal:2',
+        'delivery_commission_amount' => 'decimal:2',
+        'delivery_commission_calculated_at' => 'datetime',
         'pickup_date' => 'date',
     ];
 
@@ -94,6 +107,11 @@ class Sale extends Model
         return $this->belongsTo(Employee::class);
     }
 
+    public function deliveryAgent(): BelongsTo
+    {
+        return $this->belongsTo(DeliveryAgent::class);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(SaleItem::class);
@@ -138,12 +156,14 @@ class Sale extends Model
 
     public function getTotalPaidAttribute(): float
     {
-        return $this->payments->sum('amount');
+        return app(SalePaymentWorkflowService::class)
+            ->computeSaleSummary($this)['paid_confirmed_amount'];
     }
 
     public function getRemainingAmountAttribute(): float
     {
-        return $this->total - $this->total_paid;
+        return app(SalePaymentWorkflowService::class)
+            ->computeSaleSummary($this)['remaining_amount'];
     }
 
     public function scopeCompleted($query)
@@ -170,5 +190,27 @@ class Sale extends Model
     {
         return $query->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year);
+    }
+
+    public static function supportsColumn(string $column): bool
+    {
+        static $cache = [];
+        $table = (new static())->getTable();
+        $key = $table . ':' . $column;
+
+        if (!array_key_exists($key, $cache)) {
+            $cache[$key] = Schema::hasColumn($table, $column);
+        }
+
+        return $cache[$key];
+    }
+
+    public static function persistable(array $attributes): array
+    {
+        return array_filter(
+            $attributes,
+            fn ($value, $key) => static::supportsColumn((string) $key),
+            ARRAY_FILTER_USE_BOTH
+        );
     }
 }

@@ -41,6 +41,26 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Mode service</label>
+                        <select v-model="form.service_mode" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            <option v-for="mode in serviceModeOptions" :key="mode.value" :value="mode.value">
+                                {{ mode.label }}
+                            </option>
+                        </select>
+                    </div>
+                    <div v-if="shouldShowDeliveryAgentSelect">
+                        <label class="block text-sm text-gray-600 mb-1">Livreur</label>
+                        <select v-model="form.delivery_agent_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            <option :value="null">{{ deliveryAgentPlaceholder }}</option>
+                            <option v-for="agent in visibleDeliveryAgents" :key="agent.id" :value="agent.id">
+                                {{ formatDeliveryAgentLabel(agent) }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="border border-gray-200 rounded-xl p-3">
                     <div class="flex items-center gap-2 mb-3">
                         <button
@@ -150,7 +170,7 @@
                             <label class="block text-sm text-gray-600 mb-1">Activité (commande)</label>
                             <input v-model="form.customer_activity" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Auto-rempli depuis le client">
                         </div>
-                        <div>
+                        <div v-if="shouldShowDeliveryAgentSelect">
                             <label class="block text-sm text-gray-600 mb-1">Adresse</label>
                             <input v-model="form.delivery_address" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Auto-rempli depuis le client">
                         </div>
@@ -226,22 +246,42 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            <tr v-for="(line, index) in form.items" :key="line.key">
-                                <td class="px-3 py-2 text-sm font-medium text-gray-900">{{ line.article_name }}</td>
-                                <td class="px-3 py-2 text-sm text-gray-600">{{ line.category_name || '-' }}</td>
-                                <td class="px-3 py-2">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <button type="button" class="w-7 h-7 border border-gray-300 rounded-lg" @click="line.quantity = Math.max(0.001, Number(line.quantity || 0) - 1)">-</button>
-                                        <input v-model.number="line.quantity" type="number" min="0.001" step="0.001" class="w-20 text-right px-2 py-1 border border-gray-300 rounded-lg">
-                                        <button type="button" class="w-7 h-7 border border-gray-300 rounded-lg" @click="line.quantity = Number(line.quantity || 0) + 1">+</button>
-                                    </div>
-                                </td>
-                                <td class="px-3 py-2 text-right text-sm">{{ formatCurrency(line.unit_price || 0) }}</td>
-                                <td class="px-3 py-2 text-right text-sm font-semibold">{{ formatCurrency(lineTotal(line)) }}</td>
-                                <td class="px-3 py-2 text-right">
-                                    <button type="button" class="text-red-600 hover:text-red-700 text-sm" @click="removeLine(index)">Supprimer</button>
-                                </td>
-                            </tr>
+                            <template v-for="(line, index) in form.items" :key="line.key">
+                                <tr>
+                                    <td class="px-3 py-2 text-sm font-medium text-gray-900">{{ line.article_name }}</td>
+                                    <td class="px-3 py-2 text-sm text-gray-600">{{ line.category_name || '-' }}</td>
+                                    <td class="px-3 py-2">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button type="button" class="w-7 h-7 border border-gray-300 rounded-lg" @click="line.quantity = Math.max(0.001, Number(line.quantity || 0) - 1)">-</button>
+                                            <input v-model.number="line.quantity" type="number" min="0.001" step="0.001" class="w-20 text-right px-2 py-1 border border-gray-300 rounded-lg">
+                                            <button type="button" class="w-7 h-7 border border-gray-300 rounded-lg" @click="line.quantity = Number(line.quantity || 0) + 1">+</button>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-2 text-right text-sm">{{ formatCurrency(line.unit_price || 0) }}</td>
+                                    <td class="px-3 py-2 text-right text-sm font-semibold">{{ formatCurrency(lineTotal(line)) }}</td>
+                                    <td class="px-3 py-2 text-right">
+                                        <button type="button" class="text-red-600 hover:text-red-700 text-sm" @click="removeLine(index)">Supprimer</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="line.selected_variant || line.selected_options?.length" class="bg-blue-50">
+                                    <td colspan="6" class="px-3 py-2 text-xs text-gray-700">
+                                        <div class="space-y-1">
+                                            <div v-if="line.selected_variant" class="flex flex-wrap gap-1">
+                                                <span class="font-semibold">Variante:</span>
+                                                <span class="inline-block bg-blue-200 px-2 py-0.5 rounded">
+                                                    {{ variantLabel(line.selected_variant) }}
+                                                </span>
+                                            </div>
+                                            <div v-if="line.selected_options?.length" class="flex flex-wrap gap-1">
+                                                <span class="font-semibold">Options:</span>
+                                                <span v-for="opt in line.selected_options.filter(o => o.option_name !== 'Variante')" :key="opt.option_id" class="inline-block bg-green-200 px-2 py-0.5 rounded">
+                                                    {{ opt.option_name }}: {{ opt.variants?.map(v => v.name).join(', ') || '-' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
                             <tr v-if="!form.items.length">
                                 <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500">Aucun article ajouté.</td>
                             </tr>
@@ -249,6 +289,70 @@
                     </table>
                 </div>
             </section>
+
+            <!-- Configurateur article -->
+            <div v-if="showArticleConfigurator" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Configurer l'article</h3>
+                        <button class="text-gray-500 hover:text-gray-700" type="button" @click="closeConfigurator">✕</button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <p class="text-sm font-semibold text-gray-800">{{ configuratorArticle ? configuratorArticle.name : '' }}</p>
+                        <div v-if="configuratorActiveVariants.length" class="space-y-2">
+                            <p class="text-sm text-gray-600">Variantes (optionnel)</p>
+                            <div class="space-y-2">
+                                <label
+                                    v-for="variant in configuratorActiveVariants"
+                                    :key="variant.id"
+                                    class="flex items-center gap-2 text-sm"
+                                >
+                                    <input v-model="configuratorVariantId" type="radio" :value="String(variant.id)" class="text-blue-600">
+                                    <span class="flex-1">{{ variantLabel(variant) }}</span>
+                                    <span class="text-gray-700 font-medium">+ {{ formatCurrency(variant.price_impact || 0) }}</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div v-if="getActiveOptions(configuratorArticle).length" class="space-y-3">
+                            <p class="text-sm text-gray-600">Options (sélection multiple)</p>
+                            <div
+                                v-for="option in getActiveOptions(configuratorArticle)"
+                                :key="option.id"
+                                class="border border-gray-200 rounded-lg p-3 space-y-2"
+                            >
+                                <p class="text-sm font-semibold text-gray-800">{{ option.name }}</p>
+                                <div class="space-y-1">
+                                    <label
+                                        v-for="variant in option.variants"
+                                        :key="variant.id"
+                                        class="flex items-center gap-2 text-sm"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            :checked="(configuratorOptions[normalizeId(option.id)] || []).includes(normalizeId(variant.id))"
+                                            @change="toggleOption(option.id, variant.id)"
+                                            class="text-green-600"
+                                        >
+                                        <span class="flex-1">{{ variantLabel(variant) }}</span>
+                                        <span class="text-gray-700 font-medium">+ {{ formatCurrency(variant.price_impact || 0) }}</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between text-sm font-semibold text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                            <span>Prix unitaire</span>
+                            <span>{{ formatCurrency(configuratorUnitPrice) }}</span>
+                        </div>
+
+                        <div class="flex justify-end gap-2">
+                            <button type="button" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100" @click="closeConfigurator">Annuler</button>
+                            <button type="button" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" @click="confirmConfigurator">Valider</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <section class="bg-white rounded-2xl border border-gray-200 p-4 md:p-5">
                 <h2 class="text-sm font-semibold uppercase text-gray-500 tracking-wide mb-4">Zone ticket</h2>
@@ -281,7 +385,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { articlesApi, commandesApi, customersApi, salesApi } from '../../api'
+import { articlesApi, commandesApi, customersApi, deliveryAgentsApi, salesApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 
 const router = useRouter()
@@ -291,12 +395,17 @@ const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 const saving = ref(false)
 const articles = ref([])
 const customers = ref([])
+const deliveryAgents = ref([])
 const customerSearch = ref('')
 const customerSearchOpen = ref(false)
 const clientMode = ref('existing')
 const selectedExistingCustomer = ref(null)
 const articleSearch = ref('')
 const selectedCategoryId = ref('all')
+const showArticleConfigurator = ref(false)
+const configuratorArticle = ref(null)
+const configuratorVariantId = ref(null)
+const configuratorOptions = ref({})
 
 const newCustomer = reactive({
     name: '',
@@ -323,7 +432,9 @@ const form = reactive({
     customer_phone: '',
     customer_activity: '',
     origin: 'menu_commande',
+    service_mode: 'pickup',
     pickup_date: '',
+    delivery_agent_id: null,
     delivery_address: '',
     notes: '',
     advance_amount: 0,
@@ -359,6 +470,8 @@ function newLine(article = null) {
         category_name: article?.category?.name || article?.category_name || '-',
         quantity: 1,
         unit_price: Number(article?.sell_price || 0),
+        selected_options: [],
+        options_price: 0,
     }
 }
 
@@ -408,8 +521,66 @@ const filteredArticles = computed(() => {
     })
 })
 
+const configuratorActiveVariants = computed(() => getActiveVariants(configuratorArticle.value))
+
+const configuratorVariantPrice = computed(() => {
+    if (!configuratorArticle.value || !configuratorVariantId.value) return 0
+    const targetId = normalizeId(configuratorVariantId.value)
+    const variant = configuratorActiveVariants.value.find((v) => normalizeId(v.id) === targetId)
+    return Number(variant?.price_impact || 0)
+})
+
+const configuratorOptionsPrice = computed(() => {
+    if (!configuratorArticle.value) return 0
+    const opts = getActiveOptions(configuratorArticle.value)
+    return opts.reduce((sum, option) => {
+        const optionKey = normalizeId(option.id)
+        const selectedVariantIds = configuratorOptions.value[optionKey] || []
+        return sum + selectedVariantIds.reduce((optSum, variantId) => {
+            const variant = option.variants.find((v) => normalizeId(v.id) === normalizeId(variantId))
+            return optSum + Number(variant?.price_impact || 0)
+        }, 0)
+    }, 0)
+})
+
+const configuratorUnitPrice = computed(() => {
+    const base = Number(configuratorArticle.value?.sell_price || 0)
+    return base + Number(configuratorVariantPrice.value || 0) + Number(configuratorOptionsPrice.value || 0)
+})
+
 const totalAmount = computed(() => form.items.reduce((sum, line) => sum + lineTotal(line), 0))
 const remainingAmount = computed(() => Math.max(0, totalAmount.value - Number(form.advance_amount || 0)))
+const serviceModeOptions = [
+    { value: 'pickup', label: 'A emporter' },
+    { value: 'delivery', label: 'Livraison interne' },
+    { value: 'glovo', label: 'Glovo' },
+]
+const shouldShowDeliveryAgentSelect = computed(() => ['delivery', 'glovo'].includes(form.service_mode))
+const visibleDeliveryAgents = computed(() => {
+    if (form.service_mode === 'delivery') {
+        return deliveryAgents.value.filter((agent) => agent.type === 'internal')
+    }
+
+    if (form.service_mode === 'glovo') {
+        return deliveryAgents.value.filter((agent) => (
+            agent.type === 'platform'
+            && normalizePlatformKey(agent.platform_name) === 'glovo'
+        ))
+    }
+
+    return []
+})
+const deliveryAgentPlaceholder = computed(() => {
+    if (form.service_mode === 'delivery') {
+        return visibleDeliveryAgents.value.length ? 'Choisir un livreur' : 'Aucun livreur interne disponible'
+    }
+
+    if (form.service_mode === 'glovo') {
+        return visibleDeliveryAgents.value.length ? 'Choisir un livreur Glovo' : 'Aucun livreur Glovo disponible'
+    }
+
+    return 'Aucun livreur'
+})
 const canSubmit = computed(() => {
     const hasArticles = form.items.some((line) => line.article_id && Number(line.quantity) > 0)
     const hasClientName = clientMode.value === 'existing'
@@ -425,6 +596,24 @@ function lineTotal(line) {
 function formatOrigin(origin) {
     const map = { pos: 'POS', menu_commande: 'Menu commande', livraison: 'Livraison' }
     return map[origin] || 'POS'
+}
+
+function formatDeliveryAgentLabel(agent) {
+    if (!agent) return '-'
+    if (agent.type === 'platform' && agent.platform_name) {
+        return agent.name && agent.name !== agent.platform_name
+            ? `${agent.name} · ${agent.platform_name}`
+            : agent.platform_name
+    }
+
+    return agent.name
+}
+
+function normalizePlatformKey(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]+/g, '')
 }
 
 function setClientMode(mode) {
@@ -494,13 +683,184 @@ function articleImage(article) {
         || null
 }
 
-function addArticleByCard(article) {
-    const line = form.items.find((item) => Number(item.article_id) === Number(article.id))
+function normalizeId(value) {
+    if (value === null || value === undefined) return ''
+    return String(value)
+}
+
+function variantLabel(variant) {
+    if (!variant) return '-'
+    if (variant.template_name && variant.template_value) {
+        return `${variant.template_name} · ${variant.template_value}`
+    }
+    return variant.name || variant.template_value || '-'
+}
+
+function getActiveVariants(article) {
+    return (article?.variants || [])
+        .filter((variant) => variant.is_active !== false)
+        .map((variant) => ({
+            ...variant,
+            id: normalizeId(variant.id),
+            price_impact: Number(variant.price_impact || 0),
+        }))
+}
+
+async function resolveArticleForConfigurator(article) {
+    if (!article) return article
+    const hasVariantsFlag = Boolean(article.has_variants)
+    const hasOptionsFlag = Boolean(article.has_options)
+    const hasLoadedVariants = Array.isArray(article.variants)
+    const hasLoadedOptions = Array.isArray(article.options)
+
+    if ((hasVariantsFlag && !hasLoadedVariants) || (hasOptionsFlag && !hasLoadedOptions)) {
+        try {
+            const response = await articlesApi.get(article.id)
+            return response.data || article
+        } catch (error) {
+            console.error('Erreur chargement configurateur article:', error)
+        }
+    }
+
+    return article
+}
+
+async function addArticleByCard(article) {
+    const resolvedArticle = await resolveArticleForConfigurator(article)
+    const hasVariants = getActiveVariants(resolvedArticle).length > 0 || Boolean(resolvedArticle?.has_variants)
+    const activeOptions = getActiveOptions(resolvedArticle)
+    const hasOptions = activeOptions.length > 0
+    if (hasVariants || hasOptions) {
+        openConfigurator(resolvedArticle, activeOptions)
+        return
+    }
+    const line = form.items.find((item) => normalizeId(item.article_id) === normalizeId(resolvedArticle.id))
     if (line) {
         line.quantity = Number(line.quantity || 0) + 1
         return
     }
-    form.items.push(newLine(article))
+    form.items.push(newLine(resolvedArticle))
+}
+
+function getActiveOptions(article) {
+    return (article?.options || [])
+        .filter((option) => option.is_active !== false)
+        .map((option) => {
+            const activeVariants = (option.variants || [])
+                .filter((variant) => variant.is_active !== false)
+                .map((variant) => ({
+                    ...variant,
+                    id: normalizeId(variant.id),
+                    price_impact: Number(variant.price_impact || 0),
+                }))
+
+            const fallbackVariants = !activeVariants.length && Array.isArray(option.values)
+                ? option.values.map((value, index) => ({
+                    id: normalizeId(`value-${option.id}-${index}`),
+                    name: value,
+                    template_value: value,
+                    price_impact: Number(option.extra_price || 0),
+                    is_active: true,
+                }))
+                : []
+
+            return {
+                ...option,
+                variants: activeVariants.length ? activeVariants : fallbackVariants,
+            }
+        })
+        .filter((option) => option.variants.length > 0)
+}
+
+function openConfigurator(article, activeOptions = []) {
+    configuratorArticle.value = article
+    configuratorVariantId.value = null
+    const initial = {}
+    activeOptions.forEach((option) => {
+        initial[normalizeId(option.id)] = []
+    })
+    configuratorOptions.value = initial
+    showArticleConfigurator.value = true
+}
+
+function toggleOption(optionId, variantId) {
+    const normalizedOptionId = normalizeId(optionId)
+    const normalizedVariantId = normalizeId(variantId)
+    const currentList = configuratorOptions.value[normalizedOptionId] || []
+    const exists = currentList.includes(normalizedVariantId)
+
+    // Reassign the whole object to guarantee change detection in the configurator price preview
+    configuratorOptions.value = {
+        ...configuratorOptions.value,
+        [normalizedOptionId]: exists
+            ? currentList.filter((id) => id !== normalizedVariantId)
+            : [...currentList, normalizedVariantId],
+    }
+}
+
+function closeConfigurator() {
+    showArticleConfigurator.value = false
+    configuratorArticle.value = null
+    configuratorVariantId.value = null
+    configuratorOptions.value = {}
+}
+
+function confirmConfigurator() {
+    if (!configuratorArticle.value) return
+    const article = configuratorArticle.value
+    const basePrice = Number(article.sell_price || 0)
+    const variantPrice = configuratorVariantPrice.value
+    const optionsPrice = configuratorOptionsPrice.value
+    const activeOptions = getActiveOptions(article)
+    
+    // Get selected variant if any
+    const selectedVariant = configuratorVariantId.value
+        ? configuratorActiveVariants.value.find((v) => normalizeId(v.id) === normalizeId(configuratorVariantId.value)) || null
+        : null
+    
+    // Build selected options
+    const selectedOptions = Object.entries(configuratorOptions.value)
+        .map(([optionId, selectedVariantIds]) => {
+            const option = activeOptions.find((opt) => normalizeId(opt.id) === normalizeId(optionId))
+            if (!option || !selectedVariantIds.length) return null
+            
+            const variants = selectedVariantIds
+                .map((variantId) => option.variants.find((v) => normalizeId(v.id) === normalizeId(variantId)))
+                .filter(Boolean)
+            
+            if (!variants.length) return null
+            return {
+                option_id: option.id,
+                option_name: option.name,
+                variants: variants,
+            }
+        })
+        .filter(Boolean)
+    
+    // Add variant as pseudo-option if selected
+    if (selectedVariant) {
+        selectedOptions.unshift({
+            option_id: `variant-${selectedVariant.id}`,
+            option_name: 'Variante',
+            variants: [{
+                id: selectedVariant.id,
+                name: variantLabel(selectedVariant),
+                price_impact: Number(selectedVariant.price_impact || 0),
+            }],
+        })
+    }
+
+    const line = {
+        ...newLine(article),
+        unit_price: basePrice + variantPrice + optionsPrice,
+        selected_variant: selectedVariant,
+        variant_price: variantPrice,
+        selected_options: selectedOptions,
+        options_price: optionsPrice,
+    }
+
+    form.items.push(line)
+    closeConfigurator()
 }
 
 async function createCustomerIfNeeded() {
@@ -523,14 +883,17 @@ async function createCustomerIfNeeded() {
 }
 
 async function fetchData() {
-    const [articlesRes, customersRes] = await Promise.all([
+    const [articlesRes, customersRes, deliveryAgentsRes] = await Promise.all([
         articlesApi.list({ paginate: false }),
         customersApi.list({ paginate: false, active: true }),
+        deliveryAgentsApi.list({ paginate: false, active: true }),
     ])
 
     articles.value = Array.isArray(articlesRes.data?.data) ? articlesRes.data.data : (articlesRes.data || [])
     const rawCustomers = Array.isArray(customersRes.data?.data) ? customersRes.data.data : (customersRes.data || [])
     customers.value = rawCustomers.map(normalizeCustomer)
+    const rawAgents = Array.isArray(deliveryAgentsRes.data?.data) ? deliveryAgentsRes.data.data : (deliveryAgentsRes.data || [])
+    deliveryAgents.value = rawAgents
 }
 
 watch(
@@ -541,6 +904,50 @@ watch(
         }
     }
 )
+
+watch(
+    () => [newCustomer.phone, newCustomer.activity, newCustomer.address],
+    ([phone, activity, address]) => {
+        if (clientMode.value !== 'new') return
+        form.customer_phone = phone || ''
+        form.customer_activity = activity || ''
+        form.delivery_address = address || ''
+    }
+)
+
+watch(
+    () => form.service_mode,
+    (mode) => {
+        form.origin = mode === 'pickup' ? 'menu_commande' : 'livraison'
+
+        if (!shouldShowDeliveryAgentSelect.value) {
+            form.delivery_agent_id = null
+            form.delivery_address = ''
+            return
+        }
+
+        const selectedAgentStillVisible = visibleDeliveryAgents.value.some(
+            (agent) => Number(agent.id) === Number(form.delivery_agent_id)
+        )
+
+        if (!selectedAgentStillVisible) {
+            form.delivery_agent_id = null
+        }
+    },
+    { immediate: true }
+)
+
+watch(visibleDeliveryAgents, (agents) => {
+    if (!shouldShowDeliveryAgentSelect.value) return
+
+    const selectedAgentStillVisible = agents.some(
+        (agent) => Number(agent.id) === Number(form.delivery_agent_id)
+    )
+
+    if (!selectedAgentStillVisible) {
+        form.delivery_agent_id = null
+    }
+})
 
 async function submitCommande() {
     if (!canSubmit.value) return
@@ -554,16 +961,21 @@ async function submitCommande() {
             customer_activity: clientMode.value === 'new' ? (newCustomer.activity || form.customer_activity) : (form.customer_activity || null),
             origin: form.origin,
             pickup_date: form.pickup_date || null,
-            delivery_address: (clientMode.value === 'new' ? newCustomer.address : form.delivery_address) || null,
+            delivery_agent_id: shouldShowDeliveryAgentSelect.value ? (form.delivery_agent_id || null) : null,
+            delivery_address: shouldShowDeliveryAgentSelect.value
+                ? (form.delivery_address || newCustomer.address || null)
+                : null,
             notes: form.notes || null,
             order_status: 'confirmee',
-            delivery_mode: 'pickup',
+            delivery_mode: form.service_mode === 'pickup' ? 'pickup' : 'delivery',
             items: form.items
                 .filter((line) => line.article_id && Number(line.quantity) > 0)
                 .map((line) => ({
                     article_id: line.article_id,
                     quantity: Number(line.quantity),
                     unit_price: Number(line.unit_price || 0),
+                    selected_options: line.selected_options || null,
+                    options_price: Number(line.options_price || 0),
                 })),
         }
 

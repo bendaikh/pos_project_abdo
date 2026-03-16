@@ -37,6 +37,8 @@ import FactureList from '../views/vente/FactureList.vue'
 import CommandesList from '../views/vente/CommandesList.vue'
 import CommandeForm from '../views/vente/CommandeForm.vue'
 import CommandeDetail from '../views/vente/CommandeDetail.vue'
+import LivreursList from '../views/livreurs/LivreursList.vue'
+import LivreurForm from '../views/livreurs/LivreurForm.vue'
 
 // ACHAT Views
 import BonCommandeList from '../views/achat/BonCommandeList.vue'
@@ -242,6 +244,21 @@ const routes = [
                 path: 'commandes/:id',
                 name: 'commandes.detail',
                 component: CommandeDetail
+            },
+            {
+                path: 'livreurs',
+                name: 'livreurs',
+                component: LivreursList
+            },
+            {
+                path: 'livreurs/create',
+                name: 'livreurs.create',
+                component: LivreurForm
+            },
+            {
+                path: 'livreurs/:id/edit',
+                name: 'livreurs.edit',
+                component: LivreurForm
             },
             // ACHAT Routes
             {

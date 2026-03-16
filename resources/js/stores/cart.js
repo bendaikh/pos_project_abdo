@@ -9,6 +9,8 @@ export const useCartStore = defineStore('cart', () => {
     const discountAmount = ref(0)
     const discountPercent = ref(0)
     const deliveryMode = ref('dine_in')
+    const deliveryAgentId = ref(null)
+    const deliveryAgentLabel = ref('')
     const notes = ref('')
     const currentSaleId = ref(null)
 
@@ -132,6 +134,11 @@ export const useCartStore = defineStore('cart', () => {
         deliveryMode.value = mode
     }
 
+    function setDeliveryAgent(agent) {
+        deliveryAgentId.value = agent?.id || null
+        deliveryAgentLabel.value = agent?.label || agent?.name || ''
+    }
+
     function setNotes(text) {
         notes.value = text
     }
@@ -147,6 +154,8 @@ export const useCartStore = defineStore('cart', () => {
         discountAmount.value = 0
         discountPercent.value = 0
         deliveryMode.value = 'dine_in'
+        deliveryAgentId.value = null
+        deliveryAgentLabel.value = ''
         notes.value = ''
         currentSaleId.value = null
     }
@@ -166,6 +175,7 @@ export const useCartStore = defineStore('cart', () => {
             discount_amount: discountAmount.value,
             discount_percent: discountPercent.value,
             delivery_mode: deliveryMode.value === 'glovo' ? 'delivery' : deliveryMode.value,
+            delivery_agent_id: deliveryAgentId.value,
             notes: notes.value,
             subtotal: subtotal.value,
             tax: taxAmount.value,
@@ -183,6 +193,8 @@ export const useCartStore = defineStore('cart', () => {
         discountAmount,
         discountPercent,
         deliveryMode,
+        deliveryAgentId,
+        deliveryAgentLabel,
         notes,
         currentSaleId,
         itemCount,
@@ -198,6 +210,7 @@ export const useCartStore = defineStore('cart', () => {
         setCustomer,
         setDiscount,
         setDeliveryMode,
+        setDeliveryAgent,
         setNotes,
         setSaleId,
         clearCart,

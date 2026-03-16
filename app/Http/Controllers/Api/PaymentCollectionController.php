@@ -6,67 +6,59 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\PaymentCollection;
 use App\Models\Sale;
+use App\Models\SaleLog;
 use App\Models\Setting;
+use App\Services\SalePaymentWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class PaymentCollectionController extends Controller
 {
+    public function __construct(private readonly SalePaymentWorkflowService $paymentWorkflow)
+    {
+    }
+
     /**
      * Get all deferred payments (cheque, virement, credit)
      */
     public function deferredPayments(Request $request): JsonResponse
     {
-        $query = Payment::deferred()
-            ->with(['sale.customer', 'collections'])
-            ->orderBy('due_date', 'asc');
+        $statusFilter = $this->paymentWorkflow->normalizeWorkflowStatus(
+            $request->input('status', $request->input('collection_status'))
+        );
+        $typeFilter = $request->filled('payment_type')
+            ? $this->paymentWorkflow->normalizePaymentType($request->payment_type)
+            : null;
 
-        // Filter by collection status
-        if ($request->has('collection_status')) {
-            $query->where('collection_status', $request->collection_status);
-        }
+        $sales = Sale::with(['customer', 'payments.collections', 'payments.creator', 'payments.validator'])
+            ->where('status', '!=', 'cancelled')
+            ->latest()
+            ->get()
+            ->map(fn (Sale $sale) => $this->paymentWorkflow->decorateSale($sale))
+            ->map(fn (Sale $sale) => $this->buildSaleFollowUpItem($sale))
+            ->filter()
+            ->when($statusFilter, fn ($collection) => $collection
+                ->filter(fn (array $item) => $item['workflow_status_code'] === $statusFilter))
+            ->when($typeFilter, fn ($collection) => $collection
+                ->filter(fn (array $item) => $item['payment_type'] === $typeFilter))
+            ->when($request->filled('from_date'), fn ($collection) => $collection
+                ->filter(fn (array $item) => ($item['due_date'] ?? '') >= $request->from_date))
+            ->when($request->filled('to_date'), fn ($collection) => $collection
+                ->filter(fn (array $item) => ($item['due_date'] ?? '') <= $request->to_date))
+            ->when($request->boolean('overdue'), fn ($collection) => $collection
+                ->filter(fn (array $item) => ($item['workflow_status_code'] === SalePaymentWorkflowService::STATUS_TO_COLLECT || $item['workflow_status_code'] === SalePaymentWorkflowService::STATUS_TO_PAY)
+                    && !empty($item['due_date'])
+                    && $item['due_date'] < today()->toDateString()))
+            ->when($request->boolean('due_today'), fn ($collection) => $collection
+                ->filter(fn (array $item) => ($item['due_date'] ?? null) === today()->toDateString()))
+            ->when($request->boolean('due_soon'), fn ($collection) => $collection
+                ->filter(fn (array $item) => !empty($item['due_date'])
+                    && $item['due_date'] >= today()->toDateString()
+                    && $item['due_date'] <= today()->addDays(7)->toDateString()))
+            ->values();
 
-        // Filter by payment type
-        if ($request->has('payment_type')) {
-            if ($request->payment_type === 'cheque') {
-                $query->whereIn('payment_type', ['cheque', 'check']);
-            } else {
-                $query->where('payment_type', $request->payment_type);
-            }
-        }
-
-        // Filter by date range
-        if ($request->has('from_date')) {
-            $query->whereDate('due_date', '>=', $request->from_date);
-        }
-        if ($request->has('to_date')) {
-            $query->whereDate('due_date', '<=', $request->to_date);
-        }
-
-        // Filter overdue
-        if ($request->boolean('overdue')) {
-            $query->where('collection_status', 'pending')
-                ->whereDate('due_date', '<', today());
-        }
-
-        // Filter due today
-        if ($request->boolean('due_today')) {
-            $query->where('collection_status', 'pending')
-                ->whereDate('due_date', today());
-        }
-
-        // Filter due soon (next 7 days)
-        if ($request->boolean('due_soon')) {
-            $query->where('collection_status', 'pending')
-                ->whereBetween('due_date', [today(), today()->addDays(7)]);
-        }
-
-        $payments = $request->boolean('paginate', false)
-            ? $query->paginate($request->get('per_page', 20))
-            : $query->get();
-
-        return response()->json($payments);
+        return response()->json($sales);
     }
 
     /**
@@ -74,6 +66,10 @@ class PaymentCollectionController extends Controller
      */
     public function markAsCollected(Request $request, Payment $payment): JsonResponse
     {
+        if (!$payment->is_deferred) {
+            return response()->json(['message' => 'Ce paiement ne nécessite pas de suivi d’encaissement.'], 422);
+        }
+
         if ($payment->collection_status === 'collected') {
             return response()->json(['message' => 'Payment already collected'], 422);
         }
@@ -90,13 +86,17 @@ class PaymentCollectionController extends Controller
             $validated['notes'] ?? null
         );
 
-        $payment->update(['payment_status' => 'completed']);
         $this->syncCashBalanceForStatusChange($payment, $oldStatus, 'collected');
-        $this->syncSalePaymentStatus($payment->sale);
+        $summary = $this->syncSalePaymentStatus($payment->sale);
+        $this->logSalePaymentUpdate($payment, 'Encaissement validé', $summary['payment_status_label']);
+
+        $payment->refresh()->load(['collections', 'sale.customer', 'creator', 'validator']);
+        $this->paymentWorkflow->decoratePayment($payment);
+        $this->paymentWorkflow->decorateSale($payment->sale, false);
 
         return response()->json([
             'message' => 'Payment marked as collected',
-            'payment' => $payment->load(['collections']),
+            'payment' => $payment,
         ]);
     }
 
@@ -115,9 +115,13 @@ class PaymentCollectionController extends Controller
             $validated['notes'] ?? null
         );
 
+        $payment->refresh()->load(['collections', 'sale.customer', 'creator', 'validator']);
+        $this->paymentWorkflow->decoratePayment($payment);
+        $this->paymentWorkflow->decorateSale($payment->sale, false);
+
         return response()->json([
             'message' => 'Payment scheduled for collection',
-            'payment' => $payment->load(['collections']),
+            'payment' => $payment,
         ]);
     }
 
@@ -136,9 +140,13 @@ class PaymentCollectionController extends Controller
             $validated['notes'] ?? null
         );
 
+        $payment->refresh()->load(['collections', 'sale.customer', 'creator', 'validator']);
+        $this->paymentWorkflow->decoratePayment($payment);
+        $this->paymentWorkflow->decorateSale($payment->sale, false);
+
         return response()->json([
             'message' => 'Payment rescheduled',
-            'payment' => $payment->load(['collections']),
+            'payment' => $payment,
         ]);
     }
 
@@ -152,6 +160,12 @@ class PaymentCollectionController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $payment->load(['sale.customer', 'creator', 'validator']);
+        $this->paymentWorkflow->decoratePayment($payment);
+        if ($payment->sale) {
+            $this->paymentWorkflow->decorateSale($payment->sale, false);
+        }
+
         return response()->json([
             'payment' => $payment,
             'collections' => $collections,
@@ -160,6 +174,10 @@ class PaymentCollectionController extends Controller
 
     public function changeStatus(Request $request, Payment $payment): JsonResponse
     {
+        if (!$payment->is_deferred) {
+            return response()->json(['message' => 'Ce paiement ne nécessite pas de suivi d’encaissement.'], 422);
+        }
+
         $request->validate([
             'status' => ['required', Rule::in(['pending', 'collected', 'cancelled'])],
             'notes' => 'nullable|string|required_if:status,cancelled',
@@ -171,17 +189,18 @@ class PaymentCollectionController extends Controller
 
         if ($status === 'collected') {
             $payment->markAsCollected(null, $notes);
-            $payment->update(['payment_status' => 'completed']);
         } else {
-            $action = $status === 'cancelled' ? 'cancelled' : 'rescheduled';
+            $action = $status === 'cancelled' ? 'failed' : 'rescheduled';
 
-            $payment->update([
+            $payment->update(Payment::persistable([
                 'collection_status' => $status,
                 'payment_status' => $status === 'cancelled' ? 'failed' : 'pending',
                 'collection_notes' => $notes,
+                'confirmed_at' => null,
                 'collected_at' => null,
                 'collected_by' => null,
-            ]);
+                'validated_by' => $status === 'cancelled' ? auth()->id() : null,
+            ]));
 
             PaymentCollection::create([
                 'payment_id' => $payment->id,
@@ -193,8 +212,11 @@ class PaymentCollectionController extends Controller
         }
 
         $this->syncCashBalanceForStatusChange($payment, $oldStatus, $status);
-        $this->syncSalePaymentStatus($payment->sale);
-        $payment->refresh()->load(['collections', 'sale.customer']);
+        $summary = $this->syncSalePaymentStatus($payment->sale);
+        $this->logSalePaymentUpdate($payment, 'Statut de paiement mis à jour', $summary['payment_status_label'], $notes);
+        $payment->refresh()->load(['collections', 'sale.customer', 'creator', 'validator']);
+        $this->paymentWorkflow->decoratePayment($payment);
+        $this->paymentWorkflow->decorateSale($payment->sale, false);
 
         return response()->json([
             'payment' => $payment,
@@ -256,6 +278,14 @@ class PaymentCollectionController extends Controller
             ->orderBy('due_date', 'asc')
             ->get();
 
+        $payments->transform(function (Payment $payment) {
+            if ($payment->relationLoaded('sale') && $payment->sale) {
+                $this->paymentWorkflow->decorateSale($payment->sale, false);
+            }
+
+            return $this->paymentWorkflow->decoratePayment($payment);
+        });
+
         return response()->json($payments);
     }
 
@@ -280,38 +310,115 @@ class PaymentCollectionController extends Controller
         }
     }
 
-    private function syncSalePaymentStatus(?Sale $sale): void
+    private function syncSalePaymentStatus(?Sale $sale): array
     {
-        if (!$sale) return;
-
-        $collectedAmount = (float) $sale->payments()
-            ->where(function ($query) {
-                $query
-                    ->where(function ($immediate) {
-                        $immediate
-                            ->where(function ($typeQuery) {
-                                $typeQuery->where('is_deferred', false)->orWhereNull('is_deferred');
-                            })
-                            ->where('payment_status', 'completed');
-                    })
-                    ->orWhere(function ($deferred) {
-                        $deferred
-                            ->where('is_deferred', true)
-                            ->where('payment_status', 'completed')
-                            ->where('collection_status', 'collected');
-                    });
-            })
-            ->sum('amount');
-
-        $status = 'unpaid';
-        if ($collectedAmount >= (float) $sale->total) {
-            $status = 'paid';
-        } elseif ($collectedAmount > 0) {
-            $status = 'partial';
+        if (!$sale) {
+            return [
+                'payment_status_code' => SalePaymentWorkflowService::STATUS_TO_PAY,
+                'payment_status_label' => $this->paymentWorkflow->saleStatusLabel(SalePaymentWorkflowService::STATUS_TO_PAY),
+            ];
         }
 
-        if ($sale->payment_status !== $status) {
-            $sale->update(['payment_status' => $status]);
+        return $this->paymentWorkflow->syncSalePaymentStatus($sale);
+    }
+
+    /**
+     * Delete a payment collection
+     */
+    public function destroy(Payment $payment): JsonResponse
+    {
+        try {
+            $sale = $payment->sale;
+            $oldStatus = $payment->collection_status;
+
+            $payment->delete();
+            $this->syncCashBalanceForStatusChange($payment, $oldStatus, 'cancelled');
+
+            if ($sale) {
+                $summary = $this->syncSalePaymentStatus($sale->fresh());
+                SaleLog::create([
+                    'sale_id' => $sale->id,
+                    'user_id' => auth()->id(),
+                    'status' => $summary['payment_status_label'],
+                    'action' => 'paiement',
+                    'comment' => 'Paiement différé supprimé',
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Paiement supprimé avec succès',
+                'success' => true,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la suppression: ' . $e->getMessage(),
+                'success' => false,
+            ], 500);
         }
+    }
+
+    private function logSalePaymentUpdate(Payment $payment, string $prefix, string $statusLabel, ?string $notes = null): void
+    {
+        if (!$payment->sale_id) {
+            return;
+        }
+
+        SaleLog::create([
+            'sale_id' => $payment->sale_id,
+            'user_id' => auth()->id(),
+            'status' => $statusLabel,
+            'action' => 'paiement',
+            'comment' => trim($prefix . ' - ' . $this->paymentWorkflow->paymentMethodLabel($payment) . ($notes ? ' - ' . $notes : '')),
+        ]);
+    }
+
+    private function buildSaleFollowUpItem(Sale $sale): ?array
+    {
+        $saleSummary = $sale->payment_summary ?? $this->paymentWorkflow->computeSaleSummary($sale);
+        $statusCode = $saleSummary['payment_status_code'] ?? SalePaymentWorkflowService::STATUS_TO_PAY;
+
+        if (in_array($statusCode, [SalePaymentWorkflowService::STATUS_PAID, SalePaymentWorkflowService::STATUS_COLLECTED], true)) {
+            return null;
+        }
+
+        $deferredPayment = $sale->payments
+            ->filter(fn (Payment $payment) => $payment->is_deferred)
+            ->sortByDesc(fn (Payment $payment) => $payment->due_date ?? $payment->created_at)
+            ->first();
+
+        if ($deferredPayment) {
+            $this->paymentWorkflow->decoratePayment($deferredPayment);
+        }
+
+        $remainingAmount = (float) ($saleSummary['remaining_amount'] ?? 0);
+        $pendingAmount = (float) ($saleSummary['pending_collection_amount'] ?? 0);
+        $followUpAmount = round($remainingAmount + $pendingAmount, 2);
+
+        if ($followUpAmount <= 0) {
+            return null;
+        }
+
+        return [
+            'id' => 'sale-follow-up-' . $sale->id,
+            'entry_type' => 'sale_follow_up',
+            'sale_id' => $sale->id,
+            'payment_id' => $deferredPayment?->id,
+            'sale' => $sale,
+            'sale_origin' => $sale->origin,
+            'sale_reference_display' => $sale->origin === 'pos'
+                ? ($sale->reference ?? $sale->order_number)
+                : ($sale->order_number ?? $sale->reference),
+            'payment_type' => $deferredPayment?->payment_type ?? 'balance_due',
+            'payment_method_label' => $deferredPayment?->payment_method_label ?? 'Reste à payer',
+            'reference_number' => $deferredPayment?->reference_number,
+            'amount' => $followUpAmount,
+            'due_date' => $deferredPayment?->due_date?->format('Y-m-d')
+                ?? ($sale->pickup_date?->format('Y-m-d') ?? optional($sale->created_at)->format('Y-m-d')),
+            'workflow_status_code' => $statusCode,
+            'workflow_status_label' => $saleSummary['payment_status_label'] ?? $this->paymentWorkflow->saleStatusLabel($statusCode),
+            'collection_notes' => $deferredPayment?->collection_notes ?? $deferredPayment?->notes ?? $sale->notes,
+            'notes' => $sale->notes,
+            'created_at' => optional($deferredPayment?->created_at ?? $sale->created_at)?->toISOString(),
+        ];
     }
 }

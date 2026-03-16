@@ -17,11 +17,61 @@
             <section class="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 space-y-4">
                 <div class="flex items-center justify-between gap-3">
                     <h2 class="text-sm font-semibold uppercase text-gray-500 tracking-wide">Informations</h2>
-                    <div class="flex items-center gap-2">
-                        <label class="text-sm text-gray-600">Statut commande</label>
-                        <select v-model="statusForm.order_status" class="px-3 py-2 border border-gray-300 rounded-lg" @change="saveStatus">
-                            <option v-for="status in orderStatuses" :key="status.value" :value="status.value">{{ status.label }}</option>
-                        </select>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-2">
+                        <div class="flex items-center gap-2 text-amber-800 text-sm font-semibold">
+                            <span class="h-2.5 w-2.5 rounded-full bg-amber-500 inline-block"></span>
+                            Statut actuel
+                        </div>
+                        <div class="inline-flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-amber-200 text-sm font-semibold text-amber-800">
+                            {{ formatOrderStatus(commande.order_status) }}
+                        </div>
+                        <div class="text-xs text-amber-700">
+                            Montant total: {{ formatCurrency(commande.total || 0) }}
+                            • En attente: {{ formatCurrency(pendingCollectionAmount) }}
+                            • Reste: {{ formatCurrency(remainingAmount) }}
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-blue-200 bg-blue-50 p-3 space-y-2">
+                        <div class="flex items-center justify-between gap-2 text-blue-800 text-sm font-semibold">
+                            <span>Passer au statut suivant</span>
+                            <span v-if="nextOrderStatus" class="text-xs px-2 py-0.5 rounded-full bg-white border border-blue-200">{{ formatOrderStatus(nextOrderStatus) }}</span>
+                        </div>
+                        <p class="text-sm text-blue-900">Valider le passage au statut {{ formatOrderStatus(nextOrderStatus) || '-' }}.</p>
+                        <textarea
+                            v-model="statusComment"
+                            rows="2"
+                            class="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Ajouter un commentaire..."
+                        ></textarea>
+                        <div class="flex gap-2">
+                            <button
+                                type="button"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40"
+                                :disabled="!nextOrderStatus || statusSaving"
+                                @click="saveStatus(nextOrderStatus)"
+                            >
+                                {{ statusSaving ? 'Validation...' : 'Valider le statut' }}
+                            </button>
+                            <button
+                                type="button"
+                                class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                                @click="statusComment = ''"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                v-if="commande.order_status === 'livree' && canOpenPayment"
+                                type="button"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                @click="openPaymentModal"
+                            >
+                                Passer au paiement
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -42,6 +92,20 @@
                     <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-3 border border-amber-200">
                         <p class="text-amber-700 text-xs font-semibold uppercase">Activité</p>
                         <p class="font-semibold text-gray-900 mt-1">{{ commande.customer_activity || '-' }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-3 border border-indigo-200">
+                        <p class="text-indigo-700 text-xs font-semibold uppercase">Livreur</p>
+                        <p class="font-semibold text-gray-900 mt-1">{{ commande.delivery_agent?.name || commande.delivery_agent_name_snapshot || '-' }}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">{{ commande.delivery_agent?.platform_name || commande.delivery_platform_name_snapshot || '' }}</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-rose-50 to-rose-100 rounded-xl p-3 border border-rose-200">
+                        <p class="text-rose-700 text-xs font-semibold uppercase">Commission livraison</p>
+                        <p class="font-semibold text-gray-900 mt-1">{{ formatCurrency(commande.delivery_commission_amount || 0) }}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            {{ commande.delivery_commission_type === 'fixed'
+                                ? formatCurrency(commande.delivery_commission_value_snapshot || 0)
+                                : `${Number(commande.delivery_commission_value_snapshot || 0)}%` }}
+                        </p>
                     </div>
                     <div class="bg-gray-50 rounded-xl p-3 lg:col-span-2 border border-gray-200">
                         <p class="text-gray-600 text-xs font-semibold uppercase">Adresse</p>
@@ -71,6 +135,14 @@
                                 <td class="px-4 py-2 text-sm text-right">{{ formatCurrency(item.unit_price) }}</td>
                                 <td class="px-4 py-2 text-sm text-right font-semibold">{{ formatCurrency(item.total) }}</td>
                             </tr>
+                            <tr class="bg-gray-50 font-semibold">
+                                <td colspan="3" class="px-4 py-2 text-sm text-right text-gray-700">Sous-total</td>
+                                <td class="px-4 py-2 text-sm text-right text-gray-900">{{ formatCurrency(commande.subtotal || 0) }}</td>
+                            </tr>
+                            <tr v-if="commande.tax_amount && commande.tax_amount > 0" class="bg-amber-50">
+                                <td colspan="3" class="px-4 py-2 text-sm text-right text-amber-700">TVA {{ commande.tax_rate || 0 }}%</td>
+                                <td class="px-4 py-2 text-sm text-right font-semibold text-amber-900">{{ formatCurrency(commande.tax_amount || 0) }}</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -81,8 +153,12 @@
                         <p class="text-lg font-bold text-blue-900">{{ formatCurrency(commande.total || 0) }}</p>
                     </div>
                     <div class="bg-green-50 rounded-xl p-3 border border-green-100">
-                        <p class="text-green-700">Avance</p>
+                        <p class="text-green-700">Montant déjà payé</p>
                         <p class="text-lg font-bold text-green-900">{{ formatCurrency(advanceAmount) }}</p>
+                    </div>
+                    <div class="bg-cyan-50 rounded-xl p-3 border border-cyan-100">
+                        <p class="text-cyan-700">Montant en attente d'encaissement</p>
+                        <p class="text-lg font-bold text-cyan-900">{{ formatCurrency(pendingCollectionAmount) }}</p>
                     </div>
                     <div class="bg-amber-50 rounded-xl p-3 border border-amber-100">
                         <p class="text-amber-700">Reste à payer</p>
@@ -90,92 +166,25 @@
                     </div>
                     <div class="bg-gray-50 rounded-xl p-3 border border-gray-200">
                         <p class="text-gray-700">Statut paiement</p>
-                        <p class="text-lg font-bold text-gray-900">{{ formatPaymentStatus(commande.payment_status) }}</p>
+                        <p class="text-lg font-bold text-gray-900">{{ commande.payment_status_label || formatPaymentStatus(commande.payment_status_code || commande.payment_status) }}</p>
                     </div>
                 </div>
             </section>
 
             <section class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 space-y-4">
-                    <h2 class="text-sm font-semibold uppercase text-gray-500 tracking-wide">Gestion paiement</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                        <div>
-                            <label class="block text-gray-600 mb-1">Mode de paiement</label>
-                            <select v-model="paymentForm.payment_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                <option value="cash">Cash</option>
-                                <option value="card">Carte</option>
-                                <option value="mobile">Mobile</option>
-                                <option value="cheque">Chèque (différé)</option>
-                                <option value="simple_transfer">Virement simple (différé)</option>
-                                <option value="instant_transfer">Virement instantané</option>
-                                <option value="credit">Crédit (différé)</option>
-                            </select>
+                <div v-if="remainingAmount > 0.001" class="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 space-y-3">
+                    <div class="flex items-center justify-between gap-3 flex-wrap rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
+                        <div class="text-gray-700 space-y-1">
+                            <p>Il reste {{ formatCurrency(remainingAmount) }} à encaisser pour cette commande.</p>
+                            <p class="text-xs text-gray-500">Cliquez sur le bouton pour finaliser ou compléter le paiement (cash, chèque, crédit, virement).</p>
                         </div>
-                        <div>
-                            <label class="block text-gray-600 mb-1">Montant</label>
-                            <input v-model.number="paymentForm.amount" type="number" min="0.01" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                        </div>
-                        <div class="flex items-end gap-2">
-                            <button type="button" class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40" :disabled="savingPayment" @click="savePayment">
-                                {{ savingPayment ? 'Validation...' : 'Valider paiement' }}
-                            </button>
-                            <button type="button" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100" @click="resetPaymentForm">Annuler</button>
-                        </div>
-                    </div>
-
-                    <div v-if="requiresTransactionNumber || requiresPieceNumber || requiresBankName || requiresDueDates || allowsNotes" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                        <div v-if="requiresTransactionNumber">
-                            <label class="block text-gray-600 mb-1">{{ transactionLabel }}</label>
-                            <input v-model.trim="paymentForm.transaction_number" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" :placeholder="transactionPlaceholder">
-                        </div>
-                        <div v-if="requiresPieceNumber">
-                            <label class="block text-gray-600 mb-1">N° pièce / effet</label>
-                            <input v-model.trim="paymentForm.piece_number" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Référence pièce">
-                        </div>
-                        <div v-if="requiresBankName">
-                            <label class="block text-gray-600 mb-1">Banque</label>
-                            <input v-model.trim="paymentForm.bank_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Nom de la banque">
-                        </div>
-                        <div v-if="requiresDueDates">
-                            <label class="block text-gray-600 mb-1">Date émission</label>
-                            <input v-model="paymentForm.issue_date" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                        </div>
-                        <div v-if="requiresDueDates">
-                            <label class="block text-gray-600 mb-1">Date échéance</label>
-                            <input v-model="paymentForm.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                        </div>
-                        <div v-if="allowsNotes" class="md:col-span-2">
-                            <label class="block text-gray-600 mb-1">Note</label>
-                            <input v-model.trim="paymentForm.notes" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Note interne paiement">
-                        </div>
-                    </div>
-
-                    <p v-if="isDeferredType" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        Ce paiement est différé. Il sera suivi dans le module Suivi Encaissement jusqu'à validation finale.
-                    </p>
-
-                    <div class="border border-gray-200 rounded-xl overflow-hidden">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
-                                <tr>
-                                    <th class="px-3 py-2 text-left">Date</th>
-                                    <th class="px-3 py-2 text-left">Mode</th>
-                                    <th class="px-3 py-2 text-left">Statut</th>
-                                    <th class="px-3 py-2 text-right">Montant</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                <tr v-for="payment in commande.payments" :key="payment.id">
-                                    <td class="px-3 py-2">{{ formatDateTime(payment.created_at) }}</td>
-                                    <td class="px-3 py-2">{{ formatPaymentType(payment) }}</td>
-                                    <td class="px-3 py-2">{{ formatCollectionStatus(payment) }}</td>
-                                    <td class="px-3 py-2 text-right font-semibold">{{ formatCurrency(payment.amount) }}</td>
-                                </tr>
-                                <tr v-if="!commande.payments?.length">
-                                    <td colspan="4" class="px-3 py-4 text-center text-gray-500">Aucun paiement.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <button
+                            type="button"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            @click="openPaymentModal"
+                        >
+                            Continuer le paiement
+                        </button>
                     </div>
                 </div>
 
@@ -193,7 +202,17 @@
                         </div>
                         <div>
                             <label class="block text-gray-600 mb-1">Quantité retournée</label>
-                            <input v-model.number="returnForm.quantity" type="number" min="0.001" step="0.001" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            <input
+                                v-model.number="returnForm.quantity"
+                                type="number"
+                                :min="maxReturnableQty > 0 ? 0.001 : 0"
+                                :max="maxReturnableQty || undefined"
+                                step="0.001"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            >
+                            <p class="text-xs text-gray-500 mt-1" v-if="selectedReturnItem">
+                                Restant retournable: {{ maxReturnableQty }} / {{ selectedReturnItem.quantity }}
+                            </p>
                         </div>
                         <div>
                             <label class="block text-gray-600 mb-1">Etat</label>
@@ -215,7 +234,12 @@
                     </div>
                     <div class="flex gap-2 justify-end">
                         <button type="button" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100" @click="resetReturnForm">Annuler</button>
-                        <button type="button" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-40" :disabled="savingReturn" @click="saveReturn">
+                        <button
+                            type="button"
+                            class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-40"
+                            :disabled="savingReturn || !selectedReturnItem || maxReturnableQty <= 0"
+                            @click="saveReturn"
+                        >
                             {{ savingReturn ? 'Validation...' : 'Valider retour' }}
                         </button>
                     </div>
@@ -247,6 +271,43 @@
             </section>
 
             <section class="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 space-y-3">
+                <h2 class="text-sm font-semibold uppercase text-gray-500 tracking-wide">Paiements enregistrés</h2>
+                <div class="border border-gray-200 rounded-xl overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Date</th>
+                                <th class="px-3 py-2 text-left">Mode</th>
+                                <th class="px-3 py-2 text-left">Référence</th>
+                                <th class="px-3 py-2 text-right">Montant</th>
+                                <th class="px-3 py-2 text-left">Échéance</th>
+                                <th class="px-3 py-2 text-left">Statut</th>
+                                <th class="px-3 py-2 text-left">Commentaire</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr v-for="payment in commande.payments || []" :key="payment.id">
+                                <td class="px-3 py-2">{{ formatDateTime(payment.paid_at || payment.created_at) }}</td>
+                                <td class="px-3 py-2">{{ payment.payment_method_label || formatPaymentType(payment) }}</td>
+                                <td class="px-3 py-2">{{ payment.reference_number || '-' }}</td>
+                                <td class="px-3 py-2 text-right font-semibold">{{ formatCurrency(payment.amount || 0) }}</td>
+                                <td class="px-3 py-2">{{ formatDate(payment.due_date) }}</td>
+                                <td class="px-3 py-2">
+                                    <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                        {{ payment.workflow_status_label || formatCollectionStatus(payment) }}
+                                    </span>
+                                </td>
+                                <td class="px-3 py-2 text-gray-600">{{ payment.collection_notes || payment.notes || '-' }}</td>
+                            </tr>
+                            <tr v-if="!(commande.payments || []).length">
+                                <td colspan="7" class="px-3 py-4 text-center text-gray-500">Aucun paiement enregistré.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-2xl border border-gray-200 p-4 md:p-5 space-y-3">
                 <h2 class="text-sm font-semibold uppercase text-gray-500 tracking-wide">Journal de commande</h2>
                 <div class="space-y-2">
                     <div v-for="entry in journal" :key="entry.id" class="border border-gray-200 rounded-xl p-3 text-sm">
@@ -255,19 +316,31 @@
                             <p class="text-gray-500">{{ formatDateTime(entry.created_at) }}</p>
                         </div>
                         <p class="text-gray-600">Utilisateur: {{ entry.user?.name || '-' }}</p>
+                        <p v-if="entry.status" class="text-gray-700">Statut: {{ formatOrderStatus(entry.status) }}</p>
                         <p class="text-gray-700" v-if="entry.comment">{{ entry.comment }}</p>
                     </div>
                     <p v-if="!journal.length" class="text-sm text-gray-500">Aucun événement.</p>
                 </div>
             </section>
         </template>
+
+        <PaymentMultiModal
+            v-if="showPaymentModal && commande"
+            :total="remainingAmount"
+            :sale="commande"
+            :allow-partial-confirmation="true"
+            confirm-label="Enregistrer le paiement"
+            @close="showPaymentModal = false"
+            @complete="submitPaymentsFromModal"
+        />
     </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { commandesApi, salesApi } from '../../api'
+import PaymentMultiModal from '../../components/pos/PaymentMultiModal.vue'
 import { useSettingsStore } from '../../stores/settings'
 
 const route = useRoute()
@@ -276,12 +349,32 @@ const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
 const loading = ref(false)
+const statusSaving = ref(false)
 const savingPayment = ref(false)
 const savingReturn = ref(false)
+const showPaymentModal = ref(false)
+const statusComment = ref('')
 
 const commande = ref(null)
 const journal = ref([])
 const returns = ref([])
+
+const selectedReturnItem = computed(() => {
+    if (!commande.value || !returnForm.sale_item_id) return null
+    return (commande.value.items || []).find((item) => Number(item.id) === Number(returnForm.sale_item_id)) || null
+})
+
+const alreadyReturnedQty = computed(() => {
+    if (!returnForm.sale_item_id) return 0
+    return (returns.value || [])
+        .filter((retour) => Number(retour.sale_item_id) === Number(returnForm.sale_item_id))
+        .reduce((sum, retour) => sum + Number(retour.quantity || 0), 0)
+})
+
+const maxReturnableQty = computed(() => {
+    if (!selectedReturnItem.value) return 0
+    return Math.max(0, Number(selectedReturnItem.value.quantity || 0) - alreadyReturnedQty.value)
+})
 
 const orderStatuses = [
     { value: 'confirmee', label: 'Confirmee' },
@@ -317,13 +410,29 @@ const returnForm = reactive({
 
 const advanceAmount = computed(() => {
     if (!commande.value) return 0
-    return (commande.value.payments || []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+    return Number(commande.value.paid_confirmed_amount ?? commande.value.payment_summary?.paid_confirmed_amount ?? 0)
+})
+
+const pendingCollectionAmount = computed(() => {
+    if (!commande.value) return 0
+    return Number(commande.value.pending_collection_amount ?? commande.value.payment_summary?.pending_collection_amount ?? 0)
+})
+
+const nextOrderStatus = computed(() => {
+    if (!commande.value) return null
+    const sequence = ['confirmee', 'en_preparation', 'envoyee', 'livree']
+    const current = commande.value.order_status || 'confirmee'
+    const idx = sequence.indexOf(current)
+    if (idx === -1 || idx >= sequence.length - 1) return null
+    return sequence[idx + 1]
 })
 
 const remainingAmount = computed(() => {
     if (!commande.value) return 0
-    return Math.max(0, Number(commande.value.total || 0) - advanceAmount.value)
+    return Number(commande.value.remaining_amount ?? commande.value.payment_summary?.remaining_amount ?? 0)
 })
+
+const canOpenPayment = computed(() => remainingAmount.value > 0.001)
 
 function formatDate(value) {
     if (!value) return '-'
@@ -340,14 +449,38 @@ function formatOrigin(origin) {
     return map[origin] || 'POS'
 }
 
+function formatOrderStatus(status) {
+    return orderStatuses.find((s) => s.value === status)?.label || 'Confirmee'
+}
+
+function orderStatusClass(status) {
+    const map = {
+        confirmee: 'bg-blue-100 text-blue-700',
+        en_preparation: 'bg-yellow-100 text-yellow-700',
+        envoyee: 'bg-indigo-100 text-indigo-700',
+        livree: 'bg-green-100 text-green-700',
+        retournee: 'bg-red-100 text-red-700',
+        annulee: 'bg-gray-200 text-gray-700',
+    }
+    return map[status] || 'bg-blue-100 text-blue-700'
+}
+
 function formatPaymentStatus(status) {
-    const map = { unpaid: 'A payer', partial: 'Partiel', paid: 'Payee' }
-    return map[status] || 'A payer'
+    const map = {
+        to_pay: 'À payer',
+        to_collect: 'À encaisser',
+        paid: 'Payé',
+        collected: 'Encaissé',
+        unpaid: 'Impayé',
+    }
+    return map[status] || 'À payer'
 }
 
 function formatPaymentType(payment) {
-    const transferSimple = payment.payment_type === 'virement' && String(payment.notes || '').includes('[VIREMENT_SIMPLE]')
-    const transferInstant = payment.payment_type === 'virement' && String(payment.notes || '').includes('[VIREMENT_INSTANT]')
+    const transferSimple = payment.payment_type === 'virement'
+        && (payment.transfer_mode === 'simple' || String(payment.notes || '').includes('[VIREMENT_SIMPLE]'))
+    const transferInstant = payment.payment_type === 'virement'
+        && (payment.transfer_mode === 'instant' || String(payment.notes || '').includes('[VIREMENT_INSTANT]'))
     if (transferSimple) return 'Virement simple'
     if (transferInstant) return 'Virement instantané'
     const map = {
@@ -358,6 +491,8 @@ function formatPaymentType(payment) {
         check: 'Chèque',
         virement: 'Virement',
         credit: 'Crédit',
+        simple_transfer: 'Virement simple',
+        instant_transfer: 'Virement instantané',
     }
     return map[payment.payment_type] || payment.payment_type
 }
@@ -365,11 +500,14 @@ function formatPaymentType(payment) {
 function formatCollectionStatus(payment) {
     if (!payment.is_deferred) return 'Immédiat'
     const map = {
-        pending: 'En attente',
-        collected: 'Payé',
+        pending: 'À encaisser',
+        to_collect: 'À encaisser',
+        collected: 'Encaissé',
+        paid: 'Payé',
         cancelled: 'Impayé',
+        unpaid: 'Impayé',
     }
-    return map[payment.collection_status] || 'En attente'
+    return map[payment.collection_status] || 'À encaisser'
 }
 
 function formatAction(action) {
@@ -418,6 +556,7 @@ async function refresh() {
         journal.value = journalRes.data || []
         returns.value = returnsRes.data || []
         paymentForm.amount = remainingAmount.value
+        statusComment.value = ''
     } catch (error) {
         console.error('Erreur chargement fiche commande:', error)
         alert(error.response?.data?.message || 'Impossible de charger la commande.')
@@ -426,18 +565,23 @@ async function refresh() {
     }
 }
 
-async function saveStatus() {
-    if (!commande.value) return
+async function saveStatus(targetStatus) {
+    if (!commande.value || !targetStatus) return
 
+    statusSaving.value = true
     try {
+        statusForm.order_status = targetStatus
         await commandesApi.updateStatus(commande.value.id, {
-            order_status: statusForm.order_status,
-            comment: 'Statut modifié depuis la fiche commande',
+            order_status: targetStatus,
+            comment: statusComment.value || `Statut changé de ${commande.value.order_status} vers ${targetStatus}`,
         })
         await refresh()
+        statusComment.value = ''
     } catch (error) {
         console.error('Erreur mise a jour statut:', error)
         alert(error.response?.data?.message || 'Impossible de mettre à jour le statut.')
+    } finally {
+        statusSaving.value = false
     }
 }
 
@@ -468,13 +612,23 @@ async function savePayment() {
             if (paymentForm.due_date < paymentForm.issue_date) paymentForm.due_date = paymentForm.issue_date
         }
 
+        const normalizedType = ['simple_transfer', 'instant_transfer'].includes(paymentForm.payment_type)
+            ? 'virement'
+            : paymentForm.payment_type
+
+        const noteMarker = paymentForm.payment_type === 'simple_transfer'
+            ? '[VIREMENT_SIMPLE]'
+            : (paymentForm.payment_type === 'instant_transfer' ? '[VIREMENT_INSTANT]' : '')
+        const baseNote = paymentForm.notes?.trim() || 'Paiement saisi depuis Gestion paiement'
+        const normalizedNotes = noteMarker ? `${noteMarker} ${baseNote}`.trim() : baseNote
+
         const payload = {
-            payment_type: paymentForm.payment_type,
+            payment_type: normalizedType,
             transfer_mode: paymentForm.payment_type === 'simple_transfer'
                 ? 'simple'
                 : (paymentForm.payment_type === 'instant_transfer' ? 'instant' : undefined),
             amount: Number(paymentForm.amount),
-            notes: paymentForm.notes || 'Paiement saisi depuis Gestion paiement',
+            notes: normalizedNotes,
         }
 
         if (payload.payment_type === 'cash') {
@@ -501,7 +655,24 @@ async function savePayment() {
 }
 
 async function saveReturn() {
-    if (!commande.value || !returnForm.sale_item_id || Number(returnForm.quantity || 0) <= 0) return
+    if (!commande.value || !selectedReturnItem.value) return
+
+    const qty = Number(returnForm.quantity || 0)
+
+    if (qty <= 0) {
+        alert('Veuillez saisir une quantité à retourner.')
+        return
+    }
+
+    if (maxReturnableQty.value <= 0) {
+        alert('Plus aucune quantité n\'est retournable pour cet article.')
+        return
+    }
+
+    if (qty > maxReturnableQty.value) {
+        alert(`Quantité maximale retournable: ${maxReturnableQty.value}`)
+        return
+    }
 
     savingReturn.value = true
     try {
@@ -545,8 +716,51 @@ function resetReturnForm() {
     returnForm.note = ''
 }
 
+watch(
+    () => returnForm.sale_item_id,
+    () => {
+        if (maxReturnableQty.value > 0) {
+            returnForm.quantity = Math.min(Number(returnForm.quantity || maxReturnableQty.value), maxReturnableQty.value)
+        } else {
+            returnForm.quantity = 0
+        }
+    }
+)
+
 function goList() {
     router.push({ name: 'commandes' })
+}
+
+function openPaymentModal() {
+    if (!commande.value || remainingAmount.value <= 0) return
+    showPaymentModal.value = true
+}
+
+async function submitPaymentsFromModal(payments) {
+    if (!commande.value) return
+
+    savingPayment.value = true
+    try {
+        const normalizePaymentType = (type) => {
+            if (type === 'check') return 'cheque'
+            return type
+        }
+
+        for (const payment of payments || []) {
+            await salesApi.addPayment(commande.value.id, {
+                ...payment,
+                payment_type: normalizePaymentType(payment.payment_type || payment.type),
+            })
+        }
+
+        showPaymentModal.value = false
+        await refresh()
+    } catch (error) {
+        console.error('Erreur paiement:', error)
+        alert(error.response?.data?.message || 'Impossible d\'enregistrer le paiement.')
+    } finally {
+        savingPayment.value = false
+    }
 }
 
 onMounted(async () => {

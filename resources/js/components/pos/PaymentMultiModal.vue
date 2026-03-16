@@ -16,6 +16,49 @@
 
                 <!-- Content -->
                 <div class="p-6 space-y-6">
+                    <div v-if="sale" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                        <div class="grid gap-3 md:grid-cols-2 text-sm">
+                            <div>
+                                <p class="text-xs font-semibold uppercase text-slate-500">Commande N°</p>
+                                <p class="font-semibold text-slate-900">{{ sale.order_number || sale.reference || '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase text-slate-500">Client</p>
+                                <p class="font-semibold text-slate-900">{{ sale.customer?.name || 'Client anonyme' }}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-semibold uppercase text-slate-500">Articles</p>
+                            <p class="text-sm text-slate-800">
+                                {{ orderArticles.length ? orderArticles.map((item) => `${item.article_name} x${item.quantity}`).join(', ') : '-' }}
+                            </p>
+                        </div>
+
+                        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5 text-sm">
+                            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                                <p class="text-xs uppercase text-slate-500">Montant total</p>
+                                <p class="text-base font-semibold text-slate-900">{{ formatCurrency(sale.total || 0) }}</p>
+                            </div>
+                            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                                <p class="text-xs uppercase text-slate-500">Montant déjà payé</p>
+                                <p class="text-base font-semibold text-emerald-700">{{ formatCurrency(paidConfirmedAmount) }}</p>
+                            </div>
+                            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                                <p class="text-xs uppercase text-slate-500">En attente d'encaissement</p>
+                                <p class="text-base font-semibold text-amber-700">{{ formatCurrency(pendingCollectionAmount) }}</p>
+                            </div>
+                            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                                <p class="text-xs uppercase text-slate-500">Reste à payer</p>
+                                <p class="text-base font-semibold text-slate-900">{{ formatCurrency(remainingToPayNow) }}</p>
+                            </div>
+                            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                                <p class="text-xs uppercase text-slate-500">Statut paiement</p>
+                                <p class="text-base font-semibold text-slate-900">{{ sale.payment_status_label || 'À payer' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Payment Summary (Top) -->
                     <div class="grid grid-cols-3 gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
                         <div class="text-center">
@@ -257,7 +300,7 @@
                         class="flex-1 py-3 bg-green-500 text-gray-900 font-bold rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                     >
                         <CheckIcon class="w-5 h-5 mr-2" />
-                        Finaliser le Paiement
+                        {{ confirmLabelText }}
                     </button>
                 </div>
             </div>
@@ -279,6 +322,18 @@ const props = defineProps({
     total: {
         type: Number,
         required: true
+    },
+    sale: {
+        type: Object,
+        default: null
+    },
+    allowPartialConfirmation: {
+        type: Boolean,
+        default: false
+    },
+    confirmLabel: {
+        type: String,
+        default: 'Finaliser le Paiement'
     }
 })
 
@@ -338,6 +393,12 @@ const paymentMethods = [
         icon: '📋'
     }
 ]
+
+const saleSummary = computed(() => props.sale?.payment_summary || null)
+const paidConfirmedAmount = computed(() => Number(saleSummary.value?.paid_confirmed_amount || 0))
+const pendingCollectionAmount = computed(() => Number(saleSummary.value?.pending_collection_amount || 0))
+const remainingToPayNow = computed(() => Number(saleSummary.value?.remaining_amount || props.total || 0))
+const orderArticles = computed(() => Array.isArray(props.sale?.items) ? props.sale.items : [])
 
 const selectedMethod = ref(null)
 const payments = ref([])
@@ -421,8 +482,10 @@ const canAddPayment = computed(() => {
 })
 
 const canConfirmPayments = computed(() => {
-    return payments.value.length > 0 && remaining.value <= 0
+    return payments.value.length > 0 && (props.allowPartialConfirmation || remaining.value <= 0)
 })
+
+const confirmLabelText = computed(() => props.confirmLabel || 'Finaliser le Paiement')
 
 const transactionLabel = computed(() => {
     if (selectedMethod.value?.id === 'check') return 'N° de chèque'
@@ -453,11 +516,12 @@ const bankPlaceholder = computed(() => selectedMethod.value?.id === 'credit' ? '
 function selectMethod(method) {
     selectedMethod.value = method
     paymentForm.value.payment_type = method.paymentType
+    const suggestedAmount = Number(remaining.value || 0)
     paymentForm.value = {
         ...paymentForm.value,
         payment_type: method.paymentType,
-        amount: 0,
-        received_amount: null,
+        amount: suggestedAmount,
+        received_amount: method.id === 'cash' ? suggestedAmount : null,
         transaction_number: '',
         piece_number: '',
         issue_date: '',

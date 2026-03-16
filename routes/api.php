@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DeliveryAgentController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\OptionController;
 use App\Http\Controllers\Api\OptionVariantController;
@@ -89,6 +90,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/employees/{employee}/payroll-history', [PayrollController::class, 'employeeHistory']);
     Route::get('/employees/{employee}/attendance-summary', [PayrollController::class, 'attendanceSummary']);
 
+    // Delivery Agents
+    Route::get('/delivery-agents/report', [DeliveryAgentController::class, 'report']);
+    Route::apiResource('delivery-agents', DeliveryAgentController::class);
+
     // Payroll
     Route::apiResource('payrolls', PayrollController::class);
     Route::post('/payrolls/{payroll}/process-payment', [PayrollController::class, 'processPayment']);
@@ -165,6 +170,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/payment-collections/statistics', [PaymentCollectionController::class, 'statistics']);
     Route::get('/payment-collections/upcoming', [PaymentCollectionController::class, 'upcomingCollections']);
     Route::get('/payment-collections/{payment}/history', [PaymentCollectionController::class, 'collectionHistory']);
+    Route::delete('/payment-collections/{payment}', [PaymentCollectionController::class, 'destroy']);
     Route::post('/payment-collections/{payment}/mark-collected', [PaymentCollectionController::class, 'markAsCollected']);
     Route::post('/payment-collections/{payment}/schedule', [PaymentCollectionController::class, 'scheduleCollection']);
     Route::post('/payment-collections/{payment}/reschedule', [PaymentCollectionController::class, 'rescheduleCollection']);

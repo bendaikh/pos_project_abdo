@@ -10,6 +10,8 @@ use App\Models\SaleItemReturn;
 use App\Models\SaleLog;
 use App\Models\Setting;
 use App\Models\StockMovement;
+use App\Services\DeliveryCommissionService;
+use App\Services\SalePaymentWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,9 +27,16 @@ class SaleController extends Controller
         'annulee',
     ];
 
+    public function __construct(
+        private readonly SalePaymentWorkflowService $paymentWorkflow,
+        private readonly DeliveryCommissionService $deliveryCommissionService,
+    )
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $query = Sale::with(['customer', 'user', 'items', 'payments']);
+        $query = Sale::with(['customer', 'user', 'items', 'payments', 'deliveryAgent']);
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -38,7 +47,24 @@ class SaleController extends Controller
         }
 
         if ($request->filled('payment_status')) {
-            $query->where('payment_status', $request->payment_status);
+            $workflowStatus = $this->paymentWorkflow->normalizeWorkflowStatus($request->payment_status);
+            if ($workflowStatus) {
+                if (Sale::supportsColumn('payment_status_code')) {
+                    $query->where('payment_status_code', $workflowStatus);
+                } else {
+                    $legacyStatuses = match ($workflowStatus) {
+                        SalePaymentWorkflowService::STATUS_PAID,
+                        SalePaymentWorkflowService::STATUS_COLLECTED => ['paid'],
+                        SalePaymentWorkflowService::STATUS_TO_PAY,
+                        SalePaymentWorkflowService::STATUS_UNPAID => ['unpaid', 'partial'],
+                        SalePaymentWorkflowService::STATUS_TO_COLLECT => ['partial'],
+                        default => [$request->payment_status],
+                    };
+                    $query->whereIn('payment_status', $legacyStatuses);
+                }
+            } else {
+                $query->where('payment_status', $request->payment_status);
+            }
         }
 
         if ($request->filled('from_date')) {
@@ -59,6 +85,10 @@ class SaleController extends Controller
 
         if ($request->filled('customer_id')) {
             $query->where('customer_id', $request->customer_id);
+        }
+
+        if ($request->filled('delivery_agent_id')) {
+            $query->where('delivery_agent_id', $request->delivery_agent_id);
         }
 
         if ($request->filled('origin')) {
@@ -82,16 +112,19 @@ class SaleController extends Controller
         }
 
         $sales = $query->latest()->paginate($request->get('per_page', 20));
+        $sales->getCollection()->transform(fn (Sale $sale) => $this->paymentWorkflow->decorateSale($sale));
 
         return response()->json($sales);
     }
 
     public function pending(): JsonResponse
     {
-        $sales = Sale::with(['customer', 'items.article'])
+        $sales = Sale::with(['customer', 'items.article', 'payments', 'deliveryAgent'])
             ->pending()
             ->latest()
             ->get();
+
+        $sales->transform(fn (Sale $sale) => $this->paymentWorkflow->decorateSale($sale));
 
         return response()->json($sales);
     }
@@ -104,6 +137,7 @@ class SaleController extends Controller
             'items.*.article_id' => 'required|exists:articles,id',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.variant_price' => 'nullable|numeric|min:0',
             'items.*.selected_options' => 'nullable|array',
             'items.*.options_price' => 'nullable|numeric',
             'items.*.discount_amount' => 'nullable|numeric|min:0',
@@ -111,6 +145,7 @@ class SaleController extends Controller
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'delivery_mode' => 'nullable|in:pickup,delivery,dine_in',
             'origin' => 'nullable|in:pos,menu_commande,livraison',
+            'delivery_agent_id' => 'nullable|exists:delivery_agents,id',
             'customer_activity' => 'nullable|string|max:255',
             'pickup_date' => 'nullable|date',
             'delivery_address' => 'nullable|string',
@@ -122,9 +157,10 @@ class SaleController extends Controller
         $taxEnabled = Setting::get('tax_enabled', false);
 
         return DB::transaction(function () use ($validated, $taxRate, $taxEnabled) {
-            $sale = Sale::create([
+            $sale = Sale::create(Sale::persistable([
                 'user_id' => auth()->id(),
                 'customer_id' => $validated['customer_id'] ?? null,
+                'delivery_agent_id' => $validated['delivery_agent_id'] ?? null,
                 'discount_amount' => $validated['discount_amount'] ?? 0,
                 'discount_percent' => $validated['discount_percent'] ?? 0,
                 'tax_rate' => $taxEnabled ? $taxRate : 0,
@@ -137,7 +173,8 @@ class SaleController extends Controller
                 'notes' => $validated['notes'] ?? null,
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
-            ]);
+                'payment_status_code' => SalePaymentWorkflowService::STATUS_TO_PAY,
+            ]));
 
             foreach ($validated['items'] as $item) {
                 $article = Article::find($item['article_id']);
@@ -149,7 +186,7 @@ class SaleController extends Controller
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
                     'selected_options' => $item['selected_options'] ?? null,
-                    'options_price' => $item['options_price'] ?? 0,
+                    'options_price' => ($item['options_price'] ?? 0) + ($item['variant_price'] ?? 0),
                     'discount_amount' => $item['discount_amount'] ?? 0,
                     'total' => 0,
                 ]);
@@ -158,6 +195,7 @@ class SaleController extends Controller
             $sale->load('items');
             $sale->calculateTotals();
             $sale->save();
+            $this->captureDeliveryCommissionIfNeeded($sale);
 
             $this->addLog(
                 $sale,
@@ -166,25 +204,27 @@ class SaleController extends Controller
                 'Commande créée'
             );
 
-            return response()->json(
-                $sale->fresh()->load(['customer', 'user', 'items.article', 'payments', 'logs.user', 'returns.article']),
-                201
-            );
+            $sale = $sale->fresh()->load(['customer', 'user', 'items.article', 'payments', 'logs.user', 'returns.article', 'deliveryAgent']);
+
+            return response()->json($this->paymentWorkflow->decorateSale($sale), 201);
         });
     }
 
     public function show(Sale $sale): JsonResponse
     {
-        return response()->json($sale->load([
+        $sale = $sale->load([
             'customer',
             'user',
             'items.article',
             'payments',
+            'deliveryAgent',
             'logs.user',
             'returns.article',
             'returns.user',
             'returns.saleItem',
-        ]));
+        ]);
+
+        return response()->json($this->paymentWorkflow->decorateSale($sale));
     }
 
     public function update(Request $request, Sale $sale): JsonResponse
@@ -199,6 +239,7 @@ class SaleController extends Controller
             'items.*.article_id' => 'required|exists:articles,id',
             'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.variant_price' => 'nullable|numeric|min:0',
             'items.*.selected_options' => 'nullable|array',
             'items.*.options_price' => 'nullable|numeric',
             'items.*.discount_amount' => 'nullable|numeric|min:0',
@@ -206,6 +247,7 @@ class SaleController extends Controller
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'delivery_mode' => 'nullable|in:pickup,delivery,dine_in',
             'origin' => 'nullable|in:pos,menu_commande,livraison',
+            'delivery_agent_id' => 'nullable|exists:delivery_agents,id',
             'customer_activity' => 'nullable|string|max:255',
             'pickup_date' => 'nullable|date',
             'delivery_address' => 'nullable|string',
@@ -218,6 +260,7 @@ class SaleController extends Controller
 
             $sale->update([
                 'customer_id' => $validated['customer_id'] ?? $sale->customer_id,
+                'delivery_agent_id' => $validated['delivery_agent_id'] ?? $sale->delivery_agent_id,
                 'discount_amount' => $validated['discount_amount'] ?? $sale->discount_amount,
                 'discount_percent' => $validated['discount_percent'] ?? $sale->discount_percent,
                 'delivery_mode' => $validated['delivery_mode'] ?? $sale->delivery_mode,
@@ -242,7 +285,7 @@ class SaleController extends Controller
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['unit_price'],
                         'selected_options' => $item['selected_options'] ?? null,
-                        'options_price' => $item['options_price'] ?? 0,
+                        'options_price' => ($item['options_price'] ?? 0) + ($item['variant_price'] ?? 0),
                         'discount_amount' => $item['discount_amount'] ?? 0,
                         'total' => 0,
                     ]);
@@ -252,6 +295,7 @@ class SaleController extends Controller
             $sale->load('items');
             $sale->calculateTotals();
             $sale->save();
+            $this->captureDeliveryCommissionIfNeeded($sale, $oldStatus === 'livree');
 
             if ($oldStatus !== $sale->order_status) {
                 $this->addLog(
@@ -264,14 +308,17 @@ class SaleController extends Controller
                 $this->addLog($sale, 'commande_modifiee', $sale->order_status, 'Commande modifiée');
             }
 
-            return response()->json($sale->fresh()->load([
+            $sale = $sale->fresh()->load([
                 'customer',
                 'user',
                 'items.article',
                 'payments',
+                'deliveryAgent',
                 'logs.user',
                 'returns.article',
-            ]));
+            ]);
+
+            return response()->json($this->paymentWorkflow->decorateSale($sale));
         });
     }
 
@@ -288,6 +335,7 @@ class SaleController extends Controller
             'order_status' => $validated['order_status'],
             'status' => $validated['order_status'] === 'annulee' ? 'cancelled' : $sale->status,
         ]);
+        $this->captureDeliveryCommissionIfNeeded($sale, $previousStatus === 'livree');
 
         $this->addLog(
             $sale,
@@ -296,7 +344,9 @@ class SaleController extends Controller
             $validated['comment'] ?? ('Statut changé de ' . $previousStatus . ' vers ' . $validated['order_status'])
         );
 
-        return response()->json($sale->fresh()->load(['customer', 'items.article', 'payments', 'logs.user']));
+        $sale = $sale->fresh()->load(['customer', 'items.article', 'payments', 'logs.user', 'deliveryAgent']);
+
+        return response()->json($this->paymentWorkflow->decorateSale($sale));
     }
 
     public function journal(Sale $sale): JsonResponse
@@ -391,9 +441,15 @@ class SaleController extends Controller
                 'Retour de marchandise enregistré'
             );
 
+            $loadedReturns = SaleItemReturn::with(['article', 'user', 'saleItem'])
+                ->whereIn('id', collect($createdReturns)->pluck('id'))
+                ->get();
+
             return response()->json([
-                'returns' => collect($createdReturns)->load(['article', 'user', 'saleItem']),
-                'sale' => $sale->fresh()->load(['customer', 'items.article', 'payments', 'logs.user', 'returns.article']),
+                'returns' => $loadedReturns,
+                'sale' => $this->paymentWorkflow->decorateSale(
+                    $sale->fresh()->load(['customer', 'items.article', 'payments', 'logs.user', 'returns.article'])
+                ),
             ], 201);
         });
     }
@@ -427,10 +483,15 @@ class SaleController extends Controller
                 'status' => 'completed',
                 'order_status' => 'livree',
             ]);
+            $this->captureDeliveryCommissionIfNeeded($sale);
 
             $this->addLog($sale, 'livraison', 'livree', 'Commande livrée');
 
-            return response()->json($sale->load(['customer', 'items.article', 'payments', 'logs.user', 'returns.article']));
+            return response()->json(
+                $this->paymentWorkflow->decorateSale(
+                    $sale->load(['customer', 'items.article', 'payments', 'logs.user', 'returns.article', 'deliveryAgent'])
+                )
+            );
         });
     }
 
@@ -462,7 +523,11 @@ class SaleController extends Controller
 
         $this->addLog($sale, 'commande_annulee', 'annulee', 'Commande annulée');
 
-        return response()->json($sale->load(['customer', 'items.article', 'payments', 'logs.user', 'returns.article']));
+        return response()->json(
+            $this->paymentWorkflow->decorateSale(
+                $sale->load(['customer', 'items.article', 'payments', 'logs.user', 'returns.article', 'deliveryAgent'])
+            )
+        );
     }
 
     public function destroy(Sale $sale): JsonResponse
@@ -485,5 +550,22 @@ class SaleController extends Controller
             'action' => $action,
             'comment' => $comment,
         ]);
+    }
+
+    private function captureDeliveryCommissionIfNeeded(Sale $sale, bool $wasAlreadyDelivered = false): void
+    {
+        if ($sale->order_status !== 'livree' && !$wasAlreadyDelivered) {
+            return;
+        }
+
+        if (
+            $wasAlreadyDelivered
+            && $sale->delivery_commission_calculated_at
+            && $sale->delivery_commission_amount !== null
+        ) {
+            return;
+        }
+
+        $this->deliveryCommissionService->captureSnapshot($sale, true);
     }
 }

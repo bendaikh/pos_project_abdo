@@ -55,9 +55,11 @@
             </select>
             <select v-model="filters.payment_status" class="px-3 py-2 border border-gray-300 rounded-lg" @change="fetchCommandes">
                 <option value="">Tous statuts paiement</option>
-                <option value="unpaid">A payer</option>
-                <option value="partial">Partiel</option>
-                <option value="paid">Payée</option>
+                <option value="to_pay">À payer</option>
+                <option value="to_collect">À encaisser</option>
+                <option value="paid">Payé</option>
+                <option value="collected">Encaissé</option>
+                <option value="unpaid">Impayé</option>
             </select>
             <select v-model="filters.origin" class="px-3 py-2 border border-gray-300 rounded-lg" @change="fetchCommandes">
                 <option value="">Toutes origines (hors POS)</option>
@@ -70,7 +72,7 @@
         <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             <div v-if="loading" class="p-6 text-gray-500">Chargement des commandes...</div>
             <div v-else class="overflow-x-auto">
-                <table class="w-full min-w-[1200px]">
+                <table class="w-full min-w-[1320px]">
                     <thead class="bg-gray-50 border-b border-gray-200 text-xs uppercase text-gray-500">
                         <tr>
                             <th class="px-4 py-3 text-left">Utilisateur</th>
@@ -78,6 +80,7 @@
                             <th class="px-4 py-3 text-left">Client</th>
                             <th class="px-4 py-3 text-left">Origine</th>
                             <th class="px-4 py-3 text-left">Retrait prévu</th>
+                            <th class="px-4 py-3 text-left">Livreur</th>
                             <th class="px-4 py-3 text-left">Statut commande</th>
                             <th class="px-4 py-3 text-left">Statut paiement</th>
                             <th class="px-4 py-3 text-right">Montant</th>
@@ -88,23 +91,31 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        <tr v-for="commande in commandes" :key="commande.id" class="hover:bg-gray-50">
+                        <tr v-for="commande in commandes" :key="commande.id" class="hover:bg-gray-50 cursor-pointer" @click="openPaymentPanel(commande.id)">
                             <td class="px-4 py-3 text-sm text-gray-700">{{ commande.user?.name || '-' }}</td>
-                            <td class="px-4 py-3 font-semibold text-gray-900">{{ commande.order_number || commande.reference }}</td>
+                            <td class="px-4 py-3 font-semibold">
+                                <button type="button" class="text-blue-700 hover:underline" @click.stop="goToDetail(commande.id)">
+                                    {{ commande.order_number || commande.reference }}
+                                </button>
+                            </td>
                             <td class="px-4 py-3">
                                 <p class="text-gray-900">{{ commande.customer?.name || 'Client anonyme' }}</p>
                                 <p class="text-xs text-gray-500">{{ commande.customer?.phone || '-' }}</p>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ formatOrigin(commande.origin) }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ formatDate(commande.pickup_date) }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                <p class="font-medium text-gray-900">{{ commande.delivery_agent?.name || commande.delivery_agent_name_snapshot || '-' }}</p>
+                                <p class="text-xs text-gray-500">{{ commande.delivery_agent?.platform_name || commande.delivery_platform_name_snapshot || '' }}</p>
+                            </td>
                             <td class="px-4 py-3">
                                 <span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="orderStatusClass(commande.order_status)">
                                     {{ formatOrderStatus(commande.order_status) }}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="paymentStatusClass(commande.payment_status)">
-                                    {{ formatPaymentStatus(commande.payment_status) }}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold" :class="paymentStatusClass(commande.payment_status_code)">
+                                    {{ commande.payment_status_label || formatPaymentStatus(commande.payment_status_code) }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ formatCurrency(commande.total || 0) }}</td>
@@ -115,12 +126,22 @@
                             <td class="px-4 py-3 text-sm text-gray-600 max-w-[180px] truncate">{{ commande.notes || '-' }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex justify-end gap-2">
-                                    <button type="button" class="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-100" @click="goToDetail(commande.id)">Voir commande</button>
+                                    <button type="button" class="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-100" @click.stop="goToDetail(commande.id)">Voir commande</button>
+                                    <button
+                                        type="button"
+                                        class="px-3 py-1.5 text-xs rounded-lg"
+                                        :class="isFullyPaid(commande)
+                                            ? 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'"
+                                        @click.stop="openPaymentPanel(commande.id)"
+                                    >
+                                        {{ isFullyPaid(commande) ? 'Voir paiements' : 'Paiement' }}
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                         <tr v-if="commandes.length === 0">
-                            <td colspan="12" class="p-8 text-center text-gray-500">Aucune commande trouvée.</td>
+                            <td colspan="13" class="p-8 text-center text-gray-500">Aucune commande trouvée.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -138,13 +159,24 @@
                 </div>
             </div>
         </div>
+
+        <PaymentMultiModal
+            v-if="showPaymentModal && selectedCommande"
+            :total="getReste(selectedCommande)"
+            :sale="selectedCommande"
+            :allow-partial-confirmation="true"
+            confirm-label="Valider le paiement"
+            @close="closePaymentModal"
+            @complete="submitPayments"
+        />
     </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { commandesApi } from '../../api'
+import { commandesApi, salesApi } from '../../api'
+import PaymentMultiModal from '../../components/pos/PaymentMultiModal.vue'
 import { useSettingsStore } from '../../stores/settings'
 
 const router = useRouter()
@@ -154,6 +186,8 @@ const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 const loading = ref(false)
 const showFilters = ref(false)
 const commandes = ref([])
+const showPaymentModal = ref(false)
+const selectedCommande = ref(null)
 const pagination = reactive({
     current_page: 1,
     last_page: 1,
@@ -196,8 +230,14 @@ function formatOrderStatus(status) {
 }
 
 function formatPaymentStatus(status) {
-    const map = { unpaid: 'A payer', partial: 'Partiel', paid: 'Payée' }
-    return map[status] || 'A payer'
+    const map = {
+        to_pay: 'À payer',
+        to_collect: 'À encaisser',
+        paid: 'Payé',
+        collected: 'Encaissé',
+        unpaid: 'Impayé',
+    }
+    return map[status] || 'À payer'
 }
 
 function orderStatusClass(status) {
@@ -214,19 +254,25 @@ function orderStatusClass(status) {
 
 function paymentStatusClass(status) {
     const map = {
-        unpaid: 'bg-amber-100 text-amber-700',
-        partial: 'bg-cyan-100 text-cyan-700',
+        to_pay: 'bg-amber-100 text-amber-700',
+        to_collect: 'bg-cyan-100 text-cyan-700',
         paid: 'bg-green-100 text-green-700',
+        collected: 'bg-blue-100 text-blue-700',
+        unpaid: 'bg-red-100 text-red-700',
     }
     return map[status] || 'bg-amber-100 text-amber-700'
 }
 
 function getAdvance(commande) {
-    return (commande.payments || []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+    return Number(commande.paid_confirmed_amount ?? commande.payment_summary?.paid_confirmed_amount ?? 0)
 }
 
 function getReste(commande) {
-    return Math.max(0, Number(commande.total || 0) - getAdvance(commande))
+    return Number(commande.remaining_amount ?? commande.payment_summary?.remaining_amount ?? 0)
+}
+
+function isFullyPaid(commande) {
+    return getReste(commande) <= 0.001
 }
 
 function buildParams(page = 1) {
@@ -255,6 +301,46 @@ async function fetchCommandes(page = 1) {
         commandes.value = []
     } finally {
         loading.value = false
+    }
+}
+
+async function openPaymentPanel(id) {
+    try {
+        const { data } = await salesApi.get(id)
+        if (isFullyPaid(data)) {
+            goToDetail(id)
+            return
+        }
+        selectedCommande.value = data
+        showPaymentModal.value = true
+    } catch (error) {
+        console.error('Erreur chargement commande:', error)
+        alert("Impossible d'ouvrir le paiement pour cette commande.")
+    }
+}
+
+function closePaymentModal() {
+    showPaymentModal.value = false
+    selectedCommande.value = null
+}
+
+async function submitPayments(payments) {
+    if (!selectedCommande.value) return
+
+    try {
+        for (const payment of payments || []) {
+            await salesApi.addPayment(selectedCommande.value.id, payment)
+        }
+
+        const { data } = await salesApi.get(selectedCommande.value.id)
+        selectedCommande.value = data
+        if (getReste(selectedCommande.value) <= 0) {
+            closePaymentModal()
+        }
+        await fetchCommandes(pagination.current_page)
+    } catch (error) {
+        console.error('Erreur paiement commande:', error)
+        alert(error.response?.data?.message || "Impossible d'enregistrer le paiement.")
     }
 }
 

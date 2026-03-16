@@ -150,6 +150,16 @@ export const employeesApi = {
     attendanceSummary: (id, params = {}) => api.get(`/employees/${id}/attendance-summary`, { params }),
 }
 
+// Delivery Agents API
+export const deliveryAgentsApi = {
+    list: (params = {}) => api.get('/delivery-agents', { params }),
+    get: (id) => api.get(`/delivery-agents/${id}`),
+    create: (data) => api.post('/delivery-agents', data),
+    update: (id, data) => api.put(`/delivery-agents/${id}`, data),
+    deactivate: (id) => api.delete(`/delivery-agents/${id}`),
+    report: (params = {}) => api.get('/delivery-agents/report', { params }),
+}
+
 // Payroll API
 export const payrollApi = {
     list: (params = {}) => api.get('/payrolls', { params }),

@@ -4,20 +4,27 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\PaymentCollection;
 use App\Models\Sale;
 use App\Models\SaleLog;
+use App\Services\SalePaymentWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class PaymentController extends Controller
 {
+    public function __construct(private readonly SalePaymentWorkflowService $paymentWorkflow)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
-        $query = Payment::with(['sale.customer']);
+        $query = Payment::with(['sale.customer', 'collections', 'creator', 'validator']);
 
         if ($request->has('payment_type')) {
-            $query->byType($request->payment_type);
+            $query->byType($this->paymentWorkflow->normalizePaymentType($request->payment_type));
         }
 
         if ($request->has('from_date')) {
@@ -29,6 +36,13 @@ class PaymentController extends Controller
         }
 
         $payments = $query->latest()->paginate($request->get('per_page', 20));
+        $payments->getCollection()->transform(function (Payment $payment) {
+            if ($payment->relationLoaded('sale') && $payment->sale) {
+                $this->paymentWorkflow->decorateSale($payment->sale, false);
+            }
+
+            return $this->paymentWorkflow->decoratePayment($payment);
+        });
 
         return response()->json($payments);
     }
@@ -39,29 +53,14 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Cannot add payment to cancelled sale'], 422);
         }
 
-        if ($sale->payment_status === 'paid') {
-            return response()->json(['message' => 'Sale is already fully paid'], 422);
-        }
-
         $incomingPaymentType = $request->input('payment_type');
-        $normalizedPaymentType = match ($incomingPaymentType) {
-            'check' => 'cheque',
-            'simple_transfer', 'instant_transfer', 'transfer' => 'virement',
-            default => $incomingPaymentType,
-        };
+        $normalizedPaymentType = $this->paymentWorkflow->normalizePaymentType($incomingPaymentType);
 
-        $transferMode = $request->input('transfer_mode');
-        if ($normalizedPaymentType === 'virement' && !$transferMode) {
-            if ($incomingPaymentType === 'simple_transfer' || $incomingPaymentType === 'transfer') {
-                $transferMode = 'simple';
-            } elseif ($incomingPaymentType === 'instant_transfer') {
-                $transferMode = 'instant';
-            }
-        }
-
-        if ($normalizedPaymentType !== 'virement') {
-            $transferMode = null;
-        }
+        $transferMode = $this->paymentWorkflow->resolveTransferMode(
+            $normalizedPaymentType,
+            $request->input('transfer_mode'),
+            $request->input('notes')
+        );
 
         $request->merge([
             'payment_type' => $normalizedPaymentType,
@@ -69,7 +68,7 @@ class PaymentController extends Controller
         ]);
 
         $rules = [
-            'payment_type' => 'required|in:cash,check,cheque,virement,credit,card,mobile,other',
+            'payment_type' => 'required|in:cash,cheque,virement,credit,card,mobile,other',
             'transfer_mode' => 'nullable|in:simple,instant',
             'amount' => 'required|numeric|min:0.01',
             'received_amount' => 'nullable|numeric|min:0.01',
@@ -90,6 +89,13 @@ class PaymentController extends Controller
             $request->merge([
                 'issue_date' => $issueDate,
                 'due_date' => $dueDate,
+            ]);
+        }
+
+        // Ensure we always have an identifiable reference for deferred instruments
+        if (in_array($type, ['cheque', 'virement'], true) && !$request->filled('transaction_number')) {
+            $request->merge([
+                'transaction_number' => strtoupper(substr($type, 0, 3)) . '-' . now()->format('YmdHis'),
             ]);
         }
 
@@ -125,24 +131,35 @@ class PaymentController extends Controller
 
         $validated = Validator::make($request->all(), $rules)->validate();
 
-        $remainingAmount = $sale->remaining_amount;
-        if ($remainingAmount <= 0) {
-            return response()->json(['message' => 'Sale has no remaining amount'], 422);
-        }
-        $paymentAmount = min($validated['amount'], $remainingAmount);
+        $sale->loadMissing(['payments', 'customer']);
+        $saleSummary = $this->paymentWorkflow->computeSaleSummary($sale);
+        $remainingAmount = (float) $saleSummary['remaining_amount'];
 
-        // Calculate change for cash payments
+        if ($remainingAmount <= 0) {
+            $message = (float) ($saleSummary['pending_collection_amount'] ?? 0) > 0
+                ? 'Cette commande est déjà entièrement couverte par des paiements enregistrés, dont une partie est en attente d’encaissement.'
+                : 'Cette commande n’a plus de reste à payer.';
+
+            return response()->json(['message' => $message], 422);
+        }
+
+        $paymentAmount = round((float) $validated['amount'], 2);
+        if ($paymentAmount > $remainingAmount + 0.00001) {
+            return response()->json([
+                'message' => 'Le montant dépasse le reste à couvrir pour cette commande.',
+            ], 422);
+        }
+
         $changeAmount = 0;
         if ($validated['payment_type'] === 'cash' && isset($validated['received_amount'])) {
             $changeAmount = max(0, $validated['received_amount'] - $paymentAmount);
         }
 
-        // Determine if this is a deferred payment
-        $isDeferredType = in_array($validated['payment_type'], ['cheque', 'credit'], true)
-            || ($validated['payment_type'] === 'virement' && ($validated['transfer_mode'] ?? null) !== 'instant');
-        // SQLite schema enforces NOT NULL for collection_status.
-        // Deferred payments start as pending; immediate payments are considered collected.
-        $collectionStatus = $isDeferredType ? 'pending' : 'collected';
+        $requiresConfirmation = $this->paymentWorkflow->requiresConfirmation(
+            $validated['payment_type'],
+            $validated['transfer_mode'] ?? null
+        );
+        $collectionStatus = $requiresConfirmation ? 'pending' : 'collected';
 
         $notes = $validated['notes'] ?? null;
         if ($validated['payment_type'] === 'virement' && isset($validated['transfer_mode'])) {
@@ -150,90 +167,82 @@ class PaymentController extends Controller
             $notes = trim($modeTag . ' ' . ($notes ?? ''));
         }
 
-        $payment = Payment::create([
-            'sale_id' => $sale->id,
-            'payment_type' => $validated['payment_type'],
-            'amount' => $paymentAmount,
-            'received_amount' => $validated['received_amount'] ?? $paymentAmount,
-            'change_amount' => $changeAmount,
-            'reference' => $validated['reference']
-                ?? $validated['transaction_number']
-                ?? $validated['piece_number']
-                ?? null,
-            'transaction_number' => $validated['transaction_number'] ?? null,
-            'piece_number' => $validated['piece_number'] ?? null,
-            'issue_date' => $validated['issue_date'] ?? null,
-            'bank_name' => $validated['bank_name'] ?? null,
-            'due_date' => $validated['due_date'] ?? null,
-            'payment_status' => $isDeferredType ? 'pending' : 'completed',
-            'notes' => $notes,
-            'is_deferred' => $isDeferredType,
-            'collection_status' => $collectionStatus,
-            'collected_at' => $isDeferredType ? null : now(),
-            'collected_by' => $isDeferredType ? null : (auth()->user()?->name ?? null),
-        ]);
-
-        // If deferred, record the initial creation in collections history
-        if ($isDeferredType) {
-            \App\Models\PaymentCollection::create([
-                'payment_id' => $payment->id,
-                'user_id' => auth()->id(),
-                'action' => 'created',
+        $payment = DB::transaction(function () use (
+            $sale,
+            $validated,
+            $paymentAmount,
+            $changeAmount,
+            $requiresConfirmation,
+            $collectionStatus,
+            $notes
+        ) {
+            $payment = Payment::create(Payment::persistable([
+                'sale_id' => $sale->id,
+                'customer_id' => $sale->customer_id,
+                'payment_type' => $validated['payment_type'],
+                'transfer_mode' => $validated['transfer_mode'] ?? null,
                 'amount' => $paymentAmount,
-                'notes' => 'Payment created - awaiting collection',
+                'received_amount' => $validated['received_amount'] ?? $paymentAmount,
+                'change_amount' => $changeAmount,
+                'reference' => $validated['reference']
+                    ?? $validated['transaction_number']
+                    ?? $validated['piece_number']
+                    ?? null,
+                'transaction_number' => $validated['transaction_number'] ?? null,
+                'piece_number' => $validated['piece_number'] ?? null,
+                'issue_date' => $validated['issue_date'] ?? null,
+                'bank_name' => $validated['bank_name'] ?? null,
+                'due_date' => $validated['due_date'] ?? null,
+                'payment_status' => $requiresConfirmation ? 'pending' : 'completed',
+                'paid_at' => now(),
+                'confirmed_at' => $requiresConfirmation ? null : now(),
+                'created_by' => auth()->id(),
+                'validated_by' => $requiresConfirmation ? null : auth()->id(),
+                'notes' => $notes,
+                'is_deferred' => $requiresConfirmation,
+                'collection_status' => $collectionStatus,
+                'collected_at' => $requiresConfirmation ? null : now(),
+                'collected_by' => $requiresConfirmation ? null : (auth()->user()?->name ?? null),
+            ]));
+
+            if ($requiresConfirmation) {
+                PaymentCollection::create([
+                    'payment_id' => $payment->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'created',
+                    'amount' => $paymentAmount,
+                    'notes' => 'Paiement différé enregistré - en attente de confirmation',
+                ]);
+            }
+
+            $summary = $this->paymentWorkflow->syncSalePaymentStatus($sale);
+
+            SaleLog::create([
+                'sale_id' => $sale->id,
+                'user_id' => auth()->id(),
+                'status' => $summary['payment_status_label'],
+                'action' => 'paiement',
+                'comment' => sprintf(
+                    'Paiement de %.2f enregistré via %s (%s)',
+                    $paymentAmount,
+                    $this->paymentWorkflow->paymentMethodLabel($payment),
+                    $summary['payment_status_label']
+                ),
             ]);
-        }
 
-        // Update sale payment status from effectively collected money only.
-        $this->syncSalePaymentStatus($sale);
-        $totalCommitted = (float) $sale->payments()->sum('amount');
+            return $payment;
+        });
 
-        SaleLog::create([
-            'sale_id' => $sale->id,
-            'user_id' => auth()->id(),
-            'status' => $sale->fresh()->payment_status,
-            'action' => 'paiement',
-            'comment' => 'Paiement de ' . $paymentAmount . ' enregistré via ' . $validated['payment_type'],
-        ]);
+        $payment = $payment->fresh(['collections', 'sale.customer']);
+        $sale = $sale->fresh(['customer', 'user', 'items.article', 'payments', 'logs.user', 'returns.article']);
+        $this->paymentWorkflow->decoratePayment($payment);
+        $this->paymentWorkflow->decorateSale($sale);
 
         return response()->json([
-            'payment' => $payment->fresh()->load(['collections']),
-            'sale' => $sale->fresh()->load(['payments']),
-            'remaining' => max(0, $sale->total - $totalCommitted),
+            'payment' => $payment,
+            'sale' => $sale,
+            'remaining' => $sale->payment_summary['remaining_amount'],
             'change' => $changeAmount,
         ], 201);
-    }
-
-    private function syncSalePaymentStatus(Sale $sale): void
-    {
-        $collectedAmount = (float) $sale->payments()
-            ->where(function ($query) {
-                $query
-                    ->where(function ($immediate) {
-                        $immediate
-                            ->where(function ($typeQuery) {
-                                $typeQuery->where('is_deferred', false)->orWhereNull('is_deferred');
-                            })
-                            ->where('payment_status', 'completed');
-                    })
-                    ->orWhere(function ($deferred) {
-                        $deferred
-                            ->where('is_deferred', true)
-                            ->where('payment_status', 'completed')
-                            ->where('collection_status', 'collected');
-                    });
-            })
-            ->sum('amount');
-
-        $status = 'unpaid';
-        if ($collectedAmount >= (float) $sale->total) {
-            $status = 'paid';
-        } elseif ($collectedAmount > 0) {
-            $status = 'partial';
-        }
-
-        if ($sale->payment_status !== $status) {
-            $sale->update(['payment_status' => $status]);
-        }
     }
 }
