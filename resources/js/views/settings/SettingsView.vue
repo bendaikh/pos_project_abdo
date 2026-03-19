@@ -243,6 +243,99 @@
                     </div>
                 </div>
 
+                <div v-show="activeTab === 'custom_lists'" class="space-y-5">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <QueueListIcon class="w-5 h-5 mr-2 text-primary-500" />
+                        Listes personnalisées
+                    </h2>
+
+                    <div class="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+                        <div class="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-50 to-white">
+                            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Mode de service</p>
+                            <h3 class="mt-1 text-lg font-semibold text-slate-900">Gestion dynamique des modes de service</h3>
+                            <p class="mt-1 text-sm text-slate-500">Activez, réorganisez et enrichissez la liste utilisée dans le POS et la création de commande.</p>
+                        </div>
+
+                        <div class="p-5 space-y-5">
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Activer la gestion des modes de service</p>
+                                    <p class="text-sm text-slate-500">Si cette option est désactivée, le champ n’apparaît plus dans le POS ni dans la création de commande.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="inline-flex h-8 w-14 items-center rounded-full transition-colors"
+                                    :class="serviceModeSettings.is_active ? 'bg-emerald-500 justify-end' : 'bg-slate-300 justify-start'"
+                                    @click="serviceModeSettings.is_active = !serviceModeSettings.is_active"
+                                >
+                                    <span class="mx-1 h-6 w-6 rounded-full bg-white shadow"></span>
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div
+                                    v-for="item in serviceModeSettings.items"
+                                    :key="item.id"
+                                    draggable="true"
+                                    class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition"
+                                    :class="draggingServiceModeId === item.id ? 'opacity-70 border-primary-300' : ''"
+                                    @dragstart="startServiceModeDrag(item.id)"
+                                    @dragover.prevent
+                                    @drop="dropServiceModeOn(item.id)"
+                                >
+                                    <button type="button" class="text-slate-400 cursor-grab active:cursor-grabbing" title="Déplacer">
+                                        <Bars3Icon class="w-5 h-5" />
+                                    </button>
+                                    <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-slate-900">{{ item.label }}</p>
+                                        <p class="text-xs text-slate-500">Ordre {{ item.sort_order }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Ajouter un mode personnalisé</label>
+                                <div class="flex flex-col gap-3 md:flex-row">
+                                    <input
+                                        v-model.trim="newServiceModeLabel"
+                                        type="text"
+                                        placeholder="Ex: Drive, Click & Collect"
+                                        class="flex-1 rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        @keydown.enter.prevent="addCustomServiceMode"
+                                    >
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                                        @click="addCustomServiceMode"
+                                    >
+                                        <PlusIcon class="w-4 h-4" />
+                                        + Ajouter
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50"
+                                    @click="resetServiceModeForm"
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    type="button"
+                                    class="px-5 py-2.5 rounded-xl bg-primary-500 text-gray-900 font-medium hover:bg-primary-600 disabled:opacity-50"
+                                    :disabled="customListSaving || serviceModeSettings.items.length === 0"
+                                    @click="saveServiceModeList"
+                                >
+                                    {{ customListSaving ? 'Enregistrement...' : 'Enregistrer' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Taxes -->
                 <div v-show="activeTab === 'taxes'" class="space-y-4">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -357,7 +450,7 @@
                 </div>
             </div>
         </div>
-        <div class="flex justify-end space-x-3">
+        <div v-if="activeTab !== 'custom_lists'" class="flex justify-end space-x-3">
             <button 
                 @click="resetSettings"
                 class="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
@@ -377,15 +470,19 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
-import { settingsApi } from '../../api'
+import { customListsApi, settingsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
+import { useCustomListsStore } from '../../stores/customLists'
 import AutomationRules from './AutomationRules.vue'
 import {
+    Bars3Icon,
     BuildingStorefrontIcon,
+    PlusIcon,
     ComputerDesktopIcon,
     CurrencyDollarIcon,
     DocumentTextIcon,
     PhotoIcon,
+    QueueListIcon,
     ReceiptPercentIcon,
     BanknotesIcon,
     CreditCardIcon,
@@ -393,8 +490,12 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const settingsStore = useSettingsStore()
+const customListsStore = useCustomListsStore()
 const saving = ref(false)
 const activeTab = ref('general')
+const customListSaving = ref(false)
+const newServiceModeLabel = ref('')
+const draggingServiceModeId = ref(null)
 
 const tabs = [
     { id: 'general', label: 'Infos Générales' },
@@ -402,6 +503,7 @@ const tabs = [
     { id: 'currency', label: 'Devise' },
     { id: 'receipt', label: 'Format du Reçu' },
     { id: 'pos', label: 'POS' },
+    { id: 'custom_lists', label: 'Listes personnalisées' },
     { id: 'taxes', label: 'Taxes' },
     { id: 'commissions', label: 'Commissions' },
     { id: 'subscription', label: 'Abonnement' },
@@ -461,6 +563,11 @@ const settings = reactive({
     subscription_expiry: '',
 })
 
+const serviceModeSettings = reactive({
+    is_active: true,
+    items: [],
+})
+
 const subscriptionStatusClass = computed(() => {
     if (settings.subscription_type === 'free') return 'bg-gray-100 text-gray-800'
     return 'bg-green-100 text-green-800'
@@ -509,6 +616,92 @@ async function loadSettings() {
     }
 }
 
+function hydrateServiceModeForm(list) {
+    serviceModeSettings.is_active = list?.is_active !== false
+    serviceModeSettings.items = [...(list?.items || [])]
+        .map((item, index) => ({
+            id: item.id ?? `draft-${Date.now()}-${index}`,
+            label: item.label || item.value || '',
+            value: item.value || item.label || '',
+            is_active: item.is_active !== false,
+            sort_order: Number(item.sort_order ?? index + 1),
+            operational_mode: item.operational_mode || 'pickup',
+            requires_delivery_agent: item.requires_delivery_agent === true,
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+async function loadServiceModeList() {
+    const list = await customListsStore.fetchList('mode_de_service', { force: true })
+    hydrateServiceModeForm(list)
+}
+
+function reindexServiceModeItems() {
+    serviceModeSettings.items = serviceModeSettings.items.map((item, index) => ({
+        ...item,
+        sort_order: index + 1,
+    }))
+}
+
+function addCustomServiceMode() {
+    const label = newServiceModeLabel.value.trim()
+
+    if (!label) {
+        return
+    }
+
+    const exists = serviceModeSettings.items.some(
+        (item) => item.label.trim().toLowerCase() === label.toLowerCase()
+    )
+
+    if (exists) {
+        alert('Ce mode existe déjà dans la liste.')
+        return
+    }
+
+    serviceModeSettings.items.push({
+        id: `draft-${Date.now()}`,
+        label,
+        value: label,
+        is_active: true,
+        sort_order: serviceModeSettings.items.length + 1,
+        operational_mode: 'pickup',
+        requires_delivery_agent: false,
+    })
+    reindexServiceModeItems()
+    newServiceModeLabel.value = ''
+}
+
+function startServiceModeDrag(itemId) {
+    draggingServiceModeId.value = itemId
+}
+
+function dropServiceModeOn(targetId) {
+    if (!draggingServiceModeId.value || draggingServiceModeId.value === targetId) {
+        draggingServiceModeId.value = null
+        return
+    }
+
+    const sourceIndex = serviceModeSettings.items.findIndex((item) => item.id === draggingServiceModeId.value)
+    const targetIndex = serviceModeSettings.items.findIndex((item) => item.id === targetId)
+
+    if (sourceIndex < 0 || targetIndex < 0) {
+        draggingServiceModeId.value = null
+        return
+    }
+
+    const [movedItem] = serviceModeSettings.items.splice(sourceIndex, 1)
+    serviceModeSettings.items.splice(targetIndex, 0, movedItem)
+    reindexServiceModeItems()
+    draggingServiceModeId.value = null
+}
+
+function resetServiceModeForm() {
+    newServiceModeLabel.value = ''
+    draggingServiceModeId.value = null
+    loadServiceModeList()
+}
+
 function resetSettings() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser les paramètres ?')) {
         loadSettings()
@@ -549,5 +742,40 @@ async function saveSettings() {
     }
 }
 
-onMounted(loadSettings)
+async function saveServiceModeList() {
+    customListSaving.value = true
+
+    try {
+        const payload = {
+            is_active: serviceModeSettings.is_active,
+            items: serviceModeSettings.items.map((item, index) => {
+                const parsedId = Number(item.id)
+
+                return {
+                    id: Number.isInteger(parsedId) && parsedId > 0 ? parsedId : undefined,
+                    label: item.label.trim(),
+                    is_active: item.is_active !== false,
+                    sort_order: index + 1,
+                }
+            }),
+        }
+
+        const { data } = await customListsApi.update('mode_de_service', payload)
+        customListsStore.setList('mode_de_service', data)
+        hydrateServiceModeForm(data)
+        alert('Modes de service enregistrés avec succès!')
+    } catch (error) {
+        console.error('Failed to save service modes:', error)
+        alert(error.response?.data?.message || 'Erreur lors de l\'enregistrement des modes de service.')
+    } finally {
+        customListSaving.value = false
+    }
+}
+
+onMounted(async () => {
+    await Promise.all([
+        loadSettings(),
+        loadServiceModeList(),
+    ])
+})
 </script>

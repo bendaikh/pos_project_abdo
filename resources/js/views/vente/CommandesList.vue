@@ -97,13 +97,16 @@
                                 <button type="button" class="text-blue-700 hover:underline" @click.stop="goToDetail(commande.id)">
                                     {{ commande.order_number || commande.reference }}
                                 </button>
+                                <p v-if="commande.ticket_name" class="mt-1 text-xs font-medium text-gray-500">
+                                    {{ commande.ticket_group ? `${commande.ticket_group} · ` : '' }}{{ commande.ticket_name }}
+                                </p>
                             </td>
                             <td class="px-4 py-3">
                                 <p class="text-gray-900">{{ commande.customer?.name || 'Client anonyme' }}</p>
                                 <p class="text-xs text-gray-500">{{ commande.customer?.phone || '-' }}</p>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ formatOrigin(commande.origin) }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ formatDate(commande.pickup_date) }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ formatOrigin(commande.origin, commande.ticket_type) }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">{{ formatAppointment(commande) }}</td>
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 <p class="font-medium text-gray-900">{{ commande.delivery_agent?.name || commande.delivery_agent_name_snapshot || '-' }}</p>
                                 <p class="text-xs text-gray-500">{{ commande.delivery_agent?.platform_name || commande.delivery_platform_name_snapshot || '' }}</p>
@@ -220,7 +223,18 @@ function formatDate(date) {
     return new Date(date).toLocaleDateString('fr-FR')
 }
 
-function formatOrigin(origin) {
+function formatAppointment(commande) {
+    if (commande?.appointment_at) {
+        return new Date(commande.appointment_at).toLocaleString('fr-FR')
+    }
+    return formatDate(commande?.pickup_date)
+}
+
+function formatOrigin(origin, ticketType = null) {
+    if (ticketType === 'liste') return 'Ticket liste'
+    if (ticketType === 'personnalise') return 'Ticket personnalise'
+    if (ticketType === 'commande') return 'Commande'
+
     const map = { pos: 'POS', menu_commande: 'Menu commande', livraison: 'Livraison' }
     return map[origin] || 'Menu commande'
 }

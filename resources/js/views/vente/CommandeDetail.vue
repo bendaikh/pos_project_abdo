@@ -83,11 +83,18 @@
                     </div>
                     <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-3 border border-purple-200">
                         <p class="text-purple-700 text-xs font-semibold uppercase">Origine</p>
-                        <p class="font-semibold text-gray-900 mt-1">{{ formatOrigin(commande.origin) }}</p>
+                        <p class="font-semibold text-gray-900 mt-1">{{ formatOrigin(commande.origin, commande.ticket_type) }}</p>
+                        <p v-if="commande.ticket_name" class="text-xs text-gray-500 mt-0.5">
+                            {{ commande.ticket_group ? `${commande.ticket_group} · ` : '' }}{{ commande.ticket_name }}
+                        </p>
+                    </div>
+                    <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-3 border border-cyan-200">
+                        <p class="text-cyan-700 text-xs font-semibold uppercase">Mode de service</p>
+                        <p class="font-semibold text-gray-900 mt-1">{{ formatServiceMode(commande.service_mode || commande.delivery_mode) }}</p>
                     </div>
                     <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-3 border border-green-200">
                         <p class="text-green-700 text-xs font-semibold uppercase">Date retrait</p>
-                        <p class="font-semibold text-gray-900 mt-1">{{ formatDate(commande.pickup_date) }}</p>
+                        <p class="font-semibold text-gray-900 mt-1">{{ commande.appointment_at ? formatDateTime(commande.appointment_at) : formatDate(commande.pickup_date) }}</p>
                     </div>
                     <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-3 border border-amber-200">
                         <p class="text-amber-700 text-xs font-semibold uppercase">Activité</p>
@@ -341,10 +348,12 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { commandesApi, salesApi } from '../../api'
 import PaymentMultiModal from '../../components/pos/PaymentMultiModal.vue'
+import { useCustomListsStore } from '../../stores/customLists'
 import { useSettingsStore } from '../../stores/settings'
 
 const route = useRoute()
 const router = useRouter()
+const customListsStore = useCustomListsStore()
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
@@ -444,9 +453,17 @@ function formatDateTime(value) {
     return new Date(value).toLocaleString('fr-FR')
 }
 
-function formatOrigin(origin) {
+function formatOrigin(origin, ticketType = null) {
+    if (ticketType === 'liste') return 'Ticket liste'
+    if (ticketType === 'personnalise') return 'Ticket personnalise'
+    if (ticketType === 'commande') return 'Commande'
+
     const map = { pos: 'POS', menu_commande: 'Menu commande', livraison: 'Livraison' }
     return map[origin] || 'POS'
+}
+
+function formatServiceMode(mode) {
+    return customListsStore.getServiceModeLabel(mode)
 }
 
 function formatOrderStatus(status) {
@@ -765,6 +782,7 @@ async function submitPaymentsFromModal(payments) {
 
 onMounted(async () => {
     await settingsStore.fetchSettings()
+    await customListsStore.fetchList('mode_de_service')
     await refresh()
 })
 </script>

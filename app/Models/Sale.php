@@ -37,9 +37,14 @@ class Sale extends Model
         'payment_status',
         'payment_status_code',
         'delivery_mode',
+        'service_mode',
         'origin',
+        'ticket_type',
+        'ticket_name',
+        'ticket_group',
         'customer_activity',
         'pickup_date',
+        'appointment_at',
         'delivery_address',
         'notes',
     ];
@@ -55,6 +60,7 @@ class Sale extends Model
         'delivery_commission_amount' => 'decimal:2',
         'delivery_commission_calculated_at' => 'datetime',
         'pickup_date' => 'date',
+        'appointment_at' => 'datetime',
     ];
 
     protected static function boot()
@@ -79,17 +85,19 @@ class Sale extends Model
     {
         $lastSale = self::latest('id')->first();
         $nextId = $lastSale ? $lastSale->id + 1 : 1;
-        return 'TRX-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+
+        return 'TRX-'.str_pad($nextId, 4, '0', STR_PAD_LEFT);
     }
 
     public static function generateOrderNumber(?int $id = null): string
     {
         $nextId = $id;
-        if (!$nextId) {
+        if (! $nextId) {
             $lastSale = self::latest('id')->first();
             $nextId = $lastSale ? $lastSale->id + 1 : 1;
         }
-        return 'CMD-' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
+
+        return 'CMD-'.str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
     }
 
     public function user(): BelongsTo
@@ -140,15 +148,15 @@ class Sale extends Model
     public function calculateTotals(): void
     {
         $this->subtotal = $this->items->sum('total');
-        
+
         // Apply discount
         $discountAmount = $this->discount_amount;
         if ($this->discount_percent > 0) {
             $discountAmount += $this->subtotal * ($this->discount_percent / 100);
         }
-        
+
         $afterDiscount = $this->subtotal - $discountAmount;
-        
+
         // Apply tax
         $this->tax_amount = $afterDiscount * ($this->tax_rate / 100);
         $this->total = $afterDiscount + $this->tax_amount;
@@ -195,10 +203,10 @@ class Sale extends Model
     public static function supportsColumn(string $column): bool
     {
         static $cache = [];
-        $table = (new static())->getTable();
-        $key = $table . ':' . $column;
+        $table = (new static)->getTable();
+        $key = $table.':'.$column;
 
-        if (!array_key_exists($key, $cache)) {
+        if (! array_key_exists($key, $cache)) {
             $cache[$key] = Schema::hasColumn($table, $column);
         }
 

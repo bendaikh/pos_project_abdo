@@ -222,6 +222,12 @@ export const settingsApi = {
     update: (settings) => api.put('/settings', { settings }),
 }
 
+export const customListsApi = {
+    list: (params = {}) => api.get('/custom-lists', { params }),
+    get: (name, params = {}) => api.get(`/custom-lists/${name}`, { params }),
+    update: (name, data) => api.put(`/custom-lists/${name}`, data),
+}
+
 // Reports API
 export const reportsApi = {
     sales: (params = {}) => api.get('/reports/sales', { params }),

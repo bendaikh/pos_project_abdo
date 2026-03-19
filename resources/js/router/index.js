@@ -363,6 +363,7 @@ const routes = [
             {
                 path: 'assistance',
                 name: 'assistance',
+                alias: 'tickets',
                 component: AssistanceList
             }
         ]

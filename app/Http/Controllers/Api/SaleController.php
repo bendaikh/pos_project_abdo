@@ -10,6 +10,7 @@ use App\Models\SaleItemReturn;
 use App\Models\SaleLog;
 use App\Models\Setting;
 use App\Models\StockMovement;
+use App\Services\CustomListService;
 use App\Services\DeliveryCommissionService;
 use App\Services\SalePaymentWorkflowService;
 use Illuminate\Http\JsonResponse;
@@ -29,10 +30,9 @@ class SaleController extends Controller
 
     public function __construct(
         private readonly SalePaymentWorkflowService $paymentWorkflow,
+        private readonly CustomListService $customListService,
         private readonly DeliveryCommissionService $deliveryCommissionService,
-    )
-    {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -104,6 +104,8 @@ class SaleController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('reference', 'like', "%{$search}%")
                     ->orWhere('order_number', 'like', "%{$search}%")
+                    ->orWhere('ticket_name', 'like', "%{$search}%")
+                    ->orWhere('ticket_group', 'like', "%{$search}%")
                     ->orWhereHas('customer', function ($customerQuery) use ($search) {
                         $customerQuery->where('name', 'like', "%{$search}%")
                             ->orWhere('phone', 'like', "%{$search}%");
@@ -143,13 +145,18 @@ class SaleController extends Controller
             'items.*.discount_amount' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
-            'delivery_mode' => 'nullable|in:pickup,delivery,dine_in',
+            'service_mode' => 'nullable|string|max:255',
+            'delivery_mode' => 'nullable|string|max:255',
             'origin' => 'nullable|in:pos,menu_commande,livraison',
+            'ticket_type' => 'nullable|in:liste,personnalise,commande',
+            'ticket_name' => 'nullable|string|max:255',
+            'ticket_group' => 'nullable|string|max:255',
             'delivery_agent_id' => 'nullable|exists:delivery_agents,id',
             'customer_activity' => 'nullable|string|max:255',
             'pickup_date' => 'nullable|date',
+            'appointment_at' => 'nullable|date',
             'delivery_address' => 'nullable|string',
-            'order_status' => 'nullable|in:' . implode(',', self::ORDER_STATUSES),
+            'order_status' => 'nullable|in:'.implode(',', self::ORDER_STATUSES),
             'notes' => 'nullable|string',
         ]);
 
@@ -157,6 +164,22 @@ class SaleController extends Controller
         $taxEnabled = Setting::get('tax_enabled', false);
 
         return DB::transaction(function () use ($validated, $taxRate, $taxEnabled) {
+            $resolvedServiceMode = $this->customListService->resolveServiceMode(
+                $validated['service_mode'] ?? null,
+                $validated['delivery_mode'] ?? null,
+            );
+            $resolvedDeliveryMode = $this->customListService->resolveOperationalMode(
+                $resolvedServiceMode,
+                $validated['delivery_mode'] ?? null,
+            );
+            if (! empty($validated['delivery_agent_id'])) {
+                $resolvedDeliveryMode = 'delivery';
+            }
+            $pickupDate = $validated['pickup_date'] ?? null;
+            if (! $pickupDate && ! empty($validated['appointment_at'])) {
+                $pickupDate = date('Y-m-d', strtotime((string) $validated['appointment_at']));
+            }
+
             $sale = Sale::create(Sale::persistable([
                 'user_id' => auth()->id(),
                 'customer_id' => $validated['customer_id'] ?? null,
@@ -164,10 +187,15 @@ class SaleController extends Controller
                 'discount_amount' => $validated['discount_amount'] ?? 0,
                 'discount_percent' => $validated['discount_percent'] ?? 0,
                 'tax_rate' => $taxEnabled ? $taxRate : 0,
-                'delivery_mode' => $validated['delivery_mode'] ?? 'pickup',
+                'delivery_mode' => $resolvedDeliveryMode,
+                'service_mode' => $resolvedServiceMode,
                 'origin' => $validated['origin'] ?? 'pos',
+                'ticket_type' => $validated['ticket_type'] ?? null,
+                'ticket_name' => $validated['ticket_name'] ?? null,
+                'ticket_group' => $validated['ticket_group'] ?? null,
                 'customer_activity' => $validated['customer_activity'] ?? null,
-                'pickup_date' => $validated['pickup_date'] ?? null,
+                'pickup_date' => $pickupDate,
+                'appointment_at' => $validated['appointment_at'] ?? null,
                 'delivery_address' => $validated['delivery_address'] ?? null,
                 'order_status' => $validated['order_status'] ?? 'confirmee',
                 'notes' => $validated['notes'] ?? null,
@@ -245,28 +273,58 @@ class SaleController extends Controller
             'items.*.discount_amount' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
-            'delivery_mode' => 'nullable|in:pickup,delivery,dine_in',
+            'service_mode' => 'nullable|string|max:255',
+            'delivery_mode' => 'nullable|string|max:255',
             'origin' => 'nullable|in:pos,menu_commande,livraison',
+            'ticket_type' => 'nullable|in:liste,personnalise,commande',
+            'ticket_name' => 'nullable|string|max:255',
+            'ticket_group' => 'nullable|string|max:255',
             'delivery_agent_id' => 'nullable|exists:delivery_agents,id',
             'customer_activity' => 'nullable|string|max:255',
             'pickup_date' => 'nullable|date',
+            'appointment_at' => 'nullable|date',
             'delivery_address' => 'nullable|string',
-            'order_status' => 'nullable|in:' . implode(',', self::ORDER_STATUSES),
+            'order_status' => 'nullable|in:'.implode(',', self::ORDER_STATUSES),
             'notes' => 'nullable|string',
         ]);
 
         return DB::transaction(function () use ($sale, $validated) {
             $oldStatus = $sale->order_status;
+            $serviceModeInputProvided = array_key_exists('service_mode', $validated) || array_key_exists('delivery_mode', $validated);
+            $resolvedServiceMode = $serviceModeInputProvided
+                ? $this->customListService->resolveServiceMode(
+                    $validated['service_mode'] ?? $sale->service_mode,
+                    $validated['delivery_mode'] ?? $sale->delivery_mode,
+                )
+                : ($sale->service_mode ?: $this->customListService->resolveServiceMode(null, $sale->delivery_mode));
+            $resolvedDeliveryMode = $serviceModeInputProvided
+                ? $this->customListService->resolveOperationalMode(
+                    $resolvedServiceMode,
+                    $validated['delivery_mode'] ?? $sale->delivery_mode,
+                )
+                : $sale->delivery_mode;
+            if (! empty($validated['delivery_agent_id'])) {
+                $resolvedDeliveryMode = 'delivery';
+            }
+            $pickupDate = $validated['pickup_date'] ?? $sale->pickup_date;
+            if (! array_key_exists('pickup_date', $validated) && ! empty($validated['appointment_at'])) {
+                $pickupDate = date('Y-m-d', strtotime((string) $validated['appointment_at']));
+            }
 
             $sale->update([
                 'customer_id' => $validated['customer_id'] ?? $sale->customer_id,
                 'delivery_agent_id' => $validated['delivery_agent_id'] ?? $sale->delivery_agent_id,
                 'discount_amount' => $validated['discount_amount'] ?? $sale->discount_amount,
                 'discount_percent' => $validated['discount_percent'] ?? $sale->discount_percent,
-                'delivery_mode' => $validated['delivery_mode'] ?? $sale->delivery_mode,
+                'delivery_mode' => $resolvedDeliveryMode,
+                'service_mode' => $resolvedServiceMode,
                 'origin' => $validated['origin'] ?? $sale->origin,
+                'ticket_type' => $validated['ticket_type'] ?? $sale->ticket_type,
+                'ticket_name' => $validated['ticket_name'] ?? $sale->ticket_name,
+                'ticket_group' => $validated['ticket_group'] ?? $sale->ticket_group,
                 'customer_activity' => $validated['customer_activity'] ?? $sale->customer_activity,
-                'pickup_date' => $validated['pickup_date'] ?? $sale->pickup_date,
+                'pickup_date' => $pickupDate,
+                'appointment_at' => $validated['appointment_at'] ?? $sale->appointment_at,
                 'delivery_address' => $validated['delivery_address'] ?? $sale->delivery_address,
                 'order_status' => $validated['order_status'] ?? $sale->order_status,
                 'notes' => $validated['notes'] ?? $sale->notes,
@@ -302,7 +360,7 @@ class SaleController extends Controller
                     $sale,
                     'statut_commande_modifie',
                     $sale->order_status,
-                    'Statut changé de ' . $oldStatus . ' vers ' . $sale->order_status
+                    'Statut changé de '.$oldStatus.' vers '.$sale->order_status
                 );
             } else {
                 $this->addLog($sale, 'commande_modifiee', $sale->order_status, 'Commande modifiée');
@@ -325,7 +383,7 @@ class SaleController extends Controller
     public function updateOrderStatus(Request $request, Sale $sale): JsonResponse
     {
         $validated = $request->validate([
-            'order_status' => 'required|in:' . implode(',', self::ORDER_STATUSES),
+            'order_status' => 'required|in:'.implode(',', self::ORDER_STATUSES),
             'comment' => 'nullable|string|max:1000',
         ]);
 
@@ -341,7 +399,7 @@ class SaleController extends Controller
             $sale,
             'statut_commande_modifie',
             $validated['order_status'],
-            $validated['comment'] ?? ('Statut changé de ' . $previousStatus . ' vers ' . $validated['order_status'])
+            $validated['comment'] ?? ('Statut changé de '.$previousStatus.' vers '.$validated['order_status'])
         );
 
         $sale = $sale->fresh()->load(['customer', 'items.article', 'payments', 'logs.user', 'deliveryAgent']);
@@ -382,7 +440,7 @@ class SaleController extends Controller
                 /** @var SaleItem|null $saleItem */
                 $saleItem = $sale->items->firstWhere('id', $line['sale_item_id']);
 
-                if (!$saleItem) {
+                if (! $saleItem) {
                     return response()->json(['message' => 'Article de commande invalide'], 422);
                 }
 
@@ -420,7 +478,7 @@ class SaleController extends Controller
                         $saleItem->article,
                         'return',
                         max(1, (int) round($returnQty)),
-                        'Retour commande #' . ($sale->order_number ?? $sale->reference),
+                        'Retour commande #'.($sale->order_number ?? $sale->reference),
                         auth()->id(),
                         $sale->id
                     );
@@ -472,7 +530,7 @@ class SaleController extends Controller
                         $item->article,
                         'out',
                         (int) $item->quantity,
-                        'Vente #' . $sale->reference,
+                        'Vente #'.$sale->reference,
                         auth()->id(),
                         $sale->id
                     );
@@ -508,7 +566,7 @@ class SaleController extends Controller
                         $item->article,
                         'return',
                         (int) $item->quantity,
-                        'Annulation vente #' . $sale->reference,
+                        'Annulation vente #'.$sale->reference,
                         auth()->id(),
                         $sale->id
                     );
@@ -554,7 +612,7 @@ class SaleController extends Controller
 
     private function captureDeliveryCommissionIfNeeded(Sale $sale, bool $wasAlreadyDelivered = false): void
     {
-        if ($sale->order_status !== 'livree' && !$wasAlreadyDelivered) {
+        if ($sale->order_status !== 'livree' && ! $wasAlreadyDelivered) {
             return;
         }
 

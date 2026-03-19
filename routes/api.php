@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CustomListController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeliveryAgentController;
@@ -133,6 +134,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/settings', [SettingController::class, 'index']);
     Route::get('/settings/{group}', [SettingController::class, 'byGroup']);
     Route::put('/settings', [SettingController::class, 'update']);
+
+    // Custom Lists
+    Route::get('/custom-lists', [CustomListController::class, 'index']);
+    Route::get('/custom-lists/{name}', [CustomListController::class, 'show']);
+    Route::put('/custom-lists/{name}', [CustomListController::class, 'update']);
 
     // Reports
     Route::get('/reports/sales', [ReportController::class, 'sales']);

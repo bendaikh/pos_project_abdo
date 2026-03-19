@@ -42,7 +42,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
+                    <div v-if="serviceModeEnabled">
                         <label class="block text-sm text-gray-600 mb-1">Mode service</label>
                         <select v-model="form.service_mode" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                             <option v-for="mode in serviceModeOptions" :key="mode.value" :value="mode.value">
@@ -386,10 +386,12 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { articlesApi, commandesApi, customersApi, deliveryAgentsApi, salesApi } from '../../api'
+import { useCustomListsStore } from '../../stores/customLists'
 import { useSettingsStore } from '../../stores/settings'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
+const customListsStore = useCustomListsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
 const saving = ref(false)
@@ -432,7 +434,7 @@ const form = reactive({
     customer_phone: '',
     customer_activity: '',
     origin: 'menu_commande',
-    service_mode: 'pickup',
+    service_mode: customListsStore.defaultServiceModeValue(),
     pickup_date: '',
     delivery_agent_id: null,
     delivery_address: '',
@@ -550,33 +552,42 @@ const configuratorUnitPrice = computed(() => {
 
 const totalAmount = computed(() => form.items.reduce((sum, line) => sum + lineTotal(line), 0))
 const remainingAmount = computed(() => Math.max(0, totalAmount.value - Number(form.advance_amount || 0)))
-const serviceModeOptions = [
-    { value: 'pickup', label: 'A emporter' },
-    { value: 'delivery', label: 'Livraison interne' },
-    { value: 'glovo', label: 'Glovo' },
-]
-const shouldShowDeliveryAgentSelect = computed(() => ['delivery', 'glovo'].includes(form.service_mode))
+const serviceModeEnabled = computed(() => customListsStore.serviceModeEnabled)
+const serviceModeOptions = computed(() => customListsStore.activeServiceModes)
+const selectedServiceModeMeta = computed(() => customListsStore.getServiceModeMeta(form.service_mode))
+const selectedPlatformModeKey = computed(() => normalizePlatformKey(form.service_mode))
+const matchesPlatformMode = computed(() => {
+    return deliveryAgents.value.some((agent) => (
+        agent.type === 'platform'
+        && normalizePlatformKey(agent.platform_name) === selectedPlatformModeKey.value
+    ))
+})
+const shouldShowDeliveryAgentSelect = computed(() => {
+    return selectedServiceModeMeta.value.requires_delivery_agent || matchesPlatformMode.value
+})
 const visibleDeliveryAgents = computed(() => {
-    if (form.service_mode === 'delivery') {
+    if (selectedServiceModeMeta.value.requires_delivery_agent) {
         return deliveryAgents.value.filter((agent) => agent.type === 'internal')
     }
 
-    if (form.service_mode === 'glovo') {
+    if (matchesPlatformMode.value) {
         return deliveryAgents.value.filter((agent) => (
             agent.type === 'platform'
-            && normalizePlatformKey(agent.platform_name) === 'glovo'
+            && normalizePlatformKey(agent.platform_name) === selectedPlatformModeKey.value
         ))
     }
 
     return []
 })
 const deliveryAgentPlaceholder = computed(() => {
-    if (form.service_mode === 'delivery') {
+    if (selectedServiceModeMeta.value.requires_delivery_agent) {
         return visibleDeliveryAgents.value.length ? 'Choisir un livreur' : 'Aucun livreur interne disponible'
     }
 
-    if (form.service_mode === 'glovo') {
-        return visibleDeliveryAgents.value.length ? 'Choisir un livreur Glovo' : 'Aucun livreur Glovo disponible'
+    if (matchesPlatformMode.value) {
+        return visibleDeliveryAgents.value.length
+            ? `Choisir un livreur ${form.service_mode}`
+            : `Aucun livreur ${form.service_mode} disponible`
     }
 
     return 'Aucun livreur'
@@ -614,6 +625,17 @@ function normalizePlatformKey(value) {
         .trim()
         .toLowerCase()
         .replace(/[\s_-]+/g, '')
+}
+
+function ensureValidServiceModeSelection() {
+    if (!serviceModeEnabled.value || !serviceModeOptions.value.length) {
+        return
+    }
+
+    const currentSelection = customListsStore.findServiceMode(form.service_mode, { includeInactive: false })
+    if (!currentSelection) {
+        form.service_mode = customListsStore.defaultServiceModeValue()
+    }
 }
 
 function setClientMode(mode) {
@@ -917,8 +939,8 @@ watch(
 
 watch(
     () => form.service_mode,
-    (mode) => {
-        form.origin = mode === 'pickup' ? 'menu_commande' : 'livraison'
+    () => {
+        form.origin = shouldShowDeliveryAgentSelect.value ? 'livraison' : 'menu_commande'
 
         if (!shouldShowDeliveryAgentSelect.value) {
             form.delivery_agent_id = null
@@ -936,6 +958,10 @@ watch(
     },
     { immediate: true }
 )
+
+watch(serviceModeOptions, () => {
+    ensureValidServiceModeSelection()
+}, { deep: true })
 
 watch(visibleDeliveryAgents, (agents) => {
     if (!shouldShowDeliveryAgentSelect.value) return
@@ -961,13 +987,16 @@ async function submitCommande() {
             customer_activity: clientMode.value === 'new' ? (newCustomer.activity || form.customer_activity) : (form.customer_activity || null),
             origin: form.origin,
             pickup_date: form.pickup_date || null,
+            service_mode: form.service_mode || customListsStore.defaultServiceModeValue(),
             delivery_agent_id: shouldShowDeliveryAgentSelect.value ? (form.delivery_agent_id || null) : null,
             delivery_address: shouldShowDeliveryAgentSelect.value
                 ? (form.delivery_address || newCustomer.address || null)
                 : null,
             notes: form.notes || null,
             order_status: 'confirmee',
-            delivery_mode: form.service_mode === 'pickup' ? 'pickup' : 'delivery',
+            delivery_mode: shouldShowDeliveryAgentSelect.value
+                ? 'delivery'
+                : selectedServiceModeMeta.value.operational_mode,
             items: form.items
                 .filter((line) => line.article_id && Number(line.quantity) > 0)
                 .map((line) => ({
@@ -1006,6 +1035,8 @@ function goBack() {
 
 onMounted(async () => {
     await settingsStore.fetchSettings()
+    await customListsStore.fetchList('mode_de_service')
+    ensureValidServiceModeSelection()
     await fetchData()
 })
 </script>

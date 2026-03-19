@@ -306,14 +306,14 @@
                 <span v-if="!collapsed" class="ml-3">Paramètres</span>
             </router-link>
 
-            <!-- Assistance -->
+            <!-- Support & Tickets -->
             <router-link 
                 to="/assistance"
                 class="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors"
                 :class="isActive('/assistance') ? 'bg-primary-500 text-gray-900' : 'text-gray-300 hover:bg-gray-800'"
             >
                 <ChartBarIcon class="w-5 h-5 flex-shrink-0" />
-                <span v-if="!collapsed" class="ml-3">Assistance</span>
+                <span v-if="!collapsed" class="ml-3">Support & Tickets</span>
             </router-link>
 
             <!-- Logout / Exit Offline Mode -->

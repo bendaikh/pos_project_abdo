@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useSettingsStore } from './settings'
+import { useCustomListsStore } from './customLists'
 
 export const useCartStore = defineStore('cart', () => {
     const items = ref([])
@@ -8,7 +9,8 @@ export const useCartStore = defineStore('cart', () => {
     const customerName = ref('Client Anonyme')
     const discountAmount = ref(0)
     const discountPercent = ref(0)
-    const deliveryMode = ref('dine_in')
+    const customListsStore = useCustomListsStore()
+    const deliveryMode = ref(customListsStore.defaultServiceModeValue())
     const deliveryAgentId = ref(null)
     const deliveryAgentLabel = ref('')
     const notes = ref('')
@@ -131,7 +133,7 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     function setDeliveryMode(mode) {
-        deliveryMode.value = mode
+        deliveryMode.value = mode || customListsStore.defaultServiceModeValue()
     }
 
     function setDeliveryAgent(agent) {
@@ -147,13 +149,50 @@ export const useCartStore = defineStore('cart', () => {
         currentSaleId.value = id
     }
 
+    function hydrateFromSale(sale) {
+        const customer = sale?.customer || null
+        const deliveryAgent = sale?.delivery_agent || sale?.deliveryAgent || null
+        const resolvedServiceMode = customListsStore.findServiceMode(
+            sale?.service_mode || sale?.delivery_mode,
+            { includeInactive: true }
+        )?.value || customListsStore.defaultServiceModeValue()
+
+        items.value = (sale?.items || []).map((item) => ({
+            article_id: item.article_id,
+            article_name: item.article_name,
+            unit_price: Number(item.unit_price) || 0,
+            quantity: Number(item.quantity) || 0,
+            selected_options: Array.isArray(item.selected_options)
+                ? JSON.parse(JSON.stringify(item.selected_options))
+                : (item.selected_options || null),
+            options_price: Number(item.options_price) || 0,
+            variant_price: 0,
+            selected_variant: null,
+            discount_amount: Number(item.discount_amount) || 0,
+            total: Number(item.total) || 0,
+            article: item.article || null,
+        }))
+
+        customerId.value = customer?.id || sale?.customer_id || null
+        customerName.value = customer?.name || 'Client Anonyme'
+        discountAmount.value = Number(sale?.discount_amount) || 0
+        discountPercent.value = Number(sale?.discount_percent) || 0
+        deliveryMode.value = resolvedServiceMode
+        deliveryAgentId.value = deliveryAgent?.id || sale?.delivery_agent_id || null
+        deliveryAgentLabel.value = deliveryAgent?.name
+            || sale?.delivery_agent_name_snapshot
+            || ''
+        notes.value = sale?.notes || ''
+        currentSaleId.value = sale?.id || null
+    }
+
     function clearCart() {
         items.value = []
         customerId.value = null
         customerName.value = 'Client Anonyme'
         discountAmount.value = 0
         discountPercent.value = 0
-        deliveryMode.value = 'dine_in'
+        deliveryMode.value = customListsStore.defaultServiceModeValue()
         deliveryAgentId.value = null
         deliveryAgentLabel.value = ''
         notes.value = ''
@@ -174,7 +213,10 @@ export const useCartStore = defineStore('cart', () => {
             })),
             discount_amount: discountAmount.value,
             discount_percent: discountPercent.value,
-            delivery_mode: deliveryMode.value === 'glovo' ? 'delivery' : deliveryMode.value,
+            service_mode: deliveryMode.value || customListsStore.defaultServiceModeValue(),
+            delivery_mode: deliveryAgentId.value
+                ? 'delivery'
+                : customListsStore.getServiceModeMeta(deliveryMode.value).operational_mode,
             delivery_agent_id: deliveryAgentId.value,
             notes: notes.value,
             subtotal: subtotal.value,
@@ -213,6 +255,7 @@ export const useCartStore = defineStore('cart', () => {
         setDeliveryAgent,
         setNotes,
         setSaleId,
+        hydrateFromSale,
         clearCart,
         getCartData
     }

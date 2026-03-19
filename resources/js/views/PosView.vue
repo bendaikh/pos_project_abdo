@@ -281,7 +281,7 @@
                                 </div>
                             </div>
                             <!-- Service mode -->
-                            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                            <div v-if="serviceModesEnabled" class="px-4 py-3 border-b border-gray-200 bg-gray-50">
                                 <div class="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
                                     <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button" class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors shrink-0" :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'">
                                         <span class="text-base">{{ mode.icon }}</span>
@@ -296,6 +296,75 @@
                                             {{ formatDeliveryAgentLabel(agent) }}{{ agent.phone ? ` · ${agent.phone}` : '' }}
                                         </option>
                                     </select>
+                                </div>
+                            </div>
+                            <div class="px-4 py-3 border-b border-gray-200 bg-white">
+                                <div class="flex items-center justify-between gap-3">
+                                    <button
+                                        type="button"
+                                        class="flex items-center gap-2 text-sm font-semibold text-gray-800"
+                                        @click="savedTicketsOpen = !savedTicketsOpen"
+                                    >
+                                        <span>Tickets sauvegardés</span>
+                                        <span class="inline-flex min-w-[24px] justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700">
+                                            {{ savedTickets.length }}
+                                        </span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                                        :disabled="savedTicketsLoading"
+                                        @click="fetchSavedTickets"
+                                    >
+                                        {{ savedTicketsLoading ? '...' : 'Actualiser' }}
+                                    </button>
+                                </div>
+                                <div v-if="savedTicketsOpen" class="mt-3">
+                                    <div v-if="savedTicketsLoading" class="rounded-xl border border-dashed border-gray-200 px-3 py-4 text-center text-xs text-gray-500">
+                                        Chargement des tickets sauvegardés...
+                                    </div>
+                                    <div v-else-if="savedTickets.length === 0" class="rounded-xl border border-dashed border-gray-200 px-3 py-4 text-center text-xs text-gray-500">
+                                        Les tickets enregistrés apparaissent ici.
+                                    </div>
+                                    <div v-else class="max-h-56 space-y-2 overflow-y-auto pr-1">
+                                        <div
+                                            v-for="ticket in savedTickets"
+                                            :key="ticket.id"
+                                            class="w-full rounded-xl border p-3 text-left transition-colors"
+                                            :class="isSavedTicketActive(ticket.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-white'"
+                                        >
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-sm font-semibold text-gray-900">{{ getSavedTicketTitle(ticket) }}</p>
+                                                    <p class="mt-1 text-[11px] text-gray-500">
+                                                        {{ formatSavedTicketType(ticket) }} · {{ ticket.customer?.name || 'Client anonyme' }}
+                                                    </p>
+                                                </div>
+                                                <span class="shrink-0 text-sm font-bold text-green-600">{{ formatCurrency(ticket.total || 0) }}</span>
+                                            </div>
+                                            <div class="mt-2 flex items-center justify-between gap-3 text-[11px] text-gray-500">
+                                                <span>{{ formatSavedTicketDate(ticket) }}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        class="rounded-lg border border-red-200 px-2.5 py-1 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                                        :disabled="deletingSavedTicketId === ticket.id || loadingSavedTicketId === ticket.id"
+                                                        @click.stop="deleteSavedTicket(ticket.id)"
+                                                    >
+                                                        {{ deletingSavedTicketId === ticket.id ? 'Suppression...' : 'Supprimer' }}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="rounded-lg border border-blue-200 px-2.5 py-1 font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                                                        :disabled="loadingSavedTicketId === ticket.id || deletingSavedTicketId === ticket.id"
+                                                        @click.stop="loadSavedTicket(ticket.id)"
+                                                    >
+                                                        {{ loadingSavedTicketId === ticket.id ? 'Ouverture...' : 'Ouvrir' }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <!-- Articles header -->
@@ -345,7 +414,7 @@
                             <!-- Buttons -->
                             <div class="px-4 py-3 border-t border-gray-200 space-y-2">
                                 <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">PASSER AU PAIEMENT</button>
-                                <button @click="saveSale" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">SAUVEGARDER</button>
+                                <button @click="openSaveTicketModal" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">ENREGISTRER</button>
                             </div>
                         </div>
                     </div>
@@ -371,7 +440,7 @@
                         </div>
 
                         <!-- Service mode (compact scrollable chips) -->
-                        <div class="px-3 py-1.5 border-b border-gray-100 bg-gray-50">
+                        <div v-if="serviceModesEnabled" class="px-3 py-1.5 border-b border-gray-100 bg-gray-50">
                             <div class="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap no-scrollbar">
                                 <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button"
                                     class="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors shrink-0"
@@ -386,6 +455,70 @@
                                         {{ formatDeliveryAgentLabel(agent) }}
                                     </option>
                                 </select>
+                            </div>
+                        </div>
+                        <div class="px-3 py-2 border-b border-gray-100 bg-white">
+                            <div class="flex items-center justify-between gap-2">
+                                <button
+                                    type="button"
+                                    class="flex items-center gap-2 text-xs font-semibold text-gray-800"
+                                    @click="savedTicketsOpen = !savedTicketsOpen"
+                                >
+                                    <span>Tickets sauvegardés</span>
+                                    <span class="inline-flex min-w-[22px] justify-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                                        {{ savedTickets.length }}
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded-md border border-gray-200 px-2 py-1 text-[10px] font-semibold text-gray-600 disabled:opacity-50"
+                                    :disabled="savedTicketsLoading"
+                                    @click="fetchSavedTickets"
+                                >
+                                    {{ savedTicketsLoading ? '...' : 'Actualiser' }}
+                                </button>
+                            </div>
+                            <div v-if="savedTicketsOpen" class="mt-2">
+                                <div v-if="savedTicketsLoading" class="rounded-xl border border-dashed border-gray-200 px-3 py-3 text-center text-[11px] text-gray-500">
+                                    Chargement...
+                                </div>
+                                <div v-else-if="savedTickets.length === 0" class="rounded-xl border border-dashed border-gray-200 px-3 py-3 text-center text-[11px] text-gray-500">
+                                    Aucun ticket sauvegardé.
+                                </div>
+                                <div v-else class="max-h-40 space-y-1.5 overflow-y-auto">
+                                    <div
+                                        v-for="ticket in savedTickets"
+                                        :key="`mobile-${ticket.id}`"
+                                        class="w-full rounded-xl border p-2.5 text-left"
+                                        :class="isSavedTicketActive(ticket.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50'"
+                                    >
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-xs font-semibold text-gray-900">{{ getSavedTicketTitle(ticket) }}</p>
+                                                <p class="mt-0.5 text-[10px] text-gray-500">{{ formatSavedTicketType(ticket) }}</p>
+                                            </div>
+                                            <span class="shrink-0 text-xs font-bold text-green-600">{{ formatCurrency(ticket.total || 0) }}</span>
+                                        </div>
+                                        <div class="mt-2 flex items-center justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                class="rounded-md border border-red-200 px-2 py-1 text-[10px] font-semibold text-red-600 disabled:opacity-50"
+                                                :disabled="deletingSavedTicketId === ticket.id || loadingSavedTicketId === ticket.id"
+                                                @click.stop="deleteSavedTicket(ticket.id)"
+                                            >
+                                                {{ deletingSavedTicketId === ticket.id ? '...' : 'Supprimer' }}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="rounded-md border border-blue-200 px-2 py-1 text-[10px] font-semibold text-blue-600 disabled:opacity-50"
+                                                :disabled="loadingSavedTicketId === ticket.id || deletingSavedTicketId === ticket.id"
+                                                @click.stop="loadSavedTicket(ticket.id)"
+                                            >
+                                                {{ loadingSavedTicketId === ticket.id ? '...' : 'Ouvrir' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -451,10 +584,10 @@
                             </div>
                             <!-- Action buttons side by side -->
                             <div class="px-3 py-2 flex gap-2">
-                                <button @click="saveSale" :disabled="cartStore.items.length === 0"
+                                <button @click="openSaveTicketModal" :disabled="cartStore.items.length === 0"
                                     class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
                                     type="button">
-                                    💾 Sauvegarder
+                                    💾 Enregistrer
                                 </button>
                                 <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0"
                                     class="flex-[1.4] py-2.5 text-xs font-bold rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
@@ -490,6 +623,18 @@
             :initial-selections="optionsInitialSelections"
             @close="closeOptionsModal"
             @confirm="handleOptionsConfirm"
+        />
+
+        <SaveTicketModal
+            v-if="showSaveTicketModal"
+            :cart-data="cartStore.getCartData()"
+            :cart-items="cartStore.items"
+            :default-customer-id="cartStore.customerId"
+            :default-customer-name="cartStore.customerName"
+            :default-delivery-mode="cartStore.deliveryMode"
+            :default-notes="ticketNotes || cartStore.notes"
+            @close="showSaveTicketModal = false"
+            @saved="handleTicketSaved"
         />
 
         <!-- Selection-First Variants Modal -->
@@ -783,6 +928,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCartStore } from '../stores/cart'
 import { useArticlesStore } from '../stores/articles'
+import { useCustomListsStore } from '../stores/customLists'
 import { useSettingsStore } from '../stores/settings'
 import { useOfflineStore } from '../stores/offline'
 import { useUiStore } from '../stores/ui'
@@ -790,6 +936,7 @@ import { salesApi, optionsApi, articlesApi, customersApi, deliveryAgentsApi } fr
 import PaymentMultiModal from '../components/pos/PaymentMultiModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
 import OptionsModal from '../components/pos/OptionsModal.vue'
+import SaveTicketModal from '../components/pos/SaveTicketModal.vue'
 import SelectOptionsModal from '../components/pos/SelectOptionsModal.vue'
 import SelectVariantsModal from '../components/pos/SelectVariantsModal.vue'
 import OptionFormContent from '../components/forms/OptionFormContent.vue'
@@ -805,7 +952,9 @@ import {
 
 const cartStore = useCartStore()
 const articlesStore = useArticlesStore()
+const customListsStore = useCustomListsStore()
 const settingsStore = useSettingsStore()
+const offlineStore = useOfflineStore()
 const uiStore = useUiStore()
 const { appSidebarOpen } = storeToRefs(uiStore)
 const { posCategoryDisplayMode } = storeToRefs(settingsStore)
@@ -813,6 +962,7 @@ const categoriesDisplayMode = posCategoryDisplayMode
 const showPaymentModal = ref(false)
 const showCalculator = ref(false)
 const showOptionsModal = ref(false)
+const showSaveTicketModal = ref(false)
 const showCustomerSelector = ref(false)
 const showNotesModal = ref(false)
 const showDiscountModal = ref(false)
@@ -841,6 +991,11 @@ const posCustomers = ref([])
 const posCustomersLoading = ref(false)
 const deliveryAgents = ref([])
 const deliveryAgentsLoading = ref(false)
+const savedTickets = ref([])
+const savedTicketsLoading = ref(false)
+const savedTicketsOpen = ref(true)
+const loadingSavedTicketId = ref(null)
+const deletingSavedTicketId = ref(null)
 const ticketNotes = ref('')
 const discountAmount = ref(0)
 const discountPercent = ref(0)
@@ -911,44 +1066,60 @@ const ticketPanelClass = computed(() => {
     return 'w-[380px] flex-shrink-0 border-l border-gray-200 h-full overflow-hidden'
 })
 
-const serviceModes = [
-    { value: 'dine_in', label: 'Sur place', icon: '🍽️' },
-    { value: 'pickup', label: 'A emporter', icon: '🥡' },
-    { value: 'delivery', label: 'Livraison', icon: '🚚' },
-    { value: 'glovo', label: 'Glovo', icon: '🛵' },
-]
+const serviceModes = computed(() => {
+    return customListsStore.activeServiceModes.map((mode) => ({
+        ...mode,
+        icon: getServiceModeIcon(mode),
+    }))
+})
+
+const serviceModesEnabled = computed(() => {
+    return customListsStore.serviceModeEnabled && serviceModes.value.length > 0
+})
 
 const serviceMode = computed({
     get: () => cartStore.deliveryMode,
     set: (value) => cartStore.setDeliveryMode(value),
 })
 
-const shouldShowDeliveryAgentSelect = computed(() => ['delivery', 'glovo'].includes(serviceMode.value))
-
-const visibleDeliveryAgents = computed(() => {
-    if (serviceMode.value === 'delivery') {
-        return deliveryAgents.value.filter((agent) => agent.type === 'internal')
-    }
-
-    if (!shouldShowDeliveryAgentSelect.value) {
-        return []
-    }
-
-    const targetPlatform = normalizePlatformKey(serviceMode.value)
-
-    return deliveryAgents.value.filter((agent) => (
+const selectedServiceModeMeta = computed(() => customListsStore.getServiceModeMeta(serviceMode.value))
+const selectedPlatformModeKey = computed(() => normalizePlatformKey(serviceMode.value))
+const matchesPlatformMode = computed(() => {
+    return deliveryAgents.value.some((agent) => (
         agent.type === 'platform'
-        && normalizePlatformKey(agent.platform_name) === targetPlatform
+        && normalizePlatformKey(agent.platform_name) === selectedPlatformModeKey.value
     ))
 })
 
+const shouldShowDeliveryAgentSelect = computed(() => {
+    return serviceModesEnabled.value
+        && (selectedServiceModeMeta.value.requires_delivery_agent || matchesPlatformMode.value)
+})
+
+const visibleDeliveryAgents = computed(() => {
+    if (selectedServiceModeMeta.value.requires_delivery_agent) {
+        return deliveryAgents.value.filter((agent) => agent.type === 'internal')
+    }
+
+    if (matchesPlatformMode.value) {
+        return deliveryAgents.value.filter((agent) => (
+            agent.type === 'platform'
+            && normalizePlatformKey(agent.platform_name) === selectedPlatformModeKey.value
+        ))
+    }
+
+    return []
+})
+
 const deliveryAgentPlaceholder = computed(() => {
-    if (serviceMode.value === 'delivery') {
+    if (selectedServiceModeMeta.value.requires_delivery_agent) {
         return visibleDeliveryAgents.value.length ? 'Choisir un livreur' : 'Aucun livreur interne disponible'
     }
 
-    if (serviceMode.value === 'glovo') {
-        return visibleDeliveryAgents.value.length ? 'Choisir un livreur Glovo' : 'Aucun livreur Glovo disponible'
+    if (matchesPlatformMode.value) {
+        return visibleDeliveryAgents.value.length
+            ? `Choisir un livreur ${serviceMode.value}`
+            : `Aucun livreur ${serviceMode.value} disponible`
     }
 
     return 'Aucun livreur'
@@ -1001,11 +1172,140 @@ function formatDeliveryAgentLabel(agent) {
     return agent.name
 }
 
+function isSavedTicket(sale) {
+    return ['liste', 'personnalise'].includes(String(sale?.ticket_type || '').toLowerCase())
+}
+
+function getSavedTicketTitle(ticket) {
+    return ticket?.ticket_name || ticket?.reference || `Ticket #${ticket?.id || '-'}`
+}
+
+function formatSavedTicketType(ticket) {
+    const type = String(ticket?.ticket_type || '').toLowerCase()
+    if (type === 'liste') return ticket?.ticket_group ? `Liste · ${ticket.ticket_group}` : 'Ticket liste'
+    if (type === 'personnalise') return ticket?.ticket_group ? `Personnalisé · ${ticket.ticket_group}` : 'Ticket personnalisé'
+    return 'Ticket'
+}
+
+function formatSavedTicketDate(ticket) {
+    const source = ticket?.updated_at || ticket?.created_at
+    if (!source) return '-'
+
+    return new Date(source).toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+
+function isSavedTicketActive(ticketId) {
+    return Number(cartStore.currentSaleId || 0) === Number(ticketId || 0)
+}
+
+async function fetchSavedTickets() {
+    if (savedTicketsLoading.value) return
+    if (!offlineStore.isOnline || localStorage.getItem('offline_guest_mode') === 'true') {
+        savedTickets.value = []
+        return
+    }
+
+    savedTicketsLoading.value = true
+    try {
+        const { data } = await salesApi.pending()
+        const rows = Array.isArray(data) ? data : (data?.data || [])
+        savedTickets.value = rows
+            .filter(isSavedTicket)
+            .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
+    } catch (error) {
+        console.error('Failed to fetch saved tickets:', error)
+        savedTickets.value = []
+    } finally {
+        savedTicketsLoading.value = false
+    }
+}
+
+async function loadSavedTicket(ticketId) {
+    if (!ticketId || loadingSavedTicketId.value === ticketId) return
+
+    const hasDifferentCart = cartStore.items.length > 0 && Number(cartStore.currentSaleId || 0) !== Number(ticketId)
+    if (hasDifferentCart && !confirm('Le ticket en cours sera remplacé. Continuer ?')) {
+        return
+    }
+
+    loadingSavedTicketId.value = ticketId
+    try {
+        const { data } = await salesApi.get(ticketId)
+        cartStore.hydrateFromSale(data)
+        ticketNotes.value = data?.notes || ''
+        discountAmount.value = Number(data?.discount_amount) || 0
+        discountPercent.value = Number(data?.discount_percent) || 0
+        showCustomerSelector.value = false
+        showPaymentModal.value = false
+
+        if (isMobile.value) {
+            isCartExpanded.value = true
+            isCartFullscreen.value = false
+            savedTicketsOpen.value = false
+        }
+    } catch (error) {
+        console.error('Failed to load saved ticket:', error)
+        alert(error.response?.data?.message || "Impossible d'ouvrir ce ticket.")
+    } finally {
+        loadingSavedTicketId.value = null
+    }
+}
+
+async function deleteSavedTicket(ticketId) {
+    if (!ticketId || deletingSavedTicketId.value === ticketId) return
+    if (!confirm('Supprimer ce ticket sauvegardé ?')) {
+        return
+    }
+
+    deletingSavedTicketId.value = ticketId
+    try {
+        await salesApi.delete(ticketId)
+
+        savedTickets.value = savedTickets.value.filter((ticket) => Number(ticket.id) !== Number(ticketId))
+
+        if (Number(cartStore.currentSaleId || 0) === Number(ticketId)) {
+            cartStore.clearCart()
+            ticketNotes.value = ''
+            discountAmount.value = 0
+            discountPercent.value = 0
+            showCustomerSelector.value = false
+            showPaymentModal.value = false
+        }
+    } catch (error) {
+        console.error('Failed to delete saved ticket:', error)
+        alert(error.response?.data?.message || "Impossible de supprimer ce ticket.")
+    } finally {
+        deletingSavedTicketId.value = null
+    }
+}
+
+function getServiceModeIcon(mode) {
+    if (mode?.operational_mode === 'delivery') return '🚚'
+    if (mode?.operational_mode === 'dine_in') return '🍽️'
+    return '🥡'
+}
+
 function normalizePlatformKey(value) {
     return String(value || '')
         .trim()
         .toLowerCase()
         .replace(/[\s_-]+/g, '')
+}
+
+function ensureValidServiceModeSelection() {
+    if (!serviceModesEnabled.value) {
+        return
+    }
+
+    const currentSelection = customListsStore.findServiceMode(serviceMode.value, { includeInactive: false })
+    if (!currentSelection) {
+        serviceMode.value = customListsStore.defaultServiceModeValue()
+    }
 }
 
 async function fetchDeliveryAgents() {
@@ -1460,20 +1760,22 @@ function removeItem(index) {
     cartStore.removeItem(index)
 }
 
-async function saveSale() {
-    try {
-        const data = cartStore.getCartData()
-        const response = await salesApi.create(data)
-        cartStore.setSaleId(response.data.id)
-        alert('Vente sauvegardée!')
-    } catch (error) {
-        console.error('Failed to save sale:', error)
-        alert('Erreur lors de la sauvegarde')
-    }
+function openSaveTicketModal() {
+    cartStore.setNotes(ticketNotes.value)
+    showSaveTicketModal.value = true
+}
+
+function handleTicketSaved() {
+    showSaveTicketModal.value = false
+    showCustomerSelector.value = false
+    ticketNotes.value = ''
+    discountAmount.value = 0
+    discountPercent.value = 0
+    cartStore.clearCart()
+    fetchSavedTickets()
 }
 
 async function completeSale(payments) {
-    const offlineStore = useOfflineStore()
     const SALES_STORAGE_KEY = 'pos_sales'
     
     try {
@@ -1521,6 +1823,7 @@ async function completeSale(payments) {
             
             cartStore.clearCart()
             showPaymentModal.value = false
+            await fetchSavedTickets()
             
             if (!offlineStore.isOnline) {
                 alert('Vente sauvegardée hors ligne! Elle sera synchronisée automatiquement.')
@@ -1562,6 +1865,7 @@ async function completeSale(payments) {
         // Clear cart
         cartStore.clearCart()
         showPaymentModal.value = false
+        await fetchSavedTickets()
 
         alert('Vente complétée avec succès!')
     } catch (error) {
@@ -1796,6 +2100,10 @@ watch(visibleDeliveryAgents, (agents) => {
     }
 })
 
+watch(serviceModes, () => {
+    ensureValidServiceModeSelection()
+}, { deep: true })
+
 watch([filteredArticles, itemsPerPage], () => {
     if (currentPage.value > totalPages.value) {
         currentPage.value = totalPages.value
@@ -1912,9 +2220,12 @@ onMounted(async () => {
     document.addEventListener('fullscreenchange', handleFullscreenChange)
     handleFullscreenChange()
     await settingsStore.fetchSettings()
+    await customListsStore.fetchList('mode_de_service')
+    ensureValidServiceModeSelection()
     await articlesStore.refresh()
     await fetchPosCustomers()
     await fetchDeliveryAgents()
+    await fetchSavedTickets()
 })
 
 onUnmounted(() => {
