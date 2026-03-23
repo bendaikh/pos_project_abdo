@@ -276,20 +276,244 @@
                                 <div
                                     v-for="item in serviceModeSettings.items"
                                     :key="item.id"
-                                    draggable="true"
-                                    class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition"
-                                    :class="draggingServiceModeId === item.id ? 'opacity-70 border-primary-300' : ''"
-                                    @dragstart="startServiceModeDrag(item.id)"
-                                    @dragover.prevent
-                                    @drop="dropServiceModeOn(item.id)"
+                                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4"
                                 >
-                                    <button type="button" class="text-slate-400 cursor-grab active:cursor-grabbing" title="Déplacer">
-                                        <Bars3Icon class="w-5 h-5" />
-                                    </button>
-                                    <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-slate-900">{{ item.label }}</p>
-                                        <p class="text-xs text-slate-500">Ordre {{ item.sort_order }}</p>
+                                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
+                                        <div class="flex-1 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mode</span>
+                                                <input v-model.trim="item.label" type="text" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Sur place">
+                                            </label>
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Valeur</span>
+                                                <input v-model.trim="item.value" type="text" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Sur place">
+                                            </label>
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Type opérationnel</span>
+                                                <select v-model="item.operational_mode" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                                    <option v-for="option in serviceModeOperationalOptions" :key="option.value" :value="option.value">
+                                                        {{ option.label }}
+                                                    </option>
+                                                </select>
+                                            </label>
+                                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                                                <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                                    <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                    Actif
+                                                </label>
+                                                <label class="mt-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                                                    <input v-model="item.requires_delivery_agent" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                    Demande livreur
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveServiceMode(item.id, -1)">Monter</button>
+                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveServiceMode(item.id, 1)">Descendre</button>
+                                            <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeServiceMode(item.id)">Supprimer</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid gap-4 xl:grid-cols-[1fr,1fr]">
+                                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p class="text-sm font-semibold text-slate-900">Tickets sans groupe</p>
+                                                    <p class="text-xs text-slate-500">Tickets simples visibles directement dans le popup POS.</p>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100" @click="addTicketToServiceMode(item.id)">+ Ticket</button>
+                                                    <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800" @click="addPredefinedTickets(item.id)">+ Ajout tickets prédéfinis</button>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                v-if="predefinedTicketForms[predefinedTicketFormKey(item.id)]"
+                                                class="rounded-xl border border-slate-200 bg-white p-3"
+                                            >
+                                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Ajout rapide</p>
+                                                <div class="mt-3 grid gap-3 md:grid-cols-3">
+                                                    <label class="block">
+                                                        <span class="mb-1 block text-xs font-medium text-slate-600">Préfixe</span>
+                                                        <input
+                                                            v-model.trim="predefinedTicketForms[predefinedTicketFormKey(item.id)].prefix"
+                                                            type="text"
+                                                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                            placeholder="Ex: Table"
+                                                            @keydown.enter.prevent="applyPredefinedTickets(item.id)"
+                                                        >
+                                                    </label>
+                                                    <label class="block">
+                                                        <span class="mb-1 block text-xs font-medium text-slate-600">Début</span>
+                                                        <input
+                                                            v-model.number="predefinedTicketForms[predefinedTicketFormKey(item.id)].start"
+                                                            type="number"
+                                                            min="1"
+                                                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                            @keydown.enter.prevent="applyPredefinedTickets(item.id)"
+                                                        >
+                                                    </label>
+                                                    <label class="block">
+                                                        <span class="mb-1 block text-xs font-medium text-slate-600">Fin</span>
+                                                        <input
+                                                            v-model.number="predefinedTicketForms[predefinedTicketFormKey(item.id)].end"
+                                                            type="number"
+                                                            min="1"
+                                                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                            @keydown.enter.prevent="applyPredefinedTickets(item.id)"
+                                                        >
+                                                    </label>
+                                                </div>
+                                                <div class="mt-3 flex flex-wrap justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                                                        @click="closePredefinedTicketForm(item.id)"
+                                                    >
+                                                        Annuler
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                        @click="applyPredefinedTickets(item.id)"
+                                                    >
+                                                        Générer les tickets
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div v-if="item.tickets_without_group.length" class="space-y-2">
+                                                <div
+                                                    v-for="ticket in item.tickets_without_group"
+                                                    :key="ticket.id"
+                                                    class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 md:flex-row md:items-center"
+                                                >
+                                                    <input v-model.trim="ticket.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du ticket">
+                                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                                        <input v-model="ticket.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                        Actif
+                                                    </label>
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveServiceModeTicket(item.id, ticket.id, -1)">Monter</button>
+                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveServiceModeTicket(item.id, ticket.id, 1)">Descendre</button>
+                                                        <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeServiceModeTicket(item.id, ticket.id)">Supprimer</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun ticket sans groupe.</p>
+                                        </div>
+
+                                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p class="text-sm font-semibold text-slate-900">Groupes de tickets</p>
+                                                    <p class="text-xs text-slate-500">Créez des groupes comme Salle, VIP ou Terrasse, puis ajoutez les tickets associés.</p>
+                                                </div>
+                                                <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800" @click="addTicketGroupToServiceMode(item.id)">+ Groupe</button>
+                                            </div>
+
+                                            <div v-if="item.ticket_groups.length" class="space-y-3">
+                                                <div
+                                                    v-for="group in item.ticket_groups"
+                                                    :key="group.id"
+                                                    class="rounded-xl border border-slate-200 bg-white p-3 space-y-3"
+                                                >
+                                                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                                                        <input v-model.trim="group.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du groupe">
+                                                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                                                            <input v-model="group.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                            Actif
+                                                        </label>
+                                                        <div class="flex items-center gap-2">
+                                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveTicketGroup(item.id, group.id, -1)">Monter</button>
+                                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveTicketGroup(item.id, group.id, 1)">Descendre</button>
+                                                            <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeTicketGroup(item.id, group.id)">Supprimer</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="addTicketToServiceMode(item.id, group.id)">+ Ticket</button>
+                                                        <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800" @click="addPredefinedTickets(item.id, group.id)">+ Ajout tickets prédéfinis</button>
+                                                    </div>
+
+                                                    <div
+                                                        v-if="predefinedTicketForms[predefinedTicketFormKey(item.id, group.id)]"
+                                                        class="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                                                    >
+                                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Ajout rapide dans ce groupe</p>
+                                                        <div class="mt-3 grid gap-3 md:grid-cols-3">
+                                                            <label class="block">
+                                                                <span class="mb-1 block text-xs font-medium text-slate-600">Préfixe</span>
+                                                                <input
+                                                                    v-model.trim="predefinedTicketForms[predefinedTicketFormKey(item.id, group.id)].prefix"
+                                                                    type="text"
+                                                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                                    placeholder="Ex: Table"
+                                                                    @keydown.enter.prevent="applyPredefinedTickets(item.id, group.id)"
+                                                                >
+                                                            </label>
+                                                            <label class="block">
+                                                                <span class="mb-1 block text-xs font-medium text-slate-600">Début</span>
+                                                                <input
+                                                                    v-model.number="predefinedTicketForms[predefinedTicketFormKey(item.id, group.id)].start"
+                                                                    type="number"
+                                                                    min="1"
+                                                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                                    @keydown.enter.prevent="applyPredefinedTickets(item.id, group.id)"
+                                                                >
+                                                            </label>
+                                                            <label class="block">
+                                                                <span class="mb-1 block text-xs font-medium text-slate-600">Fin</span>
+                                                                <input
+                                                                    v-model.number="predefinedTicketForms[predefinedTicketFormKey(item.id, group.id)].end"
+                                                                    type="number"
+                                                                    min="1"
+                                                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                                    @keydown.enter.prevent="applyPredefinedTickets(item.id, group.id)"
+                                                                >
+                                                            </label>
+                                                        </div>
+                                                        <div class="mt-3 flex flex-wrap justify-end gap-2">
+                                                            <button
+                                                                type="button"
+                                                                class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white"
+                                                                @click="closePredefinedTicketForm(item.id, group.id)"
+                                                            >
+                                                                Annuler
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                                @click="applyPredefinedTickets(item.id, group.id)"
+                                                            >
+                                                                Générer les tickets
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div v-if="group.tickets.length" class="space-y-2">
+                                                        <div
+                                                            v-for="ticket in group.tickets"
+                                                            :key="ticket.id"
+                                                            class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center"
+                                                        >
+                                                            <input v-model.trim="ticket.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du ticket">
+                                                            <label class="flex items-center gap-2 text-sm text-slate-700">
+                                                                <input v-model="ticket.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                                Actif
+                                                            </label>
+                                                            <div class="flex items-center gap-2">
+                                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white" @click="moveServiceModeTicket(item.id, ticket.id, -1, group.id)">Monter</button>
+                                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white" @click="moveServiceModeTicket(item.id, ticket.id, 1, group.id)">Descendre</button>
+                                                                <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeServiceModeTicket(item.id, ticket.id, group.id)">Supprimer</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <p v-else class="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun ticket dans ce groupe.</p>
+                                                </div>
+                                            </div>
+                                            <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun groupe configuré.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -475,7 +699,6 @@ import { useSettingsStore } from '../../stores/settings'
 import { useCustomListsStore } from '../../stores/customLists'
 import AutomationRules from './AutomationRules.vue'
 import {
-    Bars3Icon,
     BuildingStorefrontIcon,
     PlusIcon,
     ComputerDesktopIcon,
@@ -495,7 +718,6 @@ const saving = ref(false)
 const activeTab = ref('general')
 const customListSaving = ref(false)
 const newServiceModeLabel = ref('')
-const draggingServiceModeId = ref(null)
 
 const tabs = [
     { id: 'general', label: 'Infos Générales' },
@@ -567,6 +789,13 @@ const serviceModeSettings = reactive({
     is_active: true,
     items: [],
 })
+const predefinedTicketForms = reactive({})
+
+const serviceModeOperationalOptions = [
+    { value: 'dine_in', label: 'Sur place' },
+    { value: 'pickup', label: 'Emporté' },
+    { value: 'delivery', label: 'Livraison' },
+]
 
 const subscriptionStatusClass = computed(() => {
     if (settings.subscription_type === 'free') return 'bg-gray-100 text-gray-800'
@@ -617,16 +846,21 @@ async function loadSettings() {
 }
 
 function hydrateServiceModeForm(list) {
+    Object.keys(predefinedTicketForms).forEach((key) => {
+        delete predefinedTicketForms[key]
+    })
     serviceModeSettings.is_active = list?.is_active !== false
     serviceModeSettings.items = [...(list?.items || [])]
         .map((item, index) => ({
-            id: item.id ?? `draft-${Date.now()}-${index}`,
+            id: item.id ?? createDraftId('mode'),
             label: item.label || item.value || '',
             value: item.value || item.label || '',
             is_active: item.is_active !== false,
             sort_order: Number(item.sort_order ?? index + 1),
             operational_mode: item.operational_mode || 'pickup',
             requires_delivery_agent: item.requires_delivery_agent === true,
+            tickets_without_group: normalizeTickets(item.tickets_without_group || []),
+            ticket_groups: normalizeTicketGroups(item.ticket_groups || []),
         }))
         .sort((a, b) => a.sort_order - b.sort_order)
 }
@@ -641,6 +875,79 @@ function reindexServiceModeItems() {
         ...item,
         sort_order: index + 1,
     }))
+}
+
+function normalizeTickets(tickets) {
+    return [...tickets]
+        .map((ticket, index) => ({
+            id: ticket.id ?? createDraftId('ticket'),
+            label: ticket.label || '',
+            is_active: ticket.is_active !== false,
+            sort_order: Number(ticket.sort_order ?? index + 1),
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+function normalizeTicketGroups(groups) {
+    return [...groups]
+        .map((group, index) => ({
+            id: group.id ?? createDraftId('group'),
+            label: group.label || '',
+            is_active: group.is_active !== false,
+            sort_order: Number(group.sort_order ?? index + 1),
+            tickets: normalizeTickets(group.tickets || []),
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+function createDraftId(prefix) {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function predefinedTicketFormKey(modeId, groupId = null) {
+    return groupId ? `${modeId}::${groupId}` : `${modeId}::root`
+}
+
+function createPredefinedTicketForm() {
+    return {
+        prefix: 'Table',
+        start: 1,
+        end: 5,
+    }
+}
+
+function moveInArray(list, fromIndex, toIndex) {
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
+        return list
+    }
+
+    const clone = [...list]
+    const [item] = clone.splice(fromIndex, 1)
+    clone.splice(toIndex, 0, item)
+    return clone
+}
+
+function reindexTickets(tickets) {
+    return tickets.map((ticket, index) => ({
+        ...ticket,
+        sort_order: index + 1,
+    }))
+}
+
+function reindexTicketGroups(groups) {
+    return groups.map((group, index) => ({
+        ...group,
+        sort_order: index + 1,
+        tickets: reindexTickets(group.tickets || []),
+    }))
+}
+
+function getServiceModeItem(modeId) {
+    return serviceModeSettings.items.find((item) => String(item.id) === String(modeId)) || null
+}
+
+function getTicketGroup(modeId, groupId) {
+    return getServiceModeItem(modeId)?.ticket_groups.find((group) => String(group.id) === String(groupId)) || null
 }
 
 function addCustomServiceMode() {
@@ -660,45 +967,223 @@ function addCustomServiceMode() {
     }
 
     serviceModeSettings.items.push({
-        id: `draft-${Date.now()}`,
+        id: createDraftId('mode'),
         label,
         value: label,
         is_active: true,
         sort_order: serviceModeSettings.items.length + 1,
         operational_mode: 'pickup',
         requires_delivery_agent: false,
+        tickets_without_group: [],
+        ticket_groups: [],
     })
     reindexServiceModeItems()
     newServiceModeLabel.value = ''
 }
 
-function startServiceModeDrag(itemId) {
-    draggingServiceModeId.value = itemId
+function removeServiceMode(modeId) {
+    serviceModeSettings.items = serviceModeSettings.items.filter((item) => String(item.id) !== String(modeId))
+    reindexServiceModeItems()
 }
 
-function dropServiceModeOn(targetId) {
-    if (!draggingServiceModeId.value || draggingServiceModeId.value === targetId) {
-        draggingServiceModeId.value = null
-        return
-    }
-
-    const sourceIndex = serviceModeSettings.items.findIndex((item) => item.id === draggingServiceModeId.value)
-    const targetIndex = serviceModeSettings.items.findIndex((item) => item.id === targetId)
-
-    if (sourceIndex < 0 || targetIndex < 0) {
-        draggingServiceModeId.value = null
-        return
-    }
-
-    const [movedItem] = serviceModeSettings.items.splice(sourceIndex, 1)
-    serviceModeSettings.items.splice(targetIndex, 0, movedItem)
+function moveServiceMode(modeId, direction) {
+    const sourceIndex = serviceModeSettings.items.findIndex((item) => String(item.id) === String(modeId))
+    const targetIndex = sourceIndex + direction
+    serviceModeSettings.items = moveInArray(serviceModeSettings.items, sourceIndex, targetIndex)
     reindexServiceModeItems()
-    draggingServiceModeId.value = null
+}
+
+function addTicketToServiceMode(modeId, groupId = null) {
+    const serviceMode = getServiceModeItem(modeId)
+    if (!serviceMode) {
+        return
+    }
+
+    const ticket = {
+        id: createDraftId('ticket'),
+        label: '',
+        is_active: true,
+        sort_order: 0,
+    }
+
+    if (!groupId) {
+        serviceMode.tickets_without_group = reindexTickets([
+            ...serviceMode.tickets_without_group,
+            ticket,
+        ])
+        return
+    }
+
+    const group = getTicketGroup(modeId, groupId)
+    if (!group) return
+
+    group.tickets = reindexTickets([
+        ...group.tickets,
+        ticket,
+    ])
+}
+
+function addTicketGroupToServiceMode(modeId) {
+    const serviceMode = getServiceModeItem(modeId)
+    if (!serviceMode) {
+        return
+    }
+
+    serviceMode.ticket_groups = reindexTicketGroups([
+        ...serviceMode.ticket_groups,
+        {
+            id: createDraftId('group'),
+            label: '',
+            is_active: true,
+            sort_order: 0,
+            tickets: [],
+        },
+    ])
+}
+
+function addPredefinedTickets(modeId, groupId = null) {
+    predefinedTicketForms[predefinedTicketFormKey(modeId, groupId)] = createPredefinedTicketForm()
+}
+
+function closePredefinedTicketForm(modeId, groupId = null) {
+    delete predefinedTicketForms[predefinedTicketFormKey(modeId, groupId)]
+}
+
+function applyPredefinedTickets(modeId, groupId = null) {
+    const form = predefinedTicketForms[predefinedTicketFormKey(modeId, groupId)]
+    if (!form) {
+        return
+    }
+
+    const prefix = String(form.prefix || '').trim()
+    const start = Number(form.start)
+    const end = Number(form.end)
+
+    if (!prefix) {
+        alert('Veuillez renseigner un préfixe pour les tickets prédéfinis.')
+        return
+    }
+
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start <= 0 || end < start) {
+        alert('La plage définie est invalide.')
+        return
+    }
+
+    for (let value = start; value <= end; value += 1) {
+        appendPredefinedTicket(modeId, `${prefix} ${value}`, groupId)
+    }
+
+    closePredefinedTicketForm(modeId, groupId)
+}
+
+function appendPredefinedTicket(modeId, label, groupId = null) {
+    const serviceMode = getServiceModeItem(modeId)
+    if (!serviceMode) {
+        return
+    }
+
+    const nextTicket = {
+        id: createDraftId('ticket'),
+        label,
+        is_active: true,
+        sort_order: 0,
+    }
+
+    if (!groupId) {
+        const exists = serviceMode.tickets_without_group.some(
+            (ticket) => ticket.label.trim().toLowerCase() === label.trim().toLowerCase()
+        )
+        if (exists) return
+
+        serviceMode.tickets_without_group = reindexTickets([
+            ...serviceMode.tickets_without_group,
+            nextTicket,
+        ])
+        return
+    }
+
+    const group = getTicketGroup(modeId, groupId)
+    if (!group) return
+
+    const exists = group.tickets.some(
+        (ticket) => ticket.label.trim().toLowerCase() === label.trim().toLowerCase()
+    )
+    if (exists) return
+
+    group.tickets = reindexTickets([
+        ...group.tickets,
+        nextTicket,
+    ])
+}
+
+function removeServiceModeTicket(modeId, ticketId, groupId = null) {
+    const serviceMode = getServiceModeItem(modeId)
+    if (!serviceMode) {
+        return
+    }
+
+    if (!groupId) {
+        serviceMode.tickets_without_group = reindexTickets(
+            serviceMode.tickets_without_group.filter((ticket) => String(ticket.id) !== String(ticketId))
+        )
+        return
+    }
+
+    const group = getTicketGroup(modeId, groupId)
+    if (!group) return
+    group.tickets = reindexTickets(
+        group.tickets.filter((ticket) => String(ticket.id) !== String(ticketId))
+    )
+}
+
+function moveServiceModeTicket(modeId, ticketId, direction, groupId = null) {
+    const serviceMode = getServiceModeItem(modeId)
+    if (!serviceMode) {
+        return
+    }
+
+    if (!groupId) {
+        const sourceIndex = serviceMode.tickets_without_group.findIndex((ticket) => String(ticket.id) === String(ticketId))
+        serviceMode.tickets_without_group = reindexTickets(
+            moveInArray(serviceMode.tickets_without_group, sourceIndex, sourceIndex + direction)
+        )
+        return
+    }
+
+    const group = getTicketGroup(modeId, groupId)
+    if (!group) return
+
+    const sourceIndex = group.tickets.findIndex((ticket) => String(ticket.id) === String(ticketId))
+    group.tickets = reindexTickets(
+        moveInArray(group.tickets, sourceIndex, sourceIndex + direction)
+    )
+}
+
+function removeTicketGroup(modeId, groupId) {
+    const serviceMode = getServiceModeItem(modeId)
+    if (!serviceMode) {
+        return
+    }
+
+    serviceMode.ticket_groups = reindexTicketGroups(
+        serviceMode.ticket_groups.filter((group) => String(group.id) !== String(groupId))
+    )
+}
+
+function moveTicketGroup(modeId, groupId, direction) {
+    const serviceMode = getServiceModeItem(modeId)
+    if (!serviceMode) {
+        return
+    }
+
+    const sourceIndex = serviceMode.ticket_groups.findIndex((group) => String(group.id) === String(groupId))
+    serviceMode.ticket_groups = reindexTicketGroups(
+        moveInArray(serviceMode.ticket_groups, sourceIndex, sourceIndex + direction)
+    )
 }
 
 function resetServiceModeForm() {
     newServiceModeLabel.value = ''
-    draggingServiceModeId.value = null
     loadServiceModeList()
 }
 
@@ -754,8 +1239,47 @@ async function saveServiceModeList() {
                 return {
                     id: Number.isInteger(parsedId) && parsedId > 0 ? parsedId : undefined,
                     label: item.label.trim(),
+                    value: (item.value || item.label).trim(),
                     is_active: item.is_active !== false,
+                    operational_mode: item.operational_mode || 'pickup',
+                    requires_delivery_agent: item.requires_delivery_agent === true,
                     sort_order: index + 1,
+                    tickets_without_group: (item.tickets_without_group || [])
+                        .filter((ticket) => ticket.label.trim() !== '')
+                        .map((ticket, ticketIndex) => {
+                            const ticketId = Number(ticket.id)
+
+                            return {
+                                id: Number.isInteger(ticketId) && ticketId > 0 ? ticketId : undefined,
+                                label: ticket.label.trim(),
+                                is_active: ticket.is_active !== false,
+                                sort_order: ticketIndex + 1,
+                            }
+                        }),
+                    ticket_groups: (item.ticket_groups || [])
+                        .filter((group) => group.label.trim() !== '')
+                        .map((group, groupIndex) => {
+                            const groupId = Number(group.id)
+
+                            return {
+                                id: Number.isInteger(groupId) && groupId > 0 ? groupId : undefined,
+                                label: group.label.trim(),
+                                is_active: group.is_active !== false,
+                                sort_order: groupIndex + 1,
+                                tickets: (group.tickets || [])
+                                    .filter((ticket) => ticket.label.trim() !== '')
+                                    .map((ticket, ticketIndex) => {
+                                        const ticketId = Number(ticket.id)
+
+                                        return {
+                                            id: Number.isInteger(ticketId) && ticketId > 0 ? ticketId : undefined,
+                                            label: ticket.label.trim(),
+                                            is_active: ticket.is_active !== false,
+                                            sort_order: ticketIndex + 1,
+                                        }
+                                    }),
+                            }
+                        }),
                 }
             }),
         }

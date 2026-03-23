@@ -1,147 +1,187 @@
 <template>
     <div class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-screen items-center justify-center px-4 py-6">
-            <div class="fixed inset-0 bg-slate-900/60" @click="$emit('close')"></div>
+            <div class="fixed inset-0 bg-slate-900/45 backdrop-blur-[2px]" @click="$emit('close')"></div>
 
-            <div class="relative z-10 w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-                <div class="border-b border-slate-200 bg-slate-50 px-6 py-4">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">POS</p>
-                            <h2 class="mt-1 text-2xl font-semibold text-slate-900">Enregistrer le ticket</h2>
-                            <p class="mt-1 text-sm text-slate-600">
-                                Total {{ formatCurrency(cartData.total || 0) }} · {{ cartItems.length }} article(s)
-                            </p>
-                        </div>
+            <div class="relative z-10 w-full max-w-3xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+                <div class="border-b border-slate-100 px-6 py-4">
+                    <div class="relative flex items-center justify-center">
+                        <h2 class="text-2xl font-semibold text-slate-900">Enregistrer</h2>
                         <button
                             type="button"
-                            class="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-white"
+                            class="absolute right-0 inline-flex h-10 w-10 items-center justify-center rounded-full text-3xl leading-none text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
                             @click="$emit('close')"
                         >
-                            Fermer
+                            <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="border-b border-slate-200 px-6 py-3">
-                    <div class="flex flex-wrap gap-2">
+                <div class="px-6 pt-4">
+                    <div class="grid gap-3 rounded-[24px] bg-slate-50 px-4 py-3 text-sm text-slate-600 sm:grid-cols-3">
+                        <div>
+                            <span class="font-semibold text-slate-800">Client:</span>
+                            {{ defaultCustomerName || 'Client anonyme' }}
+                        </div>
+                        <div>
+                            <span class="font-semibold text-slate-800">Total:</span>
+                            {{ formatCurrency(cartData.total || 0) }}
+                        </div>
+                        <div>
+                            <span class="font-semibold text-slate-800">Articles:</span>
+                            {{ cartItems.length }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 pb-6 pt-4">
+                    <div class="flex flex-col gap-1 rounded-[22px] bg-slate-100 p-1 sm:flex-row">
                         <button
                             v-for="tab in tabs"
                             :key="tab.value"
                             type="button"
-                            class="rounded-2xl px-4 py-2 text-sm font-semibold transition"
-                            :class="activeTab === tab.value ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                            class="w-full rounded-[18px] px-4 py-2.5 text-sm font-semibold transition sm:w-auto sm:min-w-[180px]"
+                            :class="activeTab === tab.value ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white/70'"
                             @click="activeTab = tab.value"
                         >
                             {{ tab.label }}
                         </button>
                     </div>
-                </div>
 
-                <div class="grid gap-6 px-6 py-6 lg:grid-cols-[300px,1fr]">
-                    <aside class="space-y-4">
-                        <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-                            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Résumé</p>
-                            <div class="mt-4 space-y-3">
-                                <div class="rounded-2xl bg-slate-50 p-3">
-                                    <p class="text-xs uppercase text-slate-500">Client</p>
-                                    <p class="mt-1 text-sm font-semibold text-slate-900">{{ defaultCustomerName || 'Client anonyme' }}</p>
-                                </div>
-                                <div v-if="serviceModeEnabled" class="rounded-2xl bg-slate-50 p-3">
-                                    <p class="text-xs uppercase text-slate-500">Mode service</p>
-                                    <p class="mt-1 text-sm font-semibold text-slate-900">{{ formatDeliveryMode(defaultDeliveryMode) }}</p>
-                                </div>
-                                <div class="rounded-2xl bg-slate-50 p-3">
-                                    <p class="text-xs uppercase text-slate-500">Articles</p>
-                                    <div class="mt-2 max-h-48 space-y-2 overflow-y-auto pr-1">
-                                        <div
-                                            v-for="(item, index) in cartItems"
-                                            :key="`${item.article_id}-${index}`"
-                                            class="flex items-start justify-between gap-3 text-sm"
-                                        >
-                                            <div class="min-w-0">
-                                                <p class="font-medium text-slate-900">{{ item.article_name }}</p>
-                                                <p class="text-xs text-slate-500">x{{ item.quantity }}</p>
-                                            </div>
-                                            <p class="whitespace-nowrap font-semibold text-slate-700">{{ formatCurrency(getItemTotal(item)) }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </aside>
-
-                    <section class="min-h-[460px]">
+                    <section class="mt-5 min-h-[460px]">
                         <div v-if="activeTab === 'liste'" class="space-y-5">
-                            <div class="rounded-3xl border border-emerald-200 bg-emerald-50 p-4">
-                                <p class="text-sm text-emerald-900">
-                                    Cliquez directement sur un nom de ticket. L’addition s’imprime immédiatement et le ticket est enregistré pour un paiement ultérieur.
+                            <div class="flex items-center justify-between gap-3 rounded-[20px] bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                <p>
+                                    {{ canSaveCurrentCart ? `Choisissez l’emplacement où enregistrer le ticket actuel pour ${formatDeliveryMode(currentServiceMode)}.` : 'Ajoutez des articles au ticket avant de choisir un emplacement.' }}
                                 </p>
+                                <button
+                                    type="button"
+                                    class="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+                                    :disabled="savedTicketsLoading"
+                                    @click="$emit('refresh-tickets')"
+                                >
+                                    {{ savedTicketsLoading ? '...' : 'Actualiser' }}
+                                </button>
                             </div>
 
-                            <div v-if="groupedPresetTickets.length" class="space-y-5">
-                                <div v-for="group in groupedPresetTickets" :key="group.name" class="space-y-3">
-                                    <div class="flex items-center gap-3">
-                                        <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-white">
-                                            {{ group.name }}
-                                        </span>
-                                        <span class="text-sm text-slate-500">{{ group.items.length }} ticket(s)</span>
-                                    </div>
-                                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            <div v-if="ungroupedBoardTickets.length" class="space-y-3">
+                                <h3 class="text-xl font-semibold text-slate-700">Sans groupe</h3>
+                                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div
+                                        v-for="ticket in ungroupedBoardTickets"
+                                        :key="ticket.key"
+                                        class="relative rounded-[18px] border border-slate-200 bg-white p-3 shadow-sm transition"
+                                        :class="ticket.ticket ? 'border-amber-300 bg-amber-50/40' : 'hover:border-slate-300 hover:shadow-md'"
+                                    >
                                         <button
-                                            v-for="ticket in group.items"
-                                            :key="ticket.key"
                                             type="button"
-                                            class="rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="saving"
-                                            @click="saveListedTicket(ticket)"
+                                            class="w-full text-left disabled:cursor-not-allowed disabled:opacity-50"
+                                            :disabled="isBoardTicketDisabled(ticket)"
+                                            @click="handleBoardTicketClick(ticket)"
                                         >
-                                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{{ ticket.group }}</p>
-                                            <p class="mt-2 text-lg font-semibold text-slate-900">{{ ticket.name }}</p>
-                                            <p class="mt-1 text-sm text-slate-500">Imprimer et enregistrer</p>
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-lg font-medium text-slate-700">{{ ticket.name }}</p>
+                                                    <p class="mt-1 text-xs font-medium text-slate-500">{{ getBoardTicketCaption(ticket) }}</p>
+                                                </div>
+                                                <span
+                                                    class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
+                                                    :class="getBoardTicketBadgeClass(ticket)"
+                                                >
+                                                    {{ getBoardTicketBadgeLabel(ticket) }}
+                                                </span>
+                                            </div>
+                                            <div v-if="ticket.ticket" class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+                                                <span class="truncate">{{ ticket.ticket.customer?.name || 'Client anonyme' }}</span>
+                                                <span class="shrink-0 font-semibold text-amber-700">{{ formatCurrency(ticket.ticket.total || 0) }}</span>
+                                            </div>
                                         </button>
                                     </div>
                                 </div>
                             </div>
+
+                            <div v-if="groupedBoardTickets.length" class="space-y-3">
+                                <h3 class="text-xl font-semibold text-slate-700">Groupes</h3>
+                                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div
+                                        v-for="ticket in groupedBoardTickets"
+                                        :key="ticket.key"
+                                        class="relative rounded-[18px] bg-gradient-to-b from-blue-500 to-blue-600 p-3 text-white shadow-sm transition"
+                                        :class="ticket.ticket ? 'ring-2 ring-amber-200/70' : 'hover:-translate-y-0.5 hover:shadow-md'"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="w-full text-left disabled:cursor-not-allowed disabled:opacity-50"
+                                            :disabled="isBoardTicketDisabled(ticket)"
+                                            @click="handleBoardTicketClick(ticket)"
+                                        >
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <p class="truncate text-lg font-semibold">{{ ticket.name }}</p>
+                                                    <p v-if="ticket.group !== ticket.name" class="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
+                                                        {{ ticket.group }}
+                                                    </p>
+                                                </div>
+                                                <span
+                                                    class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
+                                                    :class="ticket.ticket ? 'bg-amber-100 text-amber-700' : 'bg-white/15 text-blue-50'"
+                                                >
+                                                    {{ getBoardTicketBadgeLabel(ticket) }}
+                                                </span>
+                                            </div>
+                                            <div v-if="ticket.ticket" class="mt-3 flex items-center justify-between gap-3 text-xs text-blue-100">
+                                                <span class="truncate">{{ ticket.ticket.customer?.name || 'Client anonyme' }}</span>
+                                                <span class="shrink-0 font-semibold text-amber-100">{{ formatCurrency(ticket.ticket.total || 0) }}</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="!ungroupedBoardTickets.length && !groupedBoardTickets.length" class="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+                                Aucun emplacement n’est configuré pour ce mode de service.
+                            </div>
                         </div>
 
                         <div v-else-if="activeTab === 'personnalise'" class="space-y-5">
-                            <div class="grid gap-4 md:grid-cols-2">
-                                <label class="block">
-                                    <span class="mb-2 block text-sm font-medium text-slate-700">Nom du ticket</span>
-                                    <input
-                                        v-model.trim="personalizedForm.ticket_name"
-                                        type="text"
-                                        placeholder="Ex: Mariage Salma"
-                                        class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
-                                    >
-                                </label>
-                                <label class="block">
-                                    <span class="mb-2 block text-sm font-medium text-slate-700">Groupe</span>
-                                    <input
-                                        v-model.trim="personalizedForm.ticket_group"
-                                        type="text"
-                                        placeholder="Ex: Evenements"
-                                        class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
-                                    >
+                            <div class="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <label class="block">
+                                        <span class="mb-2 block text-sm font-medium text-slate-700">Nom du ticket</span>
+                                        <input
+                                            v-model.trim="personalizedForm.ticket_name"
+                                            type="text"
+                                            placeholder="Ex: Mariage Salma"
+                                            class="w-full rounded-[18px] border border-slate-300 bg-white px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                        >
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-2 block text-sm font-medium text-slate-700">Groupe</span>
+                                        <input
+                                            v-model.trim="personalizedForm.ticket_group"
+                                            type="text"
+                                            placeholder="Ex: Evenements"
+                                            class="w-full rounded-[18px] border border-slate-300 bg-white px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                        >
+                                    </label>
+                                </div>
+
+                                <label class="mt-4 block">
+                                    <span class="mb-2 block text-sm font-medium text-slate-700">Commentaire</span>
+                                    <textarea
+                                        v-model.trim="personalizedForm.comment"
+                                        rows="5"
+                                        placeholder="Commentaire libre pour l’impression"
+                                        class="w-full rounded-[22px] border border-slate-300 bg-white px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                    ></textarea>
                                 </label>
                             </div>
-
-                            <label class="block">
-                                <span class="mb-2 block text-sm font-medium text-slate-700">Commentaire</span>
-                                <textarea
-                                    v-model.trim="personalizedForm.comment"
-                                    rows="5"
-                                    placeholder="Commentaire libre pour l’impression"
-                                    class="w-full rounded-3xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
-                                ></textarea>
-                            </label>
 
                             <div class="flex justify-end">
                                 <button
                                     type="button"
-                                    class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                    :disabled="saving || !personalizedForm.ticket_name"
+                                    class="rounded-[18px] bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="saving || !personalizedForm.ticket_name || !canSaveCurrentCart"
                                     @click="savePersonalizedTicket"
                                 >
                                     {{ saving ? 'Enregistrement...' : 'Enregistrer et imprimer' }}
@@ -151,7 +191,7 @@
 
                         <div v-else class="space-y-5">
                             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                                <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                                <div class="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
                                     <p class="text-xs uppercase tracking-[0.2em] text-slate-500">N° cmd</p>
                                     <p class="mt-2 text-lg font-semibold text-slate-900">Automatique</p>
                                 </div>
@@ -160,14 +200,14 @@
                                     <input
                                         v-model="commandForm.appointment_at"
                                         type="datetime-local"
-                                        class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                     >
                                 </label>
                                 <label v-if="serviceModeEnabled" class="block">
                                     <span class="mb-2 block text-sm font-medium text-slate-700">Mode de service</span>
                                     <select
                                         v-model="commandForm.delivery_mode"
-                                        class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                     >
                                         <option v-for="mode in commandDeliveryModes" :key="mode.value" :value="mode.value">
                                             {{ mode.label }}
@@ -176,11 +216,11 @@
                                 </label>
                             </div>
 
-                            <div class="rounded-3xl border border-slate-200 p-4">
+                            <div class="rounded-[24px] border border-slate-200 p-4">
                                 <div class="mb-4 flex flex-wrap gap-2">
                                     <button
                                         type="button"
-                                        class="rounded-2xl px-4 py-2 text-sm font-semibold transition"
+                                        class="rounded-[18px] px-4 py-2 text-sm font-semibold transition"
                                         :class="customerMode === 'existing' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'"
                                         @click="customerMode = 'existing'"
                                     >
@@ -188,7 +228,7 @@
                                     </button>
                                     <button
                                         type="button"
-                                        class="rounded-2xl px-4 py-2 text-sm font-semibold transition"
+                                        class="rounded-[18px] px-4 py-2 text-sm font-semibold transition"
                                         :class="customerMode === 'new' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'"
                                         @click="customerMode = 'new'"
                                     >
@@ -203,7 +243,7 @@
                                             v-model.trim="customerSearch"
                                             type="text"
                                             placeholder="Nom ou téléphone"
-                                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                         >
                                     </label>
 
@@ -212,7 +252,7 @@
                                             v-for="customer in filteredCustomers"
                                             :key="customer.id"
                                             type="button"
-                                            class="rounded-2xl border px-4 py-3 text-left transition"
+                                            class="rounded-[18px] border px-4 py-3 text-left transition"
                                             :class="selectedCustomer?.id === customer.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'"
                                             @click="selectCustomer(customer)"
                                         >
@@ -220,10 +260,9 @@
                                             <p class="mt-1 text-sm text-slate-500">{{ customer.phone || 'Sans téléphone' }}</p>
                                         </button>
                                     </div>
-
                                     <p v-if="loadingCustomers" class="text-sm text-slate-500">Chargement des clients...</p>
 
-                                    <div v-if="selectedCustomer" class="grid gap-4 rounded-3xl bg-slate-50 p-4 md:grid-cols-3">
+                                    <div v-if="selectedCustomer" class="grid gap-4 rounded-[22px] bg-slate-50 p-4 md:grid-cols-3">
                                         <div>
                                             <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Client</p>
                                             <p class="mt-1 font-semibold text-slate-900">{{ selectedCustomer.name }}</p>
@@ -246,7 +285,7 @@
                                             v-model.trim="newCustomerForm.name"
                                             type="text"
                                             placeholder="Nom du client"
-                                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                         >
                                     </label>
                                     <label class="block">
@@ -255,7 +294,7 @@
                                             v-model.trim="newCustomerForm.phone"
                                             type="text"
                                             placeholder="Téléphone"
-                                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                         >
                                     </label>
                                     <label class="block">
@@ -264,7 +303,7 @@
                                             v-model.trim="newCustomerForm.activity"
                                             type="text"
                                             placeholder="Activité"
-                                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                         >
                                     </label>
                                     <label class="block">
@@ -273,7 +312,7 @@
                                             v-model.trim="newCustomerForm.address"
                                             type="text"
                                             placeholder="Adresse"
-                                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                         >
                                     </label>
                                 </div>
@@ -287,10 +326,10 @@
                                         type="number"
                                         min="0"
                                         step="0.01"
-                                        class="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                     >
                                 </label>
-                                <div class="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+                                <div class="rounded-[22px] border border-amber-200 bg-amber-50 p-4">
                                     <p class="text-xs uppercase tracking-[0.2em] text-amber-700">Reste à payer</p>
                                     <p class="mt-2 text-lg font-semibold text-amber-900">{{ formatCurrency(commandRemainingAmount) }}</p>
                                 </div>
@@ -300,7 +339,7 @@
                                         v-model.trim="commandForm.notes"
                                         rows="3"
                                         placeholder="Commentaire pour la commande"
-                                        class="w-full rounded-3xl border border-slate-300 px-4 py-3 focus:border-slate-500 focus:outline-none"
+                                        class="w-full rounded-[22px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                     ></textarea>
                                 </label>
                             </div>
@@ -308,8 +347,8 @@
                             <div class="flex justify-end">
                                 <button
                                     type="button"
-                                    class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                    :disabled="saving || !canSaveCommande"
+                                    class="rounded-[18px] bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="saving || !canSaveCommande || !canSaveCurrentCart"
                                     @click="saveCommandeTicket"
                                 >
                                     {{ saving ? 'Enregistrement...' : 'Enregistrer, imprimer la commande' }}
@@ -354,30 +393,33 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    savedTickets: {
+        type: Array,
+        default: () => [],
+    },
+    savedTicketsLoading: {
+        type: Boolean,
+        default: false,
+    },
+    currentSaleId: {
+        type: [Number, String, null],
+        default: null,
+    },
 })
 
-const emit = defineEmits(['close', 'saved'])
+const emit = defineEmits(['close', 'saved', 'refresh-tickets'])
 
 const settingsStore = useSettingsStore()
 const customListsStore = useCustomListsStore()
 
-const PRESET_STORAGE_KEY = 'pos_ticket_presets_v1'
-const DEFAULT_PRESET_TICKETS = [
-    { group: 'Caisse', name: 'Ticket comptoir' },
-    { group: 'Caisse', name: 'Ticket retrait' },
-    { group: 'Production', name: 'Ticket atelier' },
-    { group: 'Livraison', name: 'Ticket livraison' },
-]
-
 const tabs = [
     { value: 'liste', label: 'Liste tickets' },
-    { value: 'personnalise', label: 'Ticket personnalise' },
-    { value: 'commande', label: 'Commandes' },
+    { value: 'personnalise', label: 'Ticket personnalisé' },
+    { value: 'commande', label: 'Commande' },
 ]
 
 const activeTab = ref('liste')
 const saving = ref(false)
-const savedPresets = ref([])
 const customers = ref([])
 const loadingCustomers = ref(false)
 const customerSearch = ref('')
@@ -412,24 +454,120 @@ const serviceModeEnabled = computed(() => {
     return customListsStore.serviceModeEnabled && commandDeliveryModes.value.length > 0
 })
 
-const groupedPresetTickets = computed(() => {
-    const groups = new Map()
+const canSaveCurrentCart = computed(() => props.cartItems.length > 0)
+const currentServiceMode = computed(() => normalizeDeliveryMode(props.defaultDeliveryMode))
 
-    for (const ticket of savedPresets.value) {
-        const groupName = ticket.group || 'Sans groupe'
-        if (!groups.has(groupName)) {
-            groups.set(groupName, [])
-        }
-        groups.get(groupName).push({
-            ...ticket,
-            key: `${groupName}-${ticket.name}`,
+const configuredBoardEntries = computed(() => {
+    const config = customListsStore.getServiceModeTickets(currentServiceMode.value)
+    const entries = []
+
+    for (const ticket of config.tickets_without_group || []) {
+        entries.push({
+            key: createTicketBoardKey('Sans groupe', ticket.label),
+            name: String(ticket.label || '').trim(),
+            group: 'Sans groupe',
+            ticket: null,
+            group_sort_order: 0,
+            ticket_sort_order: Number(ticket.sort_order || 0),
+            configured_index: entries.length,
         })
     }
 
-    return Array.from(groups.entries()).map(([name, items]) => ({
-        name,
-        items: items.sort((a, b) => a.name.localeCompare(b.name, 'fr')),
-    }))
+    for (const group of config.ticket_groups || []) {
+        for (const ticket of group.tickets || []) {
+            entries.push({
+                key: createTicketBoardKey(group.label, ticket.label),
+                name: String(ticket.label || '').trim(),
+                group: normalizeTicketGroup(group.label),
+                ticket: null,
+                group_sort_order: Number(group.sort_order || 0),
+                ticket_sort_order: Number(ticket.sort_order || 0),
+                configured_index: entries.length,
+            })
+        }
+    }
+
+    return entries.filter((entry) => entry.name)
+})
+
+const currentModeSavedTicketEntries = computed(() => {
+    return (props.savedTickets || [])
+        .filter((ticket) => normalizeDeliveryMode(ticket?.service_mode || ticket?.delivery_mode) === currentServiceMode.value)
+        .map((ticket) => {
+            const name = String(ticket?.ticket_name || ticket?.reference || `Ticket #${ticket?.id || '-'}`).trim()
+            if (!name) return null
+
+            return {
+                key: createTicketBoardKey(ticket?.ticket_group, name),
+                name,
+                group: normalizeTicketGroup(ticket?.ticket_group),
+                ticket,
+                group_sort_order: Number.MAX_SAFE_INTEGER,
+                ticket_sort_order: Number.MAX_SAFE_INTEGER,
+                configured_index: Number.MAX_SAFE_INTEGER,
+            }
+        })
+        .filter(Boolean)
+})
+
+const ticketBoardTiles = computed(() => {
+    const tiles = new Map()
+
+    for (const preset of configuredBoardEntries.value) {
+        tiles.set(preset.key, {
+            key: preset.key,
+            name: preset.name,
+            group: normalizeTicketGroup(preset.group),
+            ticket: null,
+            group_sort_order: preset.group_sort_order,
+            ticket_sort_order: preset.ticket_sort_order,
+            configured_index: preset.configured_index,
+        })
+    }
+
+    currentModeSavedTicketEntries.value.forEach((entry, index) => {
+        const existing = tiles.get(entry.key)
+        tiles.set(entry.key, {
+            ...(existing || {}),
+            key: entry.key,
+            name: entry.name,
+            group: entry.group,
+            ticket: entry.ticket,
+            group_sort_order: existing?.group_sort_order ?? Number.MAX_SAFE_INTEGER,
+            ticket_sort_order: existing?.ticket_sort_order ?? Number.MAX_SAFE_INTEGER,
+            configured_index: existing?.configured_index ?? (Number.MAX_SAFE_INTEGER - 1000 + index),
+        })
+    })
+
+    return Array.from(tiles.values()).sort((a, b) => {
+        const ungroupedCompare = Number(isUngroupedTicket(a.group)) - Number(isUngroupedTicket(b.group))
+        if (ungroupedCompare !== 0) return ungroupedCompare * -1
+
+        if (a.group_sort_order !== b.group_sort_order) {
+            return a.group_sort_order - b.group_sort_order
+        }
+
+        const groupCompare = a.group.localeCompare(b.group, 'fr')
+        if (groupCompare !== 0) return groupCompare
+
+        if (a.ticket_sort_order !== b.ticket_sort_order) {
+            return a.ticket_sort_order - b.ticket_sort_order
+        }
+
+        if (a.configured_index !== b.configured_index) {
+            return a.configured_index - b.configured_index
+        }
+
+        return a.name.localeCompare(b.name, 'fr')
+    })
+})
+
+const ungroupedBoardTickets = computed(() => {
+    return ticketBoardTiles.value.filter((ticket) => isUngroupedTicket(ticket.group))
+})
+
+const groupedBoardTickets = computed(() => {
+    return ticketBoardTiles.value.filter((ticket) => !isUngroupedTicket(ticket.group))
 })
 
 const filteredCustomers = computed(() => {
@@ -492,7 +630,6 @@ watch(commandDeliveryModes, () => {
 onMounted(async () => {
     await customListsStore.fetchList('mode_de_service')
     commandForm.value.delivery_mode = normalizeDeliveryMode(commandForm.value.delivery_mode)
-    savedPresets.value = loadPresetTickets()
     if (activeTab.value === 'commande') {
         await fetchCustomers()
     }
@@ -501,6 +638,18 @@ onMounted(async () => {
 function normalizeDeliveryMode(mode) {
     return customListsStore.findServiceMode(mode, { includeInactive: true })?.value
         || customListsStore.defaultServiceModeValue()
+}
+
+function normalizeTicketGroup(group) {
+    return String(group || 'Sans groupe').trim() || 'Sans groupe'
+}
+
+function isUngroupedTicket(group) {
+    return normalizeTicketGroup(group).toLowerCase() === 'sans groupe'
+}
+
+function createTicketBoardKey(group, name) {
+    return `${normalizeTicketGroup(group).toLowerCase()}::${String(name || '').trim().toLowerCase()}`
 }
 
 function hydrateDefaultCustomer() {
@@ -513,48 +662,6 @@ function hydrateDefaultCustomer() {
         activity: '',
         address: '',
     }
-}
-
-function loadPresetTickets() {
-    try {
-        const raw = localStorage.getItem(PRESET_STORAGE_KEY)
-        const parsed = raw ? JSON.parse(raw) : []
-        return mergePresetTickets(DEFAULT_PRESET_TICKETS, parsed)
-    } catch {
-        return [...DEFAULT_PRESET_TICKETS]
-    }
-}
-
-function savePresetTicketsToStorage(list) {
-    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(list))
-}
-
-function mergePresetTickets(baseTickets, customTickets) {
-    const seen = new Set()
-    const merged = []
-
-    for (const ticket of [...baseTickets, ...(customTickets || [])]) {
-        const normalized = {
-            group: String(ticket.group || 'Sans groupe').trim(),
-            name: String(ticket.name || '').trim(),
-        }
-        if (!normalized.name) continue
-        const key = `${normalized.group}::${normalized.name}`.toLowerCase()
-        if (seen.has(key)) continue
-        seen.add(key)
-        merged.push(normalized)
-    }
-
-    return merged
-}
-
-function persistPresetTicket(ticketName, ticketGroup) {
-    const updated = mergePresetTickets(savedPresets.value, [{
-        name: ticketName,
-        group: ticketGroup || 'Sans groupe',
-    }])
-    savedPresets.value = updated
-    savePresetTicketsToStorage(updated)
 }
 
 async function fetchCustomers() {
@@ -620,6 +727,7 @@ function buildNotes(parts) {
 
 async function saveListedTicket(ticket) {
     await saveAndPrint({
+        saleId: ticket.ticket?.id || null,
         title: ticket.name,
         payload: buildSalePayload({
             origin: 'pos',
@@ -634,6 +742,11 @@ async function saveListedTicket(ticket) {
 }
 
 async function savePersonalizedTicket() {
+    if (!canSaveCurrentCart.value) {
+        alert('Ajoutez au moins un article avant d’enregistrer un ticket.')
+        return
+    }
+
     const ticketName = personalizedForm.value.ticket_name.trim()
     if (!ticketName) {
         alert('Veuillez saisir un nom de ticket.')
@@ -641,7 +754,6 @@ async function savePersonalizedTicket() {
     }
 
     const ticketGroup = personalizedForm.value.ticket_group.trim() || 'Personnalise'
-    persistPresetTicket(ticketName, ticketGroup)
 
     await saveAndPrint({
         title: ticketName,
@@ -658,6 +770,11 @@ async function savePersonalizedTicket() {
 }
 
 async function saveCommandeTicket() {
+    if (!canSaveCurrentCart.value) {
+        alert('Ajoutez au moins un article avant d’enregistrer une commande.')
+        return
+    }
+
     if (!commandForm.value.appointment_at) {
         alert('Veuillez renseigner la date et l’heure du rendez-vous.')
         return
@@ -741,11 +858,19 @@ async function resolveCustomerId() {
     return data.id
 }
 
-async function saveAndPrint({ title, payload }) {
+async function saveAndPrint({ title, payload, saleId = null }) {
     saving.value = true
     try {
-        const { data } = await salesApi.create(payload)
-        const refreshed = await salesApi.get(data.id)
+        let savedSaleId = saleId
+
+        if (savedSaleId) {
+            await salesApi.update(savedSaleId, payload)
+        } else {
+            const { data } = await salesApi.create(payload)
+            savedSaleId = data.id
+        }
+
+        const refreshed = await salesApi.get(savedSaleId)
         printSale(refreshed.data, payload.ticket_type || 'liste', title)
         alert('Ticket enregistré et envoyé à l’impression.')
         emit('saved', refreshed.data)
@@ -755,6 +880,75 @@ async function saveAndPrint({ title, payload }) {
     } finally {
         saving.value = false
     }
+}
+
+function isBoardTicketBusy(ticket) {
+    return saving.value
+}
+
+function isBoardTicketDisabled(ticket) {
+    if (isBoardTicketBusy(ticket) || !canSaveCurrentCart.value) {
+        return true
+    }
+
+    return !!ticket.ticket && Number(ticket.ticket.id || 0) !== Number(props.currentSaleId || 0)
+}
+
+function getBoardTicketCaption(ticket) {
+    if (ticket.ticket) {
+        if (Number(ticket.ticket.id || 0) === Number(props.currentSaleId || 0)) {
+            return 'Mettre à jour le ticket actuellement ouvert'
+        }
+
+        return 'Déjà enregistré. Ouvrez-le depuis Tickets enregistrés'
+    }
+
+    return 'Enregistrer dans cet emplacement'
+}
+
+function getBoardTicketBadgeLabel(ticket) {
+    if (!ticket.ticket) {
+        return 'Libre'
+    }
+
+    if (Number(ticket.ticket.id || 0) === Number(props.currentSaleId || 0)) {
+        return 'Actuel'
+    }
+
+    return 'Occupé'
+}
+
+function getBoardTicketBadgeClass(ticket) {
+    if (!ticket.ticket) {
+        return 'bg-slate-100 text-slate-500'
+    }
+
+    if (Number(ticket.ticket.id || 0) === Number(props.currentSaleId || 0)) {
+        return 'bg-blue-100 text-blue-700'
+    }
+
+    return 'bg-amber-100 text-amber-700'
+}
+
+async function handleBoardTicketClick(ticket) {
+    if (!canSaveCurrentCart.value) {
+        alert('Ajoutez des articles avant d’enregistrer ce ticket.')
+        return
+    }
+
+    if (ticket.ticket && Number(ticket.ticket.id || 0) !== Number(props.currentSaleId || 0)) {
+        alert('Ce ticket est déjà occupé. Ouvrez-le depuis "Tickets enregistrés" ou choisissez un autre emplacement.')
+        return
+    }
+
+    if (ticket.ticket && Number(ticket.ticket.id || 0) === Number(props.currentSaleId || 0)) {
+        const shouldUpdate = confirm(`Mettre à jour le ticket actuel dans "${ticket.name}" ?`)
+        if (!shouldUpdate) {
+            return
+        }
+    }
+
+    await saveListedTicket(ticket)
 }
 
 function printSale(sale, mode, forcedTitle = null) {

@@ -18,6 +18,8 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 1,
             operational_mode: 'dine_in',
             requires_delivery_agent: false,
+            tickets_without_group: [],
+            ticket_groups: [],
         },
         {
             id: 'fallback-emporte',
@@ -27,6 +29,8 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 2,
             operational_mode: 'pickup',
             requires_delivery_agent: false,
+            tickets_without_group: [],
+            ticket_groups: [],
         },
         {
             id: 'fallback-livraison',
@@ -36,6 +40,8 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 3,
             operational_mode: 'delivery',
             requires_delivery_agent: true,
+            tickets_without_group: [],
+            ticket_groups: [],
         },
     ],
 }
@@ -73,6 +79,48 @@ function normalizeServiceModeValue(value) {
     return matchedLegacy ? matchedLegacy[1] : String(value || '').trim()
 }
 
+function normalizeTicket(ticket, index) {
+    return {
+        id: ticket?.id ?? `generated-ticket-${index}`,
+        label: String(ticket?.label || '').trim(),
+        is_active: ticket?.is_active !== false,
+        sort_order: Number(ticket?.sort_order ?? index + 1),
+    }
+}
+
+function normalizeTicketGroup(group, index) {
+    return {
+        id: group?.id ?? `generated-group-${index}`,
+        label: String(group?.label || '').trim(),
+        is_active: group?.is_active !== false,
+        sort_order: Number(group?.sort_order ?? index + 1),
+        tickets: [...(group?.tickets || [])]
+            .map((ticket, ticketIndex) => normalizeTicket(ticket, ticketIndex))
+            .filter((ticket) => ticket.label)
+            .sort((a, b) => a.sort_order - b.sort_order),
+    }
+}
+
+function normalizeServiceModeItem(item, index) {
+    return {
+        id: item?.id ?? `generated-${index}`,
+        label: item?.label || item?.value || '',
+        value: item?.value || item?.label || '',
+        is_active: item?.is_active !== false,
+        sort_order: Number(item?.sort_order ?? index + 1),
+        operational_mode: item?.operational_mode || 'pickup',
+        requires_delivery_agent: item?.requires_delivery_agent === true,
+        tickets_without_group: [...(item?.tickets_without_group || [])]
+            .map((ticket, ticketIndex) => normalizeTicket(ticket, ticketIndex))
+            .filter((ticket) => ticket.label)
+            .sort((a, b) => a.sort_order - b.sort_order),
+        ticket_groups: [...(item?.ticket_groups || [])]
+            .map((group, groupIndex) => normalizeTicketGroup(group, groupIndex))
+            .filter((group) => group.label)
+            .sort((a, b) => a.sort_order - b.sort_order),
+    }
+}
+
 function normalizeListPayload(list) {
     const base = list && list.name === SERVICE_MODE_LIST_NAME
         ? list
@@ -83,15 +131,7 @@ function normalizeListPayload(list) {
         name: base.name,
         is_active: base.is_active !== false,
         items: [...(base.items || [])]
-            .map((item, index) => ({
-                id: item.id ?? `generated-${index}`,
-                label: item.label || item.value || '',
-                value: item.value || item.label || '',
-                is_active: item.is_active !== false,
-                sort_order: Number(item.sort_order ?? index + 1),
-                operational_mode: item.operational_mode || 'pickup',
-                requires_delivery_agent: item.requires_delivery_agent === true,
-            }))
+            .map((item, index) => normalizeServiceModeItem(item, index))
             .sort((a, b) => a.sort_order - b.sort_order),
     }
 }
@@ -243,6 +283,36 @@ export const useCustomListsStore = defineStore('customLists', () => {
         }
     }
 
+    function getServiceModeTickets(value, { includeInactive = false } = {}) {
+        const match = findServiceMode(value, { includeInactive: true })
+
+        if (!match) {
+            return {
+                tickets_without_group: [],
+                ticket_groups: [],
+            }
+        }
+
+        const ticketFilter = includeInactive
+            ? (entry) => true
+            : (entry) => entry.is_active !== false
+
+        return {
+            tickets_without_group: (match.tickets_without_group || [])
+                .filter(ticketFilter)
+                .sort((a, b) => a.sort_order - b.sort_order),
+            ticket_groups: (match.ticket_groups || [])
+                .filter(ticketFilter)
+                .map((group) => ({
+                    ...group,
+                    tickets: (group.tickets || [])
+                        .filter(ticketFilter)
+                        .sort((a, b) => a.sort_order - b.sort_order),
+                }))
+                .sort((a, b) => a.sort_order - b.sort_order),
+        }
+    }
+
     function defaultServiceModeValue() {
         return activeServiceModes.value[0]?.value
             || serviceModeList.value.items[0]?.value
@@ -277,6 +347,7 @@ export const useCustomListsStore = defineStore('customLists', () => {
         findServiceMode,
         getServiceModeLabel,
         getServiceModeMeta,
+        getServiceModeTickets,
         defaultServiceModeValue,
     }
 })

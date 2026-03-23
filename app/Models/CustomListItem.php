@@ -13,11 +13,14 @@ class CustomListItem extends Model
     protected $fillable = [
         'list_id',
         'label',
+        'value',
+        'metadata',
         'is_active',
         'sort_order',
     ];
 
     protected $casts = [
+        'metadata' => 'array',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];

@@ -82,6 +82,103 @@ class CustomServiceModesTest extends TestCase
         ]);
     }
 
+    public function test_service_mode_can_store_ticket_groups_and_ticket_slots(): void
+    {
+        $user = User::factory()->create();
+        $list = CustomList::where('name', 'mode_de_service')->firstOrFail();
+        $surPlace = $list->items()->where('label', 'Sur place')->firstOrFail();
+
+        $response = $this->actingAs($user)->putJson('/api/custom-lists/mode_de_service', [
+            'is_active' => true,
+            'items' => [
+                [
+                    'id' => $surPlace->id,
+                    'label' => 'Sur place',
+                    'value' => 'Sur place',
+                    'is_active' => true,
+                    'sort_order' => 1,
+                    'operational_mode' => 'dine_in',
+                    'requires_delivery_agent' => false,
+                    'tickets_without_group' => [
+                        ['label' => 'Accueil', 'is_active' => true, 'sort_order' => 1],
+                        ['label' => 'Bar', 'is_active' => true, 'sort_order' => 2],
+                    ],
+                    'ticket_groups' => [
+                        [
+                            'label' => 'Salle',
+                            'is_active' => true,
+                            'sort_order' => 1,
+                            'tickets' => [
+                                ['label' => 'Table 1', 'is_active' => true, 'sort_order' => 1],
+                                ['label' => 'Table 2', 'is_active' => false, 'sort_order' => 2],
+                            ],
+                        ],
+                    ],
+                ],
+                [
+                    'label' => 'Livraison',
+                    'value' => 'Livraison',
+                    'is_active' => true,
+                    'sort_order' => 2,
+                    'operational_mode' => 'delivery',
+                    'requires_delivery_agent' => true,
+                    'tickets_without_group' => [
+                        ['label' => 'Commande téléphone', 'is_active' => true, 'sort_order' => 1],
+                    ],
+                    'ticket_groups' => [],
+                ],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('items.0.tickets_without_group.0.label', 'Accueil')
+            ->assertJsonPath('items.0.ticket_groups.0.label', 'Salle')
+            ->assertJsonPath('items.0.ticket_groups.0.tickets.0.label', 'Table 1')
+            ->assertJsonPath('items.1.requires_delivery_agent', true);
+
+        $surPlace->refresh();
+
+        $this->assertSame('dine_in', $surPlace->metadata['operational_mode']);
+        $this->assertSame('Accueil', $surPlace->metadata['tickets_without_group'][0]['label']);
+        $this->assertSame('Salle', $surPlace->metadata['ticket_groups'][0]['label']);
+        $this->assertSame('Table 2', $surPlace->metadata['ticket_groups'][0]['tickets'][1]['label']);
+    }
+
+    public function test_service_mode_rejects_duplicate_ticket_labels_inside_same_scope(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->putJson('/api/custom-lists/mode_de_service', [
+            'is_active' => true,
+            'items' => [
+                [
+                    'label' => 'Sur place',
+                    'value' => 'Sur place',
+                    'is_active' => true,
+                    'sort_order' => 1,
+                    'tickets_without_group' => [
+                        ['label' => 'Accueil', 'is_active' => true, 'sort_order' => 1],
+                        ['label' => 'Accueil', 'is_active' => true, 'sort_order' => 2],
+                    ],
+                    'ticket_groups' => [
+                        [
+                            'label' => 'Salle',
+                            'is_active' => true,
+                            'sort_order' => 1,
+                            'tickets' => [
+                                ['label' => 'Table 1', 'is_active' => true, 'sort_order' => 1],
+                                ['label' => 'Table 1', 'is_active' => true, 'sort_order' => 2],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors('items');
+    }
+
     public function test_sale_creation_persists_dynamic_service_mode_and_maps_legacy_operational_mode(): void
     {
         $user = User::factory()->create();

@@ -947,12 +947,14 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { articlesApi, categoriesApi, optionsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
+import { useArticlesStore } from '../../stores/articles'
 import { XMarkIcon } from '@heroicons/vue/24/outline'
 import { useVariantTemplatesStore } from '../../stores/variantTemplates'
 
 const route = useRoute()
 const router = useRouter()
 const settingsStore = useSettingsStore()
+const articlesStore = useArticlesStore()
 
 const isEdit = computed(() => !!route.params.id)
 const categories = ref([])
@@ -1477,6 +1479,10 @@ async function handleSubmit() {
         } else {
             await articlesApi.create(data)
         }
+        
+        // Refresh articles in store to update POS cache
+        await articlesStore.refresh()
+        
         router.push('/articles')
     } catch (error) {
         console.error('Failed to save article:', error)
