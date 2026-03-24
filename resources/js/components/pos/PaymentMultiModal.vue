@@ -1,12 +1,9 @@
 <template>
     <div class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
-            <!-- Backdrop -->
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="$emit('close')"></div>
 
-            <!-- Modal -->
             <div class="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-auto z-10 max-h-[90vh] overflow-y-auto">
-                <!-- Header -->
                 <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900">💳 Paiement Multiple</h3>
                     <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
@@ -14,7 +11,6 @@
                     </button>
                 </div>
 
-                <!-- Content -->
                 <div class="p-6 space-y-6">
                     <div v-if="sale" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
                         <div class="grid gap-3 md:grid-cols-2 text-sm">
@@ -59,7 +55,6 @@
                         </div>
                     </div>
 
-                    <!-- Payment Summary (Top) -->
                     <div class="grid grid-cols-3 gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
                         <div class="text-center">
                             <p class="text-xs text-gray-600 font-medium">Total à Payer</p>
@@ -77,17 +72,16 @@
                         </div>
                     </div>
 
-                    <!-- Payment Methods Selection -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-900 mb-3">🔵 Méthode de Paiement</label>
-                        <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
-                            <button 
+                        <div v-if="paymentMethods.length" class="grid grid-cols-2 gap-3 md:grid-cols-3">
+                            <button
                                 v-for="method in paymentMethods"
                                 :key="method.id"
                                 @click="selectMethod(method)"
                                 class="p-4 border-2 rounded-lg flex flex-col items-center justify-center transition-all hover:shadow-md"
-                                :class="selectedMethod?.id === method.id 
-                                    ? 'border-primary-500 bg-primary-50 shadow-md' 
+                                :class="selectedMethod?.id === method.id
+                                    ? 'border-primary-500 bg-primary-50 shadow-md'
                                     : 'border-gray-200 hover:border-gray-300'"
                             >
                                 <span class="text-2xl mb-2">{{ method.icon }}</span>
@@ -95,17 +89,18 @@
                                 <span class="text-xs text-gray-500 mt-1">{{ method.description }}</span>
                             </button>
                         </div>
+                        <div v-else class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                            Aucun mode de paiement actif n’est configuré dans les paramètres.
+                        </div>
                     </div>
 
-                    <!-- Payment Form (Dynamic based on selected method) -->
                     <div v-if="selectedMethod" class="bg-gray-50 rounded-xl p-6 border border-gray-200">
                         <h4 class="text-sm font-semibold text-gray-900 mb-4">{{ selectedMethod.label }} - Détails</h4>
-                        
-                        <!-- Common: Amount -->
+
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Montant *</label>
                             <div class="flex gap-2">
-                                <input 
+                                <input
                                     v-model.number="paymentForm.amount"
                                     type="number"
                                     step="0.01"
@@ -121,13 +116,12 @@
                             </p>
                         </div>
 
-                        <!-- Espèce: Billets & Monnaie -->
                         <template v-if="selectedMethod.id === 'cash'">
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Billets (montant reçu) *</label>
                                     <div class="flex gap-2">
-                                        <input 
+                                        <input
                                             v-model.number="paymentForm.received_amount"
                                             type="number"
                                             step="0.01"
@@ -146,11 +140,10 @@
                                 </div>
                             </div>
 
-                            <!-- Quick Amount Buttons -->
                             <div class="mb-4">
                                 <p class="text-xs text-gray-600 mb-2">Montants rapides:</p>
                                 <div class="grid grid-cols-4 gap-2">
-                                    <button 
+                                    <button
                                         v-for="amount in quickCashAmounts"
                                         :key="amount"
                                         @click="paymentForm.received_amount = amount"
@@ -162,11 +155,10 @@
                             </div>
                         </template>
 
-                        <!-- Carte / Mobile / Virement Instantané: Transaction Number -->
                         <template v-if="['card', 'mobile', 'instant_transfer'].includes(selectedMethod.id)">
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Numéro de Transaction *</label>
-                                <input 
+                                <input
                                     v-model="paymentForm.transaction_number"
                                     type="text"
                                     placeholder="Ex: 12345678, ABC123XYZ"
@@ -175,12 +167,11 @@
                             </div>
                         </template>
 
-                        <!-- Virement Simple / Chèque / Crédit: All Fields -->
-                        <template v-if="['simple_transfer', 'check', 'credit'].includes(selectedMethod.id)">
+                        <template v-if="['simple_transfer', 'credit'].includes(selectedMethod.id)">
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">{{ transactionLabel }}{{ requiresTransaction ? ' *' : '' }}</label>
-                                    <input 
+                                    <input
                                         v-model="paymentForm.transaction_number"
                                         type="text"
                                         :placeholder="transactionPlaceholder"
@@ -189,7 +180,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">{{ pieceLabel }}</label>
-                                    <input 
+                                    <input
                                         v-model="paymentForm.piece_number"
                                         type="text"
                                         :placeholder="piecePlaceholder"
@@ -201,7 +192,7 @@
                             <div class="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Date d'émission *</label>
-                                    <input 
+                                    <input
                                         v-model="paymentForm.issue_date"
                                         type="date"
                                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -209,7 +200,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Banque {{ requiresBankName ? '*' : '' }}</label>
-                                    <input 
+                                    <input
                                         v-model="paymentForm.bank_name"
                                         type="text"
                                         :placeholder="bankPlaceholder"
@@ -220,7 +211,7 @@
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance *</label>
-                                <input 
+                                <input
                                     v-model="paymentForm.due_date"
                                     type="date"
                                     :min="paymentForm.issue_date || undefined"
@@ -232,10 +223,9 @@
                             </p>
                         </template>
 
-                        <!-- Notes -->
                         <div class="mt-4">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Notes (optionnel)</label>
-                            <textarea 
+                            <textarea
                                 v-model="paymentForm.notes"
                                 placeholder="Remarques ou informations supplémentaires..."
                                 rows="2"
@@ -243,8 +233,7 @@
                             ></textarea>
                         </div>
 
-                        <!-- Add Payment Button -->
-                        <button 
+                        <button
                             @click="addPayment"
                             :disabled="!canAddPayment"
                             class="w-full mt-6 py-3 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
@@ -254,18 +243,17 @@
                         </button>
                     </div>
 
-                    <!-- Added Payments List -->
                     <div v-if="payments.length > 0" class="bg-white rounded-xl border border-gray-200 p-4">
                         <h4 class="text-sm font-semibold text-gray-900 mb-3">📋 Paiements Ajoutés ({{ payments.length }})</h4>
                         <div class="space-y-2">
-                            <div 
+                            <div
                                 v-for="(payment, index) in payments"
                                 :key="index"
                                 class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                             >
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-900">
-                                        {{ getMethodLabel(payment.payment_type) }}
+                                        {{ payment.display_label || getMethodLabel(payment.payment_type, payment.transfer_mode) }}
                                     </p>
                                     <p class="text-xs text-gray-500">
                                         {{ payment.transaction_number || payment.reference || 'Aucune référence' }}
@@ -274,7 +262,7 @@
                                 <div class="text-right mr-3">
                                     <p class="text-lg font-bold text-gray-900">{{ formatCurrency(payment.amount) }}</p>
                                 </div>
-                                <button 
+                                <button
                                     @click="removePayment(index)"
                                     class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                     title="Supprimer ce paiement"
@@ -286,15 +274,14 @@
                     </div>
                 </div>
 
-                <!-- Footer -->
                 <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex space-x-3">
-                    <button 
+                    <button
                         @click="$emit('close')"
                         class="flex-1 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors"
                     >
                         Annuler
                     </button>
-                    <button 
+                    <button
                         @click="confirmPayments"
                         :disabled="!canConfirmPayments"
                         class="flex-1 py-3 bg-green-500 text-gray-900 font-bold rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
@@ -309,8 +296,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useSettingsStore } from '../../stores/settings'
+import { useCustomListsStore } from '../../stores/customLists'
 import {
     XMarkIcon,
     PlusIcon,
@@ -340,59 +328,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'complete'])
 
 const settingsStore = useSettingsStore()
+const customListsStore = useCustomListsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
-
-const paymentMethods = [
-    {
-        id: 'cash',
-        paymentType: 'cash',
-        label: 'Espèce',
-        description: 'Paiement en liquide',
-        icon: '💵'
-    },
-    {
-        id: 'card',
-        paymentType: 'card',
-        label: 'Carte',
-        description: 'Carte bancaire',
-        icon: '💳'
-    },
-    {
-        id: 'mobile',
-        paymentType: 'mobile',
-        label: 'Mobile',
-        description: 'Paiement mobile',
-        icon: '📱'
-    },
-    {
-        id: 'instant_transfer',
-        paymentType: 'virement',
-        label: 'Virement Instantané',
-        description: 'Transfert bancaire rapide',
-        icon: '⚡'
-    },
-    {
-        id: 'simple_transfer',
-        paymentType: 'virement',
-        label: 'Virement Simple',
-        description: 'Transfert bancaire standard',
-        icon: '🏦'
-    },
-    {
-        id: 'check',
-        paymentType: 'cheque',
-        label: 'Chèque',
-        description: 'Paiement par chèque',
-        icon: '📄'
-    },
-    {
-        id: 'credit',
-        paymentType: 'credit',
-        label: 'Crédit (LCN)',
-        description: 'Lettre de change',
-        icon: '📋'
-    }
-]
 
 const saleSummary = computed(() => props.sale?.payment_summary || null)
 const paidConfirmedAmount = computed(() => Number(saleSummary.value?.paid_confirmed_amount || 0))
@@ -403,6 +340,18 @@ const orderArticles = computed(() => Array.isArray(props.sale?.items) ? props.sa
 const selectedMethod = ref(null)
 const payments = ref([])
 const paymentForm = ref(getEmptyForm())
+
+const paymentMethods = computed(() => {
+    return customListsStore.activePaymentModes.map((item, index) => ({
+        id: createMethodId(item, index),
+        paymentType: item.payment_type || 'other',
+        transferMode: item.transfer_mode || null,
+        label: item.label,
+        description: describePaymentMethod(item),
+        icon: iconForPaymentMethod(item),
+        isDefault: item.is_default === true,
+    }))
+})
 
 function getEmptyForm() {
     return {
@@ -419,7 +368,7 @@ function getEmptyForm() {
 }
 
 const totalPaid = computed(() => {
-    return payments.value.reduce((sum, p) => sum + p.amount, 0)
+    return payments.value.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
 })
 
 const remaining = computed(() => {
@@ -433,7 +382,6 @@ const calculateChange = computed(() => {
 
 const quickCashAmounts = computed(() => {
     const base = [100, 200, 500, 1000]
-    // Add amount closest to total
     if (!base.includes(Math.ceil(props.total))) {
         base.push(Math.ceil(props.total))
     }
@@ -442,26 +390,16 @@ const quickCashAmounts = computed(() => {
 
 const canAddPayment = computed(() => {
     if (!selectedMethod.value || !paymentForm.value.amount || paymentForm.value.amount <= 0) return false
-    
-    // Check for method-specific required fields
+
     if (selectedMethod.value.id === 'cash') {
         return paymentForm.value.received_amount && paymentForm.value.received_amount >= paymentForm.value.amount
     }
-    
+
     if (['card', 'mobile', 'instant_transfer'].includes(selectedMethod.value.id)) {
         return !!paymentForm.value.transaction_number
     }
-    
-    if (selectedMethod.value.id === 'simple_transfer') {
-        return !!(
-            paymentForm.value.transaction_number &&
-            paymentForm.value.bank_name &&
-            paymentForm.value.issue_date &&
-            paymentForm.value.due_date
-        )
-    }
 
-    if (selectedMethod.value.id === 'check') {
+    if (selectedMethod.value.id === 'simple_transfer') {
         return !!(
             paymentForm.value.transaction_number &&
             paymentForm.value.bank_name &&
@@ -477,8 +415,8 @@ const canAddPayment = computed(() => {
             paymentForm.value.due_date
         )
     }
-    
-    return false
+
+    return true
 })
 
 const canConfirmPayments = computed(() => {
@@ -488,14 +426,13 @@ const canConfirmPayments = computed(() => {
 const confirmLabelText = computed(() => props.confirmLabel || 'Finaliser le Paiement')
 
 const transactionLabel = computed(() => {
-    if (selectedMethod.value?.id === 'check') return 'N° de chèque'
     if (selectedMethod.value?.id === 'simple_transfer') return 'N° de transaction'
     return 'Référence dossier'
 })
-const requiresTransaction = computed(() => ['simple_transfer', 'check'].includes(selectedMethod.value?.id))
+
+const requiresTransaction = computed(() => ['simple_transfer'].includes(selectedMethod.value?.id))
 
 const transactionPlaceholder = computed(() => {
-    if (selectedMethod.value?.id === 'check') return 'N° chèque'
     if (selectedMethod.value?.id === 'simple_transfer') return 'N° opération bancaire'
     return 'Référence crédit (optionnel)'
 })
@@ -510,38 +447,96 @@ const piecePlaceholder = computed(() => {
     return 'CIN / justificatif'
 })
 
-const requiresBankName = computed(() => ['simple_transfer', 'check'].includes(selectedMethod.value?.id))
+const requiresBankName = computed(() => ['simple_transfer'].includes(selectedMethod.value?.id))
 const bankPlaceholder = computed(() => selectedMethod.value?.id === 'credit' ? 'Banque (optionnel)' : 'Nom de la banque')
+
+function normalizeKey(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+}
+
+function createMethodId(item, index) {
+    if (item.payment_type === 'cash') return 'cash'
+    if (item.payment_type === 'card') return 'card'
+    if (item.payment_type === 'mobile') return 'mobile'
+    if (item.payment_type === 'credit') return 'credit'
+    if (item.payment_type === 'virement' && item.transfer_mode === 'instant') return 'instant_transfer'
+    if (item.payment_type === 'virement') return 'simple_transfer'
+
+    return `other:${normalizeKey(item.label || item.value || index)}`
+}
+
+function iconForPaymentMethod(item) {
+    if (item.payment_type === 'cash') return '💵'
+    if (item.payment_type === 'card') return '💳'
+    if (item.payment_type === 'mobile') return '📱'
+    if (item.payment_type === 'virement' && item.transfer_mode === 'instant') return '⚡'
+    if (item.payment_type === 'virement') return '🏦'
+    if (item.payment_type === 'credit') return '📋'
+    return '🧾'
+}
+
+function describePaymentMethod(item) {
+    if (item.payment_type === 'cash') return 'Paiement en liquide'
+    if (item.payment_type === 'card') return 'Carte bancaire'
+    if (item.payment_type === 'mobile') return 'Paiement mobile'
+    if (item.payment_type === 'virement' && item.transfer_mode === 'instant') return 'Transfert bancaire rapide'
+    if (item.payment_type === 'virement') return 'Transfert bancaire standard'
+    if (item.payment_type === 'credit') return 'Paiement différé'
+    return 'Mode personnalisé'
+}
+
+function encodePaymentModeLabel(label, notes) {
+    const cleanNotes = String(notes || '')
+        .replace(/\[PAYMENT_MODE_LABEL:[^\]]+\]\s*/g, '')
+        .trim()
+    const cleanLabel = String(label || '').trim()
+
+    if (!cleanLabel) {
+        return cleanNotes
+    }
+
+    const marker = `[PAYMENT_MODE_LABEL:${cleanLabel}]`
+    return cleanNotes ? `${marker} ${cleanNotes}` : marker
+}
+
+function selectDefaultMethod() {
+    if (!paymentMethods.value.length) {
+        selectedMethod.value = null
+        paymentForm.value = getEmptyForm()
+        return
+    }
+
+    const configuredDefault = paymentMethods.value.find((method) => method.isDefault)
+    selectMethod(configuredDefault || paymentMethods.value[0])
+}
 
 function selectMethod(method) {
     selectedMethod.value = method
-    paymentForm.value.payment_type = method.paymentType
     const suggestedAmount = Number(remaining.value || 0)
     paymentForm.value = {
-        ...paymentForm.value,
+        ...getEmptyForm(),
         payment_type: method.paymentType,
         amount: suggestedAmount,
         received_amount: method.id === 'cash' ? suggestedAmount : null,
-        transaction_number: '',
-        piece_number: '',
-        issue_date: '',
-        bank_name: '',
-        due_date: '',
-        notes: ''
     }
 }
 
 function addPayment() {
     if (!canAddPayment.value) return
 
-    const apiPaymentType = ['simple_transfer', 'instant_transfer', 'check'].includes(selectedMethod.value.id)
+    const apiPaymentType = ['simple_transfer', 'instant_transfer'].includes(selectedMethod.value.id)
         ? selectedMethod.value.id
         : selectedMethod.value.paymentType
     const transferMode = selectedMethod.value.id === 'simple_transfer'
         ? 'simple'
         : (selectedMethod.value.id === 'instant_transfer' ? 'instant' : null)
 
-    const payment = {
+    payments.value.push({
         payment_type: apiPaymentType,
         transfer_mode: transferMode,
         amount: paymentForm.value.amount,
@@ -555,28 +550,53 @@ function addPayment() {
         reference: selectedMethod.value.id === 'credit'
             ? paymentForm.value.piece_number
             : paymentForm.value.transaction_number || paymentForm.value.piece_number,
-        notes: paymentForm.value.notes
-    }
+        notes: encodePaymentModeLabel(selectedMethod.value.label, paymentForm.value.notes),
+        display_label: selectedMethod.value.label,
+    })
 
-    payments.value.push(payment)
-    
-    // Reset form
-    selectedMethod.value = null
-    paymentForm.value = getEmptyForm()
+    selectDefaultMethod()
 }
 
 function removePayment(index) {
     payments.value.splice(index, 1)
 }
 
-function getMethodLabel(type) {
-    const method = paymentMethods.find(m => m.id === type || m.paymentType === type)
-    return method ? method.label : type
+function getMethodLabel(type, transferMode = null) {
+    const method = paymentMethods.value.find((item) => {
+        if (item.paymentType !== type) {
+            return false
+        }
+
+        if (item.paymentType !== 'virement') {
+            return true
+        }
+
+        return (item.transferMode || 'simple') === (transferMode || 'simple')
+    })
+
+    return method?.label || type
 }
 
 function confirmPayments() {
     if (!canConfirmPayments.value) return
-    
     emit('complete', payments.value)
 }
+
+watch(paymentMethods, () => {
+    if (!paymentMethods.value.length) {
+        selectedMethod.value = null
+        paymentForm.value = getEmptyForm()
+        return
+    }
+
+    const stillExists = paymentMethods.value.find((method) => method.id === selectedMethod.value?.id)
+    if (!stillExists) {
+        selectDefaultMethod()
+    }
+}, { immediate: true })
+
+onMounted(async () => {
+    await customListsStore.fetchList('mode_de_paiement')
+    selectDefaultMethod()
+})
 </script>

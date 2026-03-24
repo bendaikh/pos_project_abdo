@@ -189,6 +189,11 @@ class SalePaymentWorkflowService
     {
         $type = $this->normalizePaymentType($payment->payment_type);
         $transferMode = $this->resolveTransferMode($type, $payment->transfer_mode, $payment->notes);
+        $customLabel = $this->extractCustomPaymentLabel($payment->notes);
+
+        if ($customLabel) {
+            return $customLabel;
+        }
 
         if ($type === 'virement' && $transferMode === 'instant') {
             return 'Virement instantané';
@@ -210,6 +215,19 @@ class SalePaymentWorkflowService
         return $payment->transaction_number
             ?: $payment->piece_number
             ?: $payment->reference;
+    }
+
+    private function extractCustomPaymentLabel(?string $notes): ?string
+    {
+        $notes = (string) $notes;
+
+        if (! preg_match('/\[PAYMENT_MODE_LABEL:([^\]]+)\]/', $notes, $matches)) {
+            return null;
+        }
+
+        $label = trim((string) ($matches[1] ?? ''));
+
+        return $label !== '' ? $label : null;
     }
 
     public function normalizeWorkflowStatus(?string $status): ?string

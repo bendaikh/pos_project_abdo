@@ -31,49 +31,44 @@
                     </div>
 
                     <section class="mt-5 min-h-[420px] space-y-5">
-                        <div v-if="currentModeTickets.length" class="space-y-3">
-                            <h3 class="text-xl font-semibold text-slate-700">Mode actuel</h3>
+                        <div v-if="currentTicket" class="space-y-3">
+                            <h3 class="text-xl font-semibold text-slate-700">Ticket actuel</h3>
                             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 <button
-                                    v-for="ticket in currentModeTickets"
-                                    :key="ticket.id"
                                     type="button"
                                     class="rounded-[18px] border p-4 text-left shadow-sm transition"
-                                    :class="getTicketCardClass(ticket)"
-                                    :disabled="isTicketBusy(ticket)"
-                                    @click="$emit('load-ticket', ticket.id)"
+                                    :class="getTicketCardClass(currentTicket)"
+                                    :disabled="isTicketBusy(currentTicket)"
+                                    @click="$emit('load-ticket', currentTicket.id)"
                                 >
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="min-w-0">
-                                            <p class="truncate text-lg font-semibold text-slate-900">{{ getTicketTitle(ticket) }}</p>
+                                            <p class="truncate text-lg font-semibold text-slate-900">{{ getTicketTitle(currentTicket) }}</p>
                                             <p class="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                                                {{ getTicketModeLabel(ticket) }}
+                                                {{ getTicketModeLabel(currentTicket) }}
                                             </p>
                                         </div>
-                                        <span
-                                            class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
-                                            :class="Number(currentSaleId || 0) === Number(ticket.id || 0) ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'"
-                                        >
-                                            {{ Number(currentSaleId || 0) === Number(ticket.id || 0) ? 'Actuel' : 'Ouvrir' }}
+                                        <span class="shrink-0 rounded-full bg-blue-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+                                            Actuel
                                         </span>
                                     </div>
                                     <div class="mt-3 space-y-1 text-xs text-slate-500">
-                                        <p class="truncate">{{ ticket.customer?.name || 'Client anonyme' }}</p>
-                                        <p>{{ ticket.ticket_group || 'Sans groupe' }}</p>
+                                        <p class="truncate">{{ currentTicket.customer?.name || 'Client anonyme' }}</p>
+                                        <p>{{ currentTicket.ticket_group || 'Sans groupe' }}</p>
                                         <div class="flex items-center justify-between gap-3">
-                                            <span>{{ formatTicketDate(ticket) }}</span>
-                                            <span class="font-semibold text-emerald-600">{{ formatCurrency(ticket.total || 0) }}</span>
+                                            <span>{{ formatTicketDate(currentTicket) }}</span>
+                                            <span class="font-semibold text-emerald-600">{{ formatCurrency(currentTicket.total || 0) }}</span>
                                         </div>
                                     </div>
                                 </button>
                             </div>
                         </div>
 
-                        <div v-if="otherModeTickets.length" class="space-y-3">
-                            <h3 class="text-xl font-semibold text-slate-700">Autres modes</h3>
+                        <div v-if="otherTickets.length" class="space-y-3">
+                            <h3 class="text-xl font-semibold text-slate-700">Autres tickets</h3>
                             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 <button
-                                    v-for="ticket in otherModeTickets"
+                                    v-for="ticket in otherTickets"
                                     :key="ticket.id"
                                     type="button"
                                     class="rounded-[18px] border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md disabled:opacity-50"
@@ -103,7 +98,7 @@
                             </div>
                         </div>
 
-                        <div v-if="!currentModeTickets.length && !otherModeTickets.length" class="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+                        <div v-if="!currentTicket && !otherTickets.length" class="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
                             Aucun ticket enregistré pour le moment.
                         </div>
                     </section>
@@ -146,22 +141,16 @@ defineEmits(['close', 'refresh-tickets', 'load-ticket'])
 const customListsStore = useCustomListsStore()
 const settingsStore = useSettingsStore()
 
-const currentModeTickets = computed(() => {
+const currentTicket = computed(() => {
     return (props.savedTickets || [])
-        .filter((ticket) => normalizeDeliveryMode(ticket?.service_mode || ticket?.delivery_mode) === normalizeDeliveryMode(props.currentServiceMode))
-        .sort(sortTickets)
+        .find((ticket) => Number(ticket?.id || 0) === Number(props.currentSaleId || 0)) || null
 })
 
-const otherModeTickets = computed(() => {
+const otherTickets = computed(() => {
     return (props.savedTickets || [])
-        .filter((ticket) => normalizeDeliveryMode(ticket?.service_mode || ticket?.delivery_mode) !== normalizeDeliveryMode(props.currentServiceMode))
+        .filter((ticket) => Number(ticket?.id || 0) !== Number(props.currentSaleId || 0))
         .sort(sortTickets)
 })
-
-function normalizeDeliveryMode(mode) {
-    return customListsStore.findServiceMode(mode, { includeInactive: true })?.value
-        || customListsStore.defaultServiceModeValue()
-}
 
 function getTicketTitle(ticket) {
     return ticket?.ticket_name || ticket?.reference || `Ticket #${ticket?.id || '-'}`

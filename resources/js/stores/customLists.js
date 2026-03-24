@@ -2,8 +2,18 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { customListsApi } from '../api'
 
-const SERVICE_MODE_LIST_NAME = 'mode_de_service'
+export const PREDEFINED_TICKET_LIST_NAME = 'tickets_predefinis'
+export const SERVICE_MODE_LIST_NAME = 'mode_de_service'
+export const PAYMENT_MODE_LIST_NAME = 'mode_de_paiement'
+
 const STORAGE_PREFIX = 'custom_list_cache_'
+
+const FALLBACK_PREDEFINED_TICKETS_LIST = {
+    id: null,
+    name: PREDEFINED_TICKET_LIST_NAME,
+    is_active: true,
+    items: [],
+}
 
 const FALLBACK_SERVICE_MODE_LIST = {
     id: null,
@@ -18,8 +28,6 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 1,
             operational_mode: 'dine_in',
             requires_delivery_agent: false,
-            tickets_without_group: [],
-            ticket_groups: [],
         },
         {
             id: 'fallback-emporte',
@@ -29,8 +37,6 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 2,
             operational_mode: 'pickup',
             requires_delivery_agent: false,
-            tickets_without_group: [],
-            ticket_groups: [],
         },
         {
             id: 'fallback-livraison',
@@ -40,8 +46,74 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 3,
             operational_mode: 'delivery',
             requires_delivery_agent: true,
-            tickets_without_group: [],
-            ticket_groups: [],
+        },
+    ],
+}
+
+const FALLBACK_PAYMENT_MODE_LIST = {
+    id: null,
+    name: PAYMENT_MODE_LIST_NAME,
+    is_active: true,
+    items: [
+        {
+            id: 'fallback-espece',
+            label: 'Espèce',
+            value: 'Espèce',
+            is_active: true,
+            sort_order: 1,
+            payment_type: 'cash',
+            transfer_mode: null,
+            is_default: true,
+        },
+        {
+            id: 'fallback-carte',
+            label: 'Carte',
+            value: 'Carte',
+            is_active: true,
+            sort_order: 2,
+            payment_type: 'card',
+            transfer_mode: null,
+            is_default: false,
+        },
+        {
+            id: 'fallback-mobile',
+            label: 'Mobile',
+            value: 'Mobile',
+            is_active: true,
+            sort_order: 3,
+            payment_type: 'mobile',
+            transfer_mode: null,
+            is_default: false,
+        },
+        {
+            id: 'fallback-virement-instant',
+            label: 'Virement instantané',
+            value: 'Virement instantané',
+            is_active: true,
+            sort_order: 4,
+            payment_type: 'virement',
+            transfer_mode: 'instant',
+            is_default: false,
+        },
+        {
+            id: 'fallback-virement-simple',
+            label: 'Virement simple',
+            value: 'Virement simple',
+            is_active: true,
+            sort_order: 5,
+            payment_type: 'virement',
+            transfer_mode: 'simple',
+            is_default: false,
+        },
+        {
+            id: 'fallback-credit',
+            label: 'Crédit',
+            value: 'Crédit',
+            is_active: true,
+            sort_order: 6,
+            payment_type: 'credit',
+            transfer_mode: null,
+            is_default: false,
         },
     ],
 }
@@ -79,6 +151,37 @@ function normalizeServiceModeValue(value) {
     return matchedLegacy ? matchedLegacy[1] : String(value || '').trim()
 }
 
+function inferPaymentModeMeta(label, item = {}) {
+    const normalized = normalizeKey(label || item?.value || '')
+
+    if (['espece', 'especes', 'cash', 'liquide'].includes(normalized)) {
+        return { payment_type: 'cash', transfer_mode: null, is_default: true }
+    }
+
+    if (normalized.includes('carte') || normalized.includes('card')) {
+        return { payment_type: 'card', transfer_mode: null, is_default: false }
+    }
+
+    if (normalized.includes('mobile')) {
+        return { payment_type: 'mobile', transfer_mode: null, is_default: false }
+    }
+
+    if ((normalized.includes('instant') || normalized.includes('instantane'))
+        && (normalized.includes('virement') || normalized.includes('transfer'))) {
+        return { payment_type: 'virement', transfer_mode: 'instant', is_default: false }
+    }
+
+    if (normalized.includes('virement') || normalized.includes('transfer')) {
+        return { payment_type: 'virement', transfer_mode: 'simple', is_default: false }
+    }
+
+    if (normalized.includes('credit') || normalized.includes('lcn')) {
+        return { payment_type: 'credit', transfer_mode: null, is_default: false }
+    }
+
+    return { payment_type: 'other', transfer_mode: null, is_default: false }
+}
+
 function normalizeTicket(ticket, index) {
     return {
         id: ticket?.id ?? `generated-ticket-${index}`,
@@ -88,57 +191,132 @@ function normalizeTicket(ticket, index) {
     }
 }
 
-function normalizeTicketGroup(group, index) {
+function normalizePredefinedTicketItem(item, index) {
+    const tickets = [...(item?.tickets || [])]
+        .map((ticket, ticketIndex) => normalizeTicket(ticket, ticketIndex))
+        .filter((ticket) => ticket.label)
+        .sort((a, b) => a.sort_order - b.sort_order)
+
     return {
-        id: group?.id ?? `generated-group-${index}`,
-        label: String(group?.label || '').trim(),
-        is_active: group?.is_active !== false,
-        sort_order: Number(group?.sort_order ?? index + 1),
-        tickets: [...(group?.tickets || [])]
-            .map((ticket, ticketIndex) => normalizeTicket(ticket, ticketIndex))
-            .filter((ticket) => ticket.label)
-            .sort((a, b) => a.sort_order - b.sort_order),
+        id: item?.id ?? `generated-ticket-entry-${index}`,
+        label: String(item?.label || item?.value || '').trim(),
+        value: String(item?.value || item?.label || '').trim(),
+        is_active: item?.is_active !== false,
+        sort_order: Number(item?.sort_order ?? index + 1),
+        kind: item?.kind === 'group' ? 'group' : 'ticket',
+        tickets,
     }
 }
 
 function normalizeServiceModeItem(item, index) {
     return {
-        id: item?.id ?? `generated-${index}`,
-        label: item?.label || item?.value || '',
-        value: item?.value || item?.label || '',
+        id: item?.id ?? `generated-service-mode-${index}`,
+        label: String(item?.label || item?.value || '').trim(),
+        value: String(item?.value || item?.label || '').trim(),
         is_active: item?.is_active !== false,
         sort_order: Number(item?.sort_order ?? index + 1),
-        operational_mode: item?.operational_mode || 'pickup',
-        requires_delivery_agent: item?.requires_delivery_agent === true,
-        tickets_without_group: [...(item?.tickets_without_group || [])]
-            .map((ticket, ticketIndex) => normalizeTicket(ticket, ticketIndex))
-            .filter((ticket) => ticket.label)
-            .sort((a, b) => a.sort_order - b.sort_order),
-        ticket_groups: [...(item?.ticket_groups || [])]
-            .map((group, groupIndex) => normalizeTicketGroup(group, groupIndex))
-            .filter((group) => group.label)
-            .sort((a, b) => a.sort_order - b.sort_order),
+        operational_mode: item?.operational_mode || inferServiceModeMeta(item).operational_mode,
+        requires_delivery_agent: item?.requires_delivery_agent === true
+            || inferServiceModeMeta(item).requires_delivery_agent,
     }
 }
 
-function normalizeListPayload(list) {
+function normalizePaymentModeItem(item, index) {
+    const label = String(item?.label || item?.value || '').trim()
+    const inferred = inferPaymentModeMeta(label, item)
+
+    return {
+        id: item?.id ?? `generated-payment-mode-${index}`,
+        label,
+        value: String(item?.value || item?.label || '').trim(),
+        is_active: item?.is_active !== false,
+        sort_order: Number(item?.sort_order ?? index + 1),
+        payment_type: item?.payment_type || inferred.payment_type,
+        transfer_mode: item?.transfer_mode ?? inferred.transfer_mode,
+        is_default: item?.is_default === true || (item?.is_default == null && inferred.is_default),
+    }
+}
+
+function inferServiceModeMeta(item) {
+    const normalized = normalizeKey(item?.label || item?.value || '')
+
+    if (normalized === normalizeKey('Livraison')) {
+        return {
+            operational_mode: 'delivery',
+            requires_delivery_agent: true,
+        }
+    }
+
+    if (normalized === normalizeKey('Sur place')) {
+        return {
+            operational_mode: 'dine_in',
+            requires_delivery_agent: false,
+        }
+    }
+
+    return {
+        operational_mode: 'pickup',
+        requires_delivery_agent: false,
+    }
+}
+
+function normalizeListPayload(list, name = list?.name) {
+    if (name === PREDEFINED_TICKET_LIST_NAME) {
+        const base = list && list.name === name ? list : FALLBACK_PREDEFINED_TICKETS_LIST
+        return {
+            id: base.id ?? null,
+            name,
+            is_active: base.is_active !== false,
+            items: [...(base.items || [])]
+                .map((item, index) => normalizePredefinedTicketItem(item, index))
+                .filter((item) => item.label)
+                .sort((a, b) => a.sort_order - b.sort_order),
+        }
+    }
+
+    if (name === PAYMENT_MODE_LIST_NAME) {
+        const base = list && list.name === name ? list : FALLBACK_PAYMENT_MODE_LIST
+        const items = [...(base.items || [])]
+            .map((item, index) => normalizePaymentModeItem(item, index))
+            .filter((item) => item.label)
+            .sort((a, b) => a.sort_order - b.sort_order)
+
+        const defaultIndex = items.findIndex((item) => item.is_default === true)
+        if (defaultIndex < 0 && items.length > 0) {
+            items[0] = {
+                ...items[0],
+                is_default: true,
+            }
+        }
+
+        return {
+            id: base.id ?? null,
+            name,
+            is_active: base.is_active !== false,
+            items,
+        }
+    }
+
     const base = list && list.name === SERVICE_MODE_LIST_NAME
         ? list
         : FALLBACK_SERVICE_MODE_LIST
 
     return {
         id: base.id ?? null,
-        name: base.name,
+        name: SERVICE_MODE_LIST_NAME,
         is_active: base.is_active !== false,
         items: [...(base.items || [])]
             .map((item, index) => normalizeServiceModeItem(item, index))
+            .filter((item) => item.label)
             .sort((a, b) => a.sort_order - b.sort_order),
     }
 }
 
 export const useCustomListsStore = defineStore('customLists', () => {
     const lists = ref({
+        [PREDEFINED_TICKET_LIST_NAME]: clone(FALLBACK_PREDEFINED_TICKETS_LIST),
         [SERVICE_MODE_LIST_NAME]: clone(FALLBACK_SERVICE_MODE_LIST),
+        [PAYMENT_MODE_LIST_NAME]: clone(FALLBACK_PAYMENT_MODE_LIST),
     })
     const loadedLists = ref({})
     const loadingLists = ref({})
@@ -147,11 +325,26 @@ export const useCustomListsStore = defineStore('customLists', () => {
         return `${STORAGE_PREFIX}${name}`
     }
 
+    function getFallbackList(name) {
+        if (name === PREDEFINED_TICKET_LIST_NAME) {
+            return clone(FALLBACK_PREDEFINED_TICKETS_LIST)
+        }
+
+        if (name === PAYMENT_MODE_LIST_NAME) {
+            return clone(FALLBACK_PAYMENT_MODE_LIST)
+        }
+
+        return clone(FALLBACK_SERVICE_MODE_LIST)
+    }
+
     function setList(name, payload) {
-        const normalized = normalizeListPayload({
-            ...payload,
-            name,
-        })
+        const normalized = normalizeListPayload(
+            {
+                ...payload,
+                name,
+            },
+            name
+        )
 
         lists.value = {
             ...lists.value,
@@ -167,24 +360,11 @@ export const useCustomListsStore = defineStore('customLists', () => {
         return normalized
     }
 
-    function getFallbackList(name) {
-        if (name === SERVICE_MODE_LIST_NAME) {
-            return clone(FALLBACK_SERVICE_MODE_LIST)
-        }
-
-        return {
-            id: null,
-            name,
-            is_active: true,
-            items: [],
-        }
-    }
-
     function loadCachedList(name) {
         try {
             const raw = localStorage.getItem(getCacheKey(name))
             if (!raw) return null
-            return normalizeListPayload(JSON.parse(raw))
+            return normalizeListPayload(JSON.parse(raw), name)
         } catch (error) {
             console.warn('Failed to load cached custom list:', error)
             return null
@@ -231,6 +411,52 @@ export const useCustomListsStore = defineStore('customLists', () => {
         }
     }
 
+    const predefinedTicketsList = computed(() => {
+        return normalizeListPayload(
+            lists.value[PREDEFINED_TICKET_LIST_NAME] || FALLBACK_PREDEFINED_TICKETS_LIST,
+            PREDEFINED_TICKET_LIST_NAME
+        )
+    })
+
+    const serviceModeList = computed(() => {
+        return normalizeListPayload(
+            lists.value[SERVICE_MODE_LIST_NAME] || FALLBACK_SERVICE_MODE_LIST,
+            SERVICE_MODE_LIST_NAME
+        )
+    })
+
+    const paymentModeList = computed(() => {
+        return normalizeListPayload(
+            lists.value[PAYMENT_MODE_LIST_NAME] || FALLBACK_PAYMENT_MODE_LIST,
+            PAYMENT_MODE_LIST_NAME
+        )
+    })
+
+    const serviceModeEnabled = computed(() => serviceModeList.value.is_active !== false)
+    const activeServiceModes = computed(() => {
+        if (!serviceModeEnabled.value) {
+            return []
+        }
+
+        return serviceModeList.value.items.filter((item) => item.is_active !== false)
+    })
+
+    const activePaymentModes = computed(() => {
+        if (paymentModeList.value.is_active === false) {
+            return []
+        }
+
+        return paymentModeList.value.items.filter((item) => item.is_active !== false)
+    })
+
+    const defaultPaymentMode = computed(() => {
+        return activePaymentModes.value.find((item) => item.is_default === true)
+            || paymentModeList.value.items.find((item) => item.is_default === true)
+            || activePaymentModes.value[0]
+            || paymentModeList.value.items[0]
+            || null
+    })
+
     function findServiceMode(value, { includeInactive = true } = {}) {
         const normalizedValue = normalizeKey(normalizeServiceModeValue(value))
         if (!normalizedValue) return null
@@ -261,55 +487,38 @@ export const useCustomListsStore = defineStore('customLists', () => {
             }
         }
 
-        const normalizedValue = normalizeKey(normalizeServiceModeValue(value))
-
-        if (normalizedValue === normalizeKey('Livraison')) {
-            return {
-                operational_mode: 'delivery',
-                requires_delivery_agent: true,
-            }
-        }
-
-        if (normalizedValue === normalizeKey('Sur place')) {
-            return {
-                operational_mode: 'dine_in',
-                requires_delivery_agent: false,
-            }
-        }
-
-        return {
-            operational_mode: 'pickup',
-            requires_delivery_agent: false,
-        }
+        return inferServiceModeMeta({ label: normalizeServiceModeValue(value) })
     }
 
-    function getServiceModeTickets(value, { includeInactive = false } = {}) {
-        const match = findServiceMode(value, { includeInactive: true })
-
-        if (!match) {
-            return {
-                tickets_without_group: [],
-                ticket_groups: [],
-            }
-        }
-
+    function getPredefinedTickets({ includeInactive = false } = {}) {
         const ticketFilter = includeInactive
-            ? (entry) => true
+            ? () => true
             : (entry) => entry.is_active !== false
 
         return {
-            tickets_without_group: (match.tickets_without_group || [])
+            tickets_without_group: predefinedTicketsList.value.items
+                .filter((item) => item.kind !== 'group')
                 .filter(ticketFilter)
-                .sort((a, b) => a.sort_order - b.sort_order),
-            ticket_groups: (match.ticket_groups || [])
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((item) => ({
+                    id: item.id,
+                    label: item.label,
+                    is_active: item.is_active,
+                    sort_order: item.sort_order,
+                })),
+            ticket_groups: predefinedTicketsList.value.items
+                .filter((item) => item.kind === 'group')
                 .filter(ticketFilter)
+                .sort((a, b) => a.sort_order - b.sort_order)
                 .map((group) => ({
-                    ...group,
+                    id: group.id,
+                    label: group.label,
+                    is_active: group.is_active,
+                    sort_order: group.sort_order,
                     tickets: (group.tickets || [])
                         .filter(ticketFilter)
                         .sort((a, b) => a.sort_order - b.sort_order),
-                }))
-                .sort((a, b) => a.sort_order - b.sort_order),
+                })),
         }
     }
 
@@ -319,35 +528,23 @@ export const useCustomListsStore = defineStore('customLists', () => {
             || FALLBACK_SERVICE_MODE_LIST.items[0].value
     }
 
-    const serviceModeList = computed(() => {
-        return normalizeListPayload(
-            lists.value[SERVICE_MODE_LIST_NAME] || FALLBACK_SERVICE_MODE_LIST
-        )
-    })
-
-    const serviceModeEnabled = computed(() => serviceModeList.value.is_active !== false)
-
-    const activeServiceModes = computed(() => {
-        if (!serviceModeEnabled.value) {
-            return []
-        }
-
-        return serviceModeList.value.items.filter((item) => item.is_active !== false)
-    })
-
     return {
         lists,
         loadedLists,
         loadingLists,
+        predefinedTicketsList,
         serviceModeList,
+        paymentModeList,
         serviceModeEnabled,
         activeServiceModes,
+        activePaymentModes,
+        defaultPaymentMode,
         fetchList,
         setList,
         findServiceMode,
         getServiceModeLabel,
         getServiceModeMeta,
-        getServiceModeTickets,
+        getPredefinedTickets,
         defaultServiceModeValue,
     }
 })

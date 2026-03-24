@@ -302,7 +302,7 @@
                                 <button
                                     type="button"
                                     class="w-full rounded-2xl border border-gray-200 bg-gray-50 p-3 text-left transition hover:border-gray-300 hover:bg-white"
-                                    @click="handlePrimaryTicketAction"
+                                    @click="openTicketsModal"
                                 >
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="min-w-0">
@@ -315,7 +315,7 @@
                                                 {{ savedTickets.length }}
                                             </span>
                                             <span class="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                                                {{ ticketPrimaryActionLabel }}
+                                                {{ ticketLauncherActionLabel }}
                                             </span>
                                         </div>
                                     </div>
@@ -368,7 +368,7 @@
                             <!-- Buttons -->
                             <div class="px-4 py-3 border-t border-gray-200 space-y-2">
                                 <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">PASSER AU PAIEMENT</button>
-                                <button @click="handlePrimaryTicketAction" class="w-full py-3 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors" type="button">{{ ticketPrimaryActionLabel }}</button>
+                                <button @click="openSaveTicketModal" :disabled="!canSaveCurrentTicket" class="w-full py-3 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">Sauvegarder</button>
                             </div>
                         </div>
                     </div>
@@ -415,7 +415,7 @@
                             <button
                                 type="button"
                                 class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-left transition hover:border-gray-300 hover:bg-white"
-                                @click="handlePrimaryTicketAction"
+                                @click="openTicketsModal"
                             >
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
@@ -428,7 +428,7 @@
                                             {{ savedTickets.length }}
                                         </span>
                                         <span class="rounded-md bg-blue-600 px-2.5 py-1 text-[10px] font-semibold text-white">
-                                            {{ ticketPrimaryActionLabel }}
+                                            {{ ticketLauncherActionLabel }}
                                         </span>
                                     </div>
                                 </div>
@@ -497,10 +497,10 @@
                             </div>
                             <!-- Action buttons side by side -->
                             <div class="px-3 py-2 flex gap-2">
-                                <button @click="handlePrimaryTicketAction"
-                                    class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                <button @click="openSaveTicketModal" :disabled="!canSaveCurrentTicket"
+                                    class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
                                     type="button">
-                                    {{ ticketPrimaryActionLabel }}
+                                    Sauvegarder
                                 </button>
                                 <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0"
                                     class="flex-[1.4] py-2.5 text-xs font-bold rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
@@ -929,6 +929,7 @@ const deletingSavedTicketId = ref(null)
 const ticketNotes = ref('')
 const discountAmount = ref(0)
 const discountPercent = ref(0)
+const loadedTicketSnapshot = ref(null)
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
 const creatingOption = ref(false)
@@ -1143,33 +1144,33 @@ const isPreparingNewPosOrder = computed(() => {
     return cartStore.items.length > 0 && !cartStore.currentSaleId
 })
 
-const shouldUseSaveTicketAction = computed(() => {
-    return !hasSavedTickets.value || isPreparingNewPosOrder.value
+const hasActiveSavedTicketChanges = computed(() => {
+    if (!cartStore.currentSaleId || !loadedTicketSnapshot.value) {
+        return false
+    }
+
+    return buildCurrentTicketSnapshot() !== loadedTicketSnapshot.value
 })
 
-const ticketPrimaryActionLabel = computed(() => {
-    return shouldUseSaveTicketAction.value ? 'Sauvegarder' : 'Tickets enregistrés'
+const canSaveCurrentTicket = computed(() => {
+    if (cartStore.items.length === 0) {
+        return false
+    }
+
+    if (!cartStore.currentSaleId) {
+        return true
+    }
+
+    return hasActiveSavedTicketChanges.value
 })
 
 const ticketLauncherTitle = computed(() => {
-    if (shouldUseSaveTicketAction.value) {
-        return 'Sauvegarder'
-    }
-
     return 'Tickets enregistrés'
 })
 
 const ticketLauncherSubtitle = computed(() => {
-    if (shouldUseSaveTicketAction.value) {
-        if (isPreparingNewPosOrder.value) {
-            return 'Enregistrer la commande en cours dans un ticket'
-        }
-
-        return 'Créer un premier ticket sauvegardé'
-    }
-
     if (activeSavedTicket.value) {
-        return `${formatSavedTicketType(activeSavedTicket.value)} · ${activeSavedTicket.value.customer?.name || 'Client anonyme'}`
+        return `${getSavedTicketTitle(activeSavedTicket.value)} · ${formatSavedTicketType(activeSavedTicket.value)}`
     }
 
     if (savedTicketsLoading.value) {
@@ -1177,11 +1178,17 @@ const ticketLauncherSubtitle = computed(() => {
     }
 
     if (savedTickets.value.length) {
-        return `${savedTickets.value.length} ticket(s) sauvegardé(s)`
+        return `${savedTickets.value.length} ticket(s) enregistré(s)`
     }
 
-    return 'Parcourir les tickets sauvegardés'
+    if (isPreparingNewPosOrder.value) {
+        return 'Aucun ticket enregistré pour le moment'
+    }
+
+    return 'Ouvrir un ticket déjà enregistré'
 })
+
+const ticketLauncherActionLabel = computed(() => 'Ouvrir')
 
 async function fetchSavedTickets() {
     if (savedTicketsLoading.value) return
@@ -1220,6 +1227,7 @@ async function loadSavedTicket(ticketId) {
         ticketNotes.value = data?.notes || ''
         discountAmount.value = Number(data?.discount_amount) || 0
         discountPercent.value = Number(data?.discount_percent) || 0
+        loadedTicketSnapshot.value = buildSaleSnapshot(data)
         showCustomerSelector.value = false
         showPaymentModal.value = false
 
@@ -1254,6 +1262,7 @@ async function deleteSavedTicket(ticketId) {
             ticketNotes.value = ''
             discountAmount.value = 0
             discountPercent.value = 0
+            loadedTicketSnapshot.value = null
             showCustomerSelector.value = false
             showPaymentModal.value = false
         }
@@ -1742,6 +1751,10 @@ function removeItem(index) {
 }
 
 function openSaveTicketModal() {
+    if (!canSaveCurrentTicket.value) {
+        return
+    }
+
     cartStore.setNotes(ticketNotes.value)
     showSaveTicketModal.value = true
     fetchSavedTickets()
@@ -1750,15 +1763,6 @@ function openSaveTicketModal() {
 function openTicketsModal() {
     showOpenTicketsModal.value = true
     fetchSavedTickets()
-}
-
-function handlePrimaryTicketAction() {
-    if (shouldUseSaveTicketAction.value) {
-        openSaveTicketModal()
-        return
-    }
-
-    openTicketsModal()
 }
 
 async function handleOpenTicketModalLoad(ticketId) {
@@ -1774,6 +1778,7 @@ function handleTicketSaved() {
     ticketNotes.value = ''
     discountAmount.value = 0
     discountPercent.value = 0
+    loadedTicketSnapshot.value = null
     cartStore.clearCart()
     fetchSavedTickets()
 }
@@ -1825,6 +1830,7 @@ async function completeSale(payments) {
             localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales))
             
             cartStore.clearCart()
+            loadedTicketSnapshot.value = null
             showPaymentModal.value = false
             await fetchSavedTickets()
             
@@ -1867,6 +1873,7 @@ async function completeSale(payments) {
 
         // Clear cart
         cartStore.clearCart()
+        loadedTicketSnapshot.value = null
         showPaymentModal.value = false
         await fetchSavedTickets()
 
@@ -2053,7 +2060,51 @@ function resetCart() {
         ticketNotes.value = ''
         discountAmount.value = 0
         discountPercent.value = 0
+        loadedTicketSnapshot.value = null
     }
+}
+
+function normalizeSnapshotItems(items = []) {
+    return (items || []).map((item) => ({
+        article_id: Number(item?.article_id || 0),
+        quantity: Number(item?.quantity || 0),
+        unit_price: Number(item?.unit_price || 0),
+        variant_price: Number(item?.variant_price || 0),
+        options_price: Number(item?.options_price || 0),
+        discount_amount: Number(item?.discount_amount || 0),
+        selected_options: Array.isArray(item?.selected_options)
+            ? JSON.parse(JSON.stringify(item.selected_options))
+            : [],
+    }))
+}
+
+function buildCurrentTicketSnapshot() {
+    return JSON.stringify({
+        sale_id: Number(cartStore.currentSaleId || 0) || null,
+        customer_id: cartStore.customerId || null,
+        service_mode: cartStore.deliveryMode || '',
+        delivery_agent_id: cartStore.deliveryAgentId || null,
+        discount_amount: Number(cartStore.discountAmount || 0),
+        discount_percent: Number(cartStore.discountPercent || 0),
+        notes: String(cartStore.notes || '').trim(),
+        items: normalizeSnapshotItems(cartStore.items),
+    })
+}
+
+function buildSaleSnapshot(sale) {
+    return JSON.stringify({
+        sale_id: Number(sale?.id || 0) || null,
+        customer_id: sale?.customer_id || sale?.customer?.id || null,
+        service_mode: customListsStore.findServiceMode(
+            sale?.service_mode || sale?.delivery_mode,
+            { includeInactive: true }
+        )?.value || customListsStore.defaultServiceModeValue(),
+        delivery_agent_id: sale?.delivery_agent_id || sale?.delivery_agent?.id || null,
+        discount_amount: Number(sale?.discount_amount || 0),
+        discount_percent: Number(sale?.discount_percent || 0),
+        notes: String(sale?.notes || '').trim(),
+        items: normalizeSnapshotItems(sale?.items || []),
+    })
 }
 
 watch([searchQuery, selectedCategoryId], () => {

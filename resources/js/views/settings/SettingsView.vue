@@ -244,318 +244,319 @@
                 </div>
 
                 <div v-show="activeTab === 'custom_lists'" class="space-y-5">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <QueueListIcon class="w-5 h-5 mr-2 text-primary-500" />
-                        Listes personnalisées
-                    </h2>
+                    <div class="rounded-2xl border border-slate-200 bg-gradient-to-r from-primary-50 to-blue-50 p-6">
+                        <div class="flex items-start gap-4">
+                            <div class="flex-1">
+                                <h2 class="text-2xl font-bold text-gray-900 mb-2 flex items-center">
+                                    <QueueListIcon class="w-6 h-6 mr-2 text-primary-600" />
+                                    Listes personnalisées
+                                </h2>
+                                <p class="text-slate-700 font-medium mb-3">Structure simplifiée du POS</p>
+                                <p class="text-sm text-slate-600 leading-relaxed">Configurez les trois éléments clés du système POS de manière indépendante :</p>
+                                <ul class="mt-3 space-y-2 text-sm text-slate-600">
+                                    <li class="flex items-center gap-2">
+                                        <span class="inline-block w-2 h-2 bg-primary-500 rounded-full"></span>
+                                        <strong>Tickets globaux</strong> - Listes prédéfinies pour le POS (Tables, Commandes spéciales, etc.)
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                                        <strong>Modes de service</strong> - Contextes d'opération (Sur place, Emporté, Livraison, Drive, etc.)
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="inline-block w-2 h-2 bg-emerald-500 rounded-full"></span>
+                                        <strong>Modes de paiement</strong> - Méthodes de paiement disponibles (Espèces, Carte, Chèque, etc.)
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-                        <div class="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-50 to-white">
-                            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Mode de service</p>
-                            <h3 class="mt-1 text-lg font-semibold text-slate-900">Gestion dynamique des modes de service</h3>
-                            <p class="mt-1 text-sm text-slate-500">Activez, réorganisez et enrichissez la liste utilisée dans le POS et la création de commande.</p>
-                        </div>
-
-                        <div class="p-5 space-y-5">
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                                <div>
-                                    <p class="text-sm font-semibold text-slate-900">Activer la gestion des modes de service</p>
-                                    <p class="text-sm text-slate-500">Si cette option est désactivée, le champ n’apparaît plus dans le POS ni dans la création de commande.</p>
-                                </div>
+                        <div class="border-b border-gray-200 px-5">
+                            <div class="flex gap-2 overflow-x-auto py-4">
                                 <button
+                                    v-for="tab in customListTabs"
+                                    :key="tab.id"
                                     type="button"
-                                    class="inline-flex h-8 w-14 items-center rounded-full transition-colors"
-                                    :class="serviceModeSettings.is_active ? 'bg-emerald-500 justify-end' : 'bg-slate-300 justify-start'"
-                                    @click="serviceModeSettings.is_active = !serviceModeSettings.is_active"
+                                    class="whitespace-nowrap rounded-lg px-6 py-3 text-sm font-semibold transition-all duration-200"
+                                    :class="activeCustomListTab === tab.id 
+                                        ? 'bg-primary-500 text-white shadow-md' 
+                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'"
+                                    @click="activeCustomListTab = tab.id"
                                 >
-                                    <span class="mx-1 h-6 w-6 rounded-full bg-white shadow"></span>
+                                    <span v-if="tab.id === 'tickets'">🎫 {{ tab.label }}</span>
+                                    <span v-else-if="tab.id === 'service_modes'">⚙️ {{ tab.label }}</span>
+                                    <span v-else>💳 {{ tab.label }}</span>
                                 </button>
                             </div>
+                        </div>
 
-                            <div class="space-y-3">
-                                <div
-                                    v-for="item in serviceModeSettings.items"
-                                    :key="item.id"
-                                    class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4"
-                                >
-                                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
-                                        <div class="flex-1 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                            <label class="block">
-                                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mode</span>
-                                                <input v-model.trim="item.label" type="text" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Sur place">
-                                            </label>
-                                            <label class="block">
-                                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Valeur</span>
-                                                <input v-model.trim="item.value" type="text" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Sur place">
-                                            </label>
-                                            <label class="block">
-                                                <span class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Type opérationnel</span>
-                                                <select v-model="item.operational_mode" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                                    <option v-for="option in serviceModeOperationalOptions" :key="option.value" :value="option.value">
-                                                        {{ option.label }}
-                                                    </option>
-                                                </select>
-                                            </label>
-                                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                                <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                                                    <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
-                                                    Actif
-                                                </label>
-                                                <label class="mt-2 flex items-center gap-2 text-sm font-medium text-slate-700">
-                                                    <input v-model="item.requires_delivery_agent" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
-                                                    Demande livreur
-                                                </label>
+                        <div class="p-6 space-y-6">
+                            <template v-if="activeCustomListTab === 'tickets'">
+                                <div class="rounded-xl border-l-4 border-l-primary-500 border border-slate-200 bg-primary-50 p-4">
+                                    <p class="text-sm font-bold text-primary-900">🎫 Tickets prédéfinis globaux</p>
+                                    <p class="mt-2 text-sm text-primary-700">Utilisés directement dans le workflow enregistrer / ouvrir ticket du POS, sans lien avec les modes de service. Exemples : Tables (1-10), Commandes téléphone, Livraison directe, etc.</p>
+                                </div>
+
+                                <div class="space-y-6">
+                                    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                                        <div class="flex items-start gap-3 mb-5 pb-4 border-b border-slate-200">
+                                            <span class="text-2xl">📋</span>
+                                            <div class="flex-1">
+                                                <p class="text-base font-bold text-slate-900">Tickets simples</p>
+                                                <p class="text-xs text-slate-500 mt-1">Exemples : Ahmed, Client 1, Livraison express, Commande Web.</p>
                                             </div>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveServiceMode(item.id, -1)">Monter</button>
-                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveServiceMode(item.id, 1)">Descendre</button>
-                                            <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeServiceMode(item.id)">Supprimer</button>
-                                        </div>
-                                    </div>
 
-                                    <div class="grid gap-4 xl:grid-cols-[1fr,1fr]">
-                                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                                            <div class="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p class="text-sm font-semibold text-slate-900">Tickets sans groupe</p>
-                                                    <p class="text-xs text-slate-500">Tickets simples visibles directement dans le popup POS.</p>
-                                                </div>
-                                                <div class="flex items-center gap-2">
-                                                    <button type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100" @click="addTicketToServiceMode(item.id)">+ Ticket</button>
-                                                    <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800" @click="addPredefinedTickets(item.id)">+ Ajout tickets prédéfinis</button>
-                                                </div>
-                                            </div>
-
+                                        <div v-if="predefinedTicketSettings.items.filter((item) => item.kind === 'ticket').length" class="space-y-2">
                                             <div
-                                                v-if="predefinedTicketForms[predefinedTicketFormKey(item.id)]"
-                                                class="rounded-xl border border-slate-200 bg-white p-3"
+                                                v-for="ticket in predefinedTicketSettings.items.filter((item) => item.kind === 'ticket')"
+                                                :key="ticket.id"
+                                                class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center"
                                             >
-                                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Ajout rapide</p>
-                                                <div class="mt-3 grid gap-3 md:grid-cols-3">
-                                                    <label class="block">
-                                                        <span class="mb-1 block text-xs font-medium text-slate-600">Préfixe</span>
-                                                        <input
-                                                            v-model.trim="predefinedTicketForms[predefinedTicketFormKey(item.id)].prefix"
-                                                            type="text"
-                                                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                            placeholder="Ex: Table"
-                                                            @keydown.enter.prevent="applyPredefinedTickets(item.id)"
-                                                        >
-                                                    </label>
-                                                    <label class="block">
-                                                        <span class="mb-1 block text-xs font-medium text-slate-600">Début</span>
-                                                        <input
-                                                            v-model.number="predefinedTicketForms[predefinedTicketFormKey(item.id)].start"
-                                                            type="number"
-                                                            min="1"
-                                                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                            @keydown.enter.prevent="applyPredefinedTickets(item.id)"
-                                                        >
-                                                    </label>
-                                                    <label class="block">
-                                                        <span class="mb-1 block text-xs font-medium text-slate-600">Fin</span>
-                                                        <input
-                                                            v-model.number="predefinedTicketForms[predefinedTicketFormKey(item.id)].end"
-                                                            type="number"
-                                                            min="1"
-                                                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                            @keydown.enter.prevent="applyPredefinedTickets(item.id)"
-                                                        >
-                                                    </label>
-                                                </div>
-                                                <div class="mt-3 flex flex-wrap justify-end gap-2">
-                                                    <button
-                                                        type="button"
-                                                        class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                                                        @click="closePredefinedTicketForm(item.id)"
-                                                    >
-                                                        Annuler
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                                                        @click="applyPredefinedTickets(item.id)"
-                                                    >
-                                                        Générer les tickets
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div v-if="item.tickets_without_group.length" class="space-y-2">
-                                                <div
-                                                    v-for="ticket in item.tickets_without_group"
-                                                    :key="ticket.id"
-                                                    class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 md:flex-row md:items-center"
-                                                >
-                                                    <input v-model.trim="ticket.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du ticket">
-                                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                                <input v-model.trim="ticket.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du ticket">
+                                                <div class="flex items-center gap-2 shrink-0">
+                                                    <label class="flex items-center gap-2 text-sm text-slate-700 whitespace-nowrap">
                                                         <input v-model="ticket.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
                                                         Actif
                                                     </label>
-                                                    <div class="flex items-center gap-2">
-                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveServiceModeTicket(item.id, ticket.id, -1)">Monter</button>
-                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveServiceModeTicket(item.id, ticket.id, 1)">Descendre</button>
-                                                        <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeServiceModeTicket(item.id, ticket.id)">Supprimer</button>
-                                                    </div>
+                                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePredefinedTicket(ticket.id, -1)">↑</button>
+                                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePredefinedTicket(ticket.id, 1)">↓</button>
+                                                    <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removePredefinedTicket(ticket.id)">✕</button>
                                                 </div>
                                             </div>
-                                            <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun ticket sans groupe.</p>
+                                        </div>
+                                        <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun ticket simple.</p>
+
+                                        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 mt-4">
+                                            <label class="block text-sm font-semibold text-slate-900 mb-3">➕ Ajouter un ticket</label>
+                                            <div class="flex flex-col gap-3 md:flex-row">
+                                                <input
+                                                    v-model.trim="newPredefinedTicketLabel"
+                                                    type="text"
+                                                    placeholder="Ex: Table 1, Ahmed, Commande Web"
+                                                    class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                    @keydown.enter.prevent="addStandalonePredefinedTicket"
+                                                >
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors shrink-0"
+                                                    @click="addStandalonePredefinedTicket"
+                                                >
+                                                    <PlusIcon class="w-4 h-4" />
+                                                    Ajouter
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                                        <div class="flex items-start gap-3 mb-5 pb-4 border-b border-slate-200">
+                                            <span class="text-2xl">📂</span>
+                                            <div class="flex-1">
+                                                <p class="text-base font-bold text-slate-900">Groupes de tickets</p>
+                                                <p class="text-xs text-slate-500 mt-1">Exemples : Salle A, VIP, Terrasse, Zone externe.</p>
+                                            </div>
                                         </div>
 
-                                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                                            <div class="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p class="text-sm font-semibold text-slate-900">Groupes de tickets</p>
-                                                    <p class="text-xs text-slate-500">Créez des groupes comme Salle, VIP ou Terrasse, puis ajoutez les tickets associés.</p>
-                                                </div>
-                                                <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800" @click="addTicketGroupToServiceMode(item.id)">+ Groupe</button>
-                                            </div>
-
-                                            <div v-if="item.ticket_groups.length" class="space-y-3">
-                                                <div
-                                                    v-for="group in item.ticket_groups"
-                                                    :key="group.id"
-                                                    class="rounded-xl border border-slate-200 bg-white p-3 space-y-3"
-                                                >
-                                                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-                                                        <input v-model.trim="group.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du groupe">
-                                                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <div v-if="predefinedTicketSettings.items.filter((item) => item.kind === 'group').length" class="space-y-3">
+                                            <div
+                                                v-for="group in predefinedTicketSettings.items.filter((item) => item.kind === 'group')"
+                                                :key="group.id"
+                                                class="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3"
+                                            >
+                                                <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                                                    <input v-model.trim="group.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du groupe">
+                                                    <div class="flex items-center gap-2 shrink-0">
+                                                        <label class="flex items-center gap-2 text-sm text-slate-700 whitespace-nowrap">
                                                             <input v-model="group.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
                                                             Actif
                                                         </label>
-                                                        <div class="flex items-center gap-2">
-                                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveTicketGroup(item.id, group.id, -1)">Monter</button>
-                                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveTicketGroup(item.id, group.id, 1)">Descendre</button>
-                                                            <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeTicketGroup(item.id, group.id)">Supprimer</button>
-                                                        </div>
+                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePredefinedTicket(group.id, -1)">↑</button>
+                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePredefinedTicket(group.id, 1)">↓</button>
+                                                        <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removePredefinedTicket(group.id)">✕</button>
                                                     </div>
-
-                                                    <div class="flex flex-wrap items-center gap-2">
-                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="addTicketToServiceMode(item.id, group.id)">+ Ticket</button>
-                                                        <button type="button" class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800" @click="addPredefinedTickets(item.id, group.id)">+ Ajout tickets prédéfinis</button>
-                                                    </div>
-
-                                                    <div
-                                                        v-if="predefinedTicketForms[predefinedTicketFormKey(item.id, group.id)]"
-                                                        class="rounded-lg border border-slate-200 bg-slate-50 p-3"
-                                                    >
-                                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Ajout rapide dans ce groupe</p>
-                                                        <div class="mt-3 grid gap-3 md:grid-cols-3">
-                                                            <label class="block">
-                                                                <span class="mb-1 block text-xs font-medium text-slate-600">Préfixe</span>
-                                                                <input
-                                                                    v-model.trim="predefinedTicketForms[predefinedTicketFormKey(item.id, group.id)].prefix"
-                                                                    type="text"
-                                                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                                    placeholder="Ex: Table"
-                                                                    @keydown.enter.prevent="applyPredefinedTickets(item.id, group.id)"
-                                                                >
-                                                            </label>
-                                                            <label class="block">
-                                                                <span class="mb-1 block text-xs font-medium text-slate-600">Début</span>
-                                                                <input
-                                                                    v-model.number="predefinedTicketForms[predefinedTicketFormKey(item.id, group.id)].start"
-                                                                    type="number"
-                                                                    min="1"
-                                                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                                    @keydown.enter.prevent="applyPredefinedTickets(item.id, group.id)"
-                                                                >
-                                                            </label>
-                                                            <label class="block">
-                                                                <span class="mb-1 block text-xs font-medium text-slate-600">Fin</span>
-                                                                <input
-                                                                    v-model.number="predefinedTicketForms[predefinedTicketFormKey(item.id, group.id)].end"
-                                                                    type="number"
-                                                                    min="1"
-                                                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                                    @keydown.enter.prevent="applyPredefinedTickets(item.id, group.id)"
-                                                                >
-                                                            </label>
-                                                        </div>
-                                                        <div class="mt-3 flex flex-wrap justify-end gap-2">
-                                                            <button
-                                                                type="button"
-                                                                class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white"
-                                                                @click="closePredefinedTicketForm(item.id, group.id)"
-                                                            >
-                                                                Annuler
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                                                                @click="applyPredefinedTickets(item.id, group.id)"
-                                                            >
-                                                                Générer les tickets
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div v-if="group.tickets.length" class="space-y-2">
-                                                        <div
-                                                            v-for="ticket in group.tickets"
-                                                            :key="ticket.id"
-                                                            class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center"
-                                                        >
-                                                            <input v-model.trim="ticket.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du ticket">
-                                                            <label class="flex items-center gap-2 text-sm text-slate-700">
-                                                                <input v-model="ticket.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
-                                                                Actif
-                                                            </label>
-                                                            <div class="flex items-center gap-2">
-                                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white" @click="moveServiceModeTicket(item.id, ticket.id, -1, group.id)">Monter</button>
-                                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white" @click="moveServiceModeTicket(item.id, ticket.id, 1, group.id)">Descendre</button>
-                                                                <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeServiceModeTicket(item.id, ticket.id, group.id)">Supprimer</button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <p v-else class="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun ticket dans ce groupe.</p>
                                                 </div>
+
+                                                <div class="flex justify-end">
+                                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white" @click="addTicketToGroup(group.id)">+ Ticket</button>
+                                                </div>
+
+                                                <div v-if="group.tickets.length" class="space-y-2">
+                                                    <div
+                                                        v-for="ticket in group.tickets"
+                                                        :key="ticket.id"
+                                                        class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 md:flex-row md:items-center"
+                                                    >
+                                                        <input v-model.trim="ticket.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du ticket">
+                                                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                                                            <input v-model="ticket.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                            Actif
+                                                        </label>
+                                                        <div class="flex items-center gap-2">
+                                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveTicketInGroup(group.id, ticket.id, -1)">Monter</button>
+                                                            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="moveTicketInGroup(group.id, ticket.id, 1)">Descendre</button>
+                                                            <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50" @click="removeTicketFromGroup(group.id, ticket.id)">Supprimer</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p v-else class="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun ticket dans ce groupe.</p>
                                             </div>
-                                            <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun groupe configuré.</p>
+                                        </div>
+                                        <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun groupe.</p>
+
+                                        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 mt-4">
+                                            <label class="block text-sm font-semibold text-slate-900 mb-3">➕ Ajouter un groupe</label>
+                                            <div class="flex flex-col gap-3 md:flex-row">
+                                                <input
+                                                    v-model.trim="newPredefinedGroupLabel"
+                                                    type="text"
+                                                    placeholder="Ex: Salle A, VIP, Terrasse"
+                                                    class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                    @keydown.enter.prevent="addPredefinedGroup"
+                                                >
+                                                <button
+                                                    type="button"
+                                                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors shrink-0"
+                                                    @click="addPredefinedGroup"
+                                                >
+                                                    <PlusIcon class="w-4 h-4" />
+                                                    Ajouter
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                                <label class="block text-sm font-medium text-slate-700 mb-2">Ajouter un mode personnalisé</label>
-                                <div class="flex flex-col gap-3 md:flex-row">
-                                    <input
-                                        v-model.trim="newServiceModeLabel"
-                                        type="text"
-                                        placeholder="Ex: Drive, Click & Collect"
-                                        class="flex-1 rounded-xl border border-slate-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                        @keydown.enter.prevent="addCustomServiceMode"
-                                    >
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                                        @click="addCustomServiceMode"
-                                    >
-                                        <PlusIcon class="w-4 h-4" />
-                                        + Ajouter
+                                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                                    <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetPredefinedTicketForm">Annuler</button>
+                                    <button type="button" class="px-6 py-2.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('tickets')" @click="savePredefinedTicketsList">
+                                        {{ isSavingCustomList('tickets') ? '⏳ Enregistrement...' : '✓ Enregistrer' }}
                                     </button>
                                 </div>
-                            </div>
+                            </template>
 
-                            <div class="flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50"
-                                    @click="resetServiceModeForm"
-                                >
-                                    Annuler
-                                </button>
-                                <button
-                                    type="button"
-                                    class="px-5 py-2.5 rounded-xl bg-primary-500 text-gray-900 font-medium hover:bg-primary-600 disabled:opacity-50"
-                                    :disabled="customListSaving || serviceModeSettings.items.length === 0"
-                                    @click="saveServiceModeList"
-                                >
-                                    {{ customListSaving ? 'Enregistrement...' : 'Enregistrer' }}
-                                </button>
-                            </div>
+                            <template v-else-if="activeCustomListTab === 'service_modes'">
+                                <div class="rounded-xl border-l-4 border-l-blue-500 border border-slate-200 bg-blue-50 p-4">
+                                    <p class="text-sm font-bold text-blue-900">⚙️ Modes de service visibles dans le POS</p>
+                                    <p class="mt-2 text-sm text-blue-700">Définissez les contextes d'opération disponibles. Ces modes n'affectent pas les tickets globaux. Exemples : Sur place, Emporté, Livraison, Drive, Click & Collect.</p>
+                                </div>
+
+                                <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                                    <div class="space-y-3">
+                                        <div v-if="serviceModeSettings.items.length === 0" class="text-center py-8">
+                                            <p class="text-slate-500 text-sm">Aucun mode de service configuré. Créez le premier en bas.</p>
+                                        </div>
+                                        <div
+                                            v-for="item in serviceModeSettings.items"
+                                            :key="item.id"
+                                            class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center hover:bg-slate-100 transition-colors"
+                                        >
+                                            <input v-model.trim="item.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du mode (ex: Sur place)">
+                                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
+                                                <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                <span class="whitespace-nowrap">Afficher dans le POS</span>
+                                            </label>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveServiceMode(item.id, -1)">↑ Monter</button>
+                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveServiceMode(item.id, 1)">↓ Descendre</button>
+                                                <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeServiceMode(item.id)">✕ Supprimer</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 mt-4">
+                                    <label class="block text-sm font-semibold text-slate-900 mb-3">➕ Ajouter un mode de service</label>
+                                    <div class="flex flex-col gap-3 md:flex-row">
+                                        <input
+                                            v-model.trim="newServiceModeLabel"
+                                            type="text"
+                                            placeholder="Exemple : Drive, Click & Collect, Catering"
+                                            class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                            @keydown.enter.prevent="addCustomServiceMode"
+                                        >
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+                                            @click="addCustomServiceMode"
+                                        >
+                                            <PlusIcon class="w-4 h-4" />
+                                            Ajouter
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                                    <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetServiceModeForm">Annuler</button>
+                                    <button type="button" class="px-6 py-2.5 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('service_modes')" @click="saveServiceModeList">
+                                        {{ isSavingCustomList('service_modes') ? '⏳ Enregistrement...' : '✓ Enregistrer' }}
+                                    </button>
+                                </div>
+                            </template>
+
+                            <template v-else>
+                                <div class="rounded-xl border-l-4 border-l-emerald-500 border border-slate-200 bg-emerald-50 p-4">
+                                    <p class="text-sm font-bold text-emerald-900">💳 Modes de paiement visibles dans le POS</p>
+                                    <p class="mt-2 text-sm text-emerald-700">Configurez les méthodes de paiement acceptées. Sélectionnez un mode par défaut pour les nouvelles transactions. Exemples : Espèces, Carte bancaire, Chèque, Virement, Bon cadeau.</p>
+                                </div>
+
+                                <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                                    <div class="space-y-3">
+                                        <div v-if="paymentModeSettings.items.length === 0" class="text-center py-8">
+                                            <p class="text-slate-500 text-sm">Aucun mode de paiement configuré. Créez le premier en bas.</p>
+                                        </div>
+                                        <div
+                                            v-for="item in paymentModeSettings.items"
+                                            :key="item.id"
+                                            class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center hover:bg-slate-100 transition-colors"
+                                        >
+                                            <input v-model.trim="item.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du mode (ex: Espèces)">
+                                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
+                                                <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                <span class="whitespace-nowrap">Afficher</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
+                                                <input :checked="item.is_default" type="radio" name="payment_default" class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500" @change="setDefaultPaymentMode(item.id)">
+                                                <span class="whitespace-nowrap">Par défaut</span>
+                                            </label>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePaymentMode(item.id, -1)">↑ Monter</button>
+                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePaymentMode(item.id, 1)">↓ Descendre</button>
+                                                <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removePaymentMode(item.id)">✕ Supprimer</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 mt-4">
+                                    <label class="block text-sm font-semibold text-slate-900 mb-3">➕ Ajouter un mode de paiement</label>
+                                    <div class="flex flex-col gap-3 md:flex-row">
+                                        <input
+                                            v-model.trim="newPaymentModeLabel"
+                                            type="text"
+                                            placeholder="Exemple : Espèces, Carte bancaire, Chèque, Virement, Bon cadeau"
+                                            class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                            @keydown.enter.prevent="addPaymentMode"
+                                        >
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
+                                            @click="addPaymentMode"
+                                        >
+                                            <PlusIcon class="w-4 h-4" />
+                                            Ajouter
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                                    <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetPaymentModeForm">Annuler</button>
+                                    <button type="button" class="px-6 py-2.5 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('payment_modes')" @click="savePaymentModeList">
+                                        {{ isSavingCustomList('payment_modes') ? '⏳ Enregistrement...' : '✓ Enregistrer' }}
+                                    </button>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -716,8 +717,12 @@ const settingsStore = useSettingsStore()
 const customListsStore = useCustomListsStore()
 const saving = ref(false)
 const activeTab = ref('general')
-const customListSaving = ref(false)
+const savingCustomListTab = ref('')
+const activeCustomListTab = ref('tickets')
 const newServiceModeLabel = ref('')
+const newPredefinedTicketLabel = ref('')
+const newPredefinedGroupLabel = ref('')
+const newPaymentModeLabel = ref('')
 
 const tabs = [
     { id: 'general', label: 'Infos Générales' },
@@ -730,6 +735,12 @@ const tabs = [
     { id: 'commissions', label: 'Commissions' },
     { id: 'subscription', label: 'Abonnement' },
     { id: 'automation', label: 'Automatisation' },
+]
+
+const customListTabs = [
+    { id: 'tickets', label: 'Tickets prédéfinis' },
+    { id: 'service_modes', label: 'Mode de service' },
+    { id: 'payment_modes', label: 'Mode de paiement' },
 ]
 
 const settings = reactive({
@@ -785,17 +796,18 @@ const settings = reactive({
     subscription_expiry: '',
 })
 
+const predefinedTicketSettings = reactive({
+    is_active: true,
+    items: [],
+})
 const serviceModeSettings = reactive({
     is_active: true,
     items: [],
 })
-const predefinedTicketForms = reactive({})
-
-const serviceModeOperationalOptions = [
-    { value: 'dine_in', label: 'Sur place' },
-    { value: 'pickup', label: 'Emporté' },
-    { value: 'delivery', label: 'Livraison' },
-]
+const paymentModeSettings = reactive({
+    is_active: true,
+    items: [],
+})
 
 const subscriptionStatusClass = computed(() => {
     if (settings.subscription_type === 'free') return 'bg-gray-100 text-gray-800'
@@ -845,75 +857,8 @@ async function loadSettings() {
     }
 }
 
-function hydrateServiceModeForm(list) {
-    Object.keys(predefinedTicketForms).forEach((key) => {
-        delete predefinedTicketForms[key]
-    })
-    serviceModeSettings.is_active = list?.is_active !== false
-    serviceModeSettings.items = [...(list?.items || [])]
-        .map((item, index) => ({
-            id: item.id ?? createDraftId('mode'),
-            label: item.label || item.value || '',
-            value: item.value || item.label || '',
-            is_active: item.is_active !== false,
-            sort_order: Number(item.sort_order ?? index + 1),
-            operational_mode: item.operational_mode || 'pickup',
-            requires_delivery_agent: item.requires_delivery_agent === true,
-            tickets_without_group: normalizeTickets(item.tickets_without_group || []),
-            ticket_groups: normalizeTicketGroups(item.ticket_groups || []),
-        }))
-        .sort((a, b) => a.sort_order - b.sort_order)
-}
-
-async function loadServiceModeList() {
-    const list = await customListsStore.fetchList('mode_de_service', { force: true })
-    hydrateServiceModeForm(list)
-}
-
-function reindexServiceModeItems() {
-    serviceModeSettings.items = serviceModeSettings.items.map((item, index) => ({
-        ...item,
-        sort_order: index + 1,
-    }))
-}
-
-function normalizeTickets(tickets) {
-    return [...tickets]
-        .map((ticket, index) => ({
-            id: ticket.id ?? createDraftId('ticket'),
-            label: ticket.label || '',
-            is_active: ticket.is_active !== false,
-            sort_order: Number(ticket.sort_order ?? index + 1),
-        }))
-        .sort((a, b) => a.sort_order - b.sort_order)
-}
-
-function normalizeTicketGroups(groups) {
-    return [...groups]
-        .map((group, index) => ({
-            id: group.id ?? createDraftId('group'),
-            label: group.label || '',
-            is_active: group.is_active !== false,
-            sort_order: Number(group.sort_order ?? index + 1),
-            tickets: normalizeTickets(group.tickets || []),
-        }))
-        .sort((a, b) => a.sort_order - b.sort_order)
-}
-
 function createDraftId(prefix) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
-
-function predefinedTicketFormKey(modeId, groupId = null) {
-    return groupId ? `${modeId}::${groupId}` : `${modeId}::root`
-}
-
-function createPredefinedTicketForm() {
-    return {
-        prefix: 'Table',
-        start: 1,
-        end: 5,
-    }
 }
 
 function moveInArray(list, fromIndex, toIndex) {
@@ -927,264 +872,350 @@ function moveInArray(list, fromIndex, toIndex) {
     return clone
 }
 
-function reindexTickets(tickets) {
-    return tickets.map((ticket, index) => ({
-        ...ticket,
+function reindexEntries(items) {
+    return items.map((item, index) => ({
+        ...item,
         sort_order: index + 1,
     }))
 }
 
-function reindexTicketGroups(groups) {
-    return groups.map((group, index) => ({
-        ...group,
-        sort_order: index + 1,
-        tickets: reindexTickets(group.tickets || []),
-    }))
+function normalizeTicketEntries(tickets) {
+    return [...tickets]
+        .map((ticket, index) => ({
+            id: ticket.id ?? createDraftId('ticket'),
+            label: ticket.label || '',
+            is_active: ticket.is_active !== false,
+            sort_order: Number(ticket.sort_order ?? index + 1),
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
 }
 
-function getServiceModeItem(modeId) {
-    return serviceModeSettings.items.find((item) => String(item.id) === String(modeId)) || null
+function normalizePredefinedTicketItems(items) {
+    return [...items]
+        .map((item, index) => ({
+            id: item.id ?? createDraftId(item.kind === 'group' ? 'group' : 'ticket'),
+            label: item.label || item.value || '',
+            value: item.value || item.label || '',
+            is_active: item.is_active !== false,
+            sort_order: Number(item.sort_order ?? index + 1),
+            kind: item.kind === 'group' ? 'group' : 'ticket',
+            tickets: normalizeTicketEntries(item.tickets || []),
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
 }
 
-function getTicketGroup(modeId, groupId) {
-    return getServiceModeItem(modeId)?.ticket_groups.find((group) => String(group.id) === String(groupId)) || null
+function normalizeServiceModeItems(items) {
+    return [...items]
+        .map((item, index) => ({
+            id: item.id ?? createDraftId('mode'),
+            label: item.label || item.value || '',
+            value: item.value || item.label || '',
+            is_active: item.is_active !== false,
+            sort_order: Number(item.sort_order ?? index + 1),
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+function normalizePaymentModeItems(items) {
+    return [...items]
+        .map((item, index) => ({
+            id: item.id ?? createDraftId('payment'),
+            label: item.label || item.value || '',
+            value: item.value || item.label || '',
+            is_active: item.is_active !== false,
+            sort_order: Number(item.sort_order ?? index + 1),
+            is_default: item.is_default === true,
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+function hydratePredefinedTicketForm(list) {
+    predefinedTicketSettings.is_active = list?.is_active !== false
+    predefinedTicketSettings.items = normalizePredefinedTicketItems(list?.items || [])
+}
+
+function hydrateServiceModeForm(list) {
+    serviceModeSettings.is_active = list?.is_active !== false
+    serviceModeSettings.items = normalizeServiceModeItems(list?.items || [])
+}
+
+function hydratePaymentModeForm(list) {
+    paymentModeSettings.is_active = list?.is_active !== false
+    paymentModeSettings.items = normalizePaymentModeItems(list?.items || [])
+
+    if (!paymentModeSettings.items.some((item) => item.is_default) && paymentModeSettings.items.length > 0) {
+        paymentModeSettings.items[0].is_default = true
+    }
+}
+
+async function loadCustomLists() {
+    const [ticketsList, serviceModesList, paymentModesList] = await Promise.all([
+        customListsStore.fetchList('tickets_predefinis', { force: true }),
+        customListsStore.fetchList('mode_de_service', { force: true }),
+        customListsStore.fetchList('mode_de_paiement', { force: true }),
+    ])
+
+    hydratePredefinedTicketForm(ticketsList)
+    hydrateServiceModeForm(serviceModesList)
+    hydratePaymentModeForm(paymentModesList)
+}
+
+function inferServiceModeMeta(label) {
+    const normalized = String(label || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase()
+
+    if (normalized === 'livraison') {
+        return { operational_mode: 'delivery', requires_delivery_agent: true }
+    }
+
+    if (normalized === 'sur place') {
+        return { operational_mode: 'dine_in', requires_delivery_agent: false }
+    }
+
+    return { operational_mode: 'pickup', requires_delivery_agent: false }
+}
+
+function inferPaymentModeMeta(label) {
+    const normalized = String(label || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase()
+
+    if (['espece', 'especes', 'cash', 'liquide'].includes(normalized)) {
+        return { payment_type: 'cash', transfer_mode: null }
+    }
+
+    if (normalized.includes('carte') || normalized.includes('card')) {
+        return { payment_type: 'card', transfer_mode: null }
+    }
+
+    if (normalized.includes('mobile')) {
+        return { payment_type: 'mobile', transfer_mode: null }
+    }
+
+    if ((normalized.includes('instant') || normalized.includes('instantane'))
+        && (normalized.includes('virement') || normalized.includes('transfer'))) {
+        return { payment_type: 'virement', transfer_mode: 'instant' }
+    }
+
+    if (normalized.includes('virement') || normalized.includes('transfer')) {
+        return { payment_type: 'virement', transfer_mode: 'simple' }
+    }
+
+    if (normalized.includes('credit') || normalized.includes('lcn')) {
+        return { payment_type: 'credit', transfer_mode: null }
+    }
+
+    return { payment_type: 'other', transfer_mode: null }
+}
+
+function isSavingCustomList(tabId) {
+    return savingCustomListTab.value === tabId
+}
+
+function getPredefinedTicketItem(itemId) {
+    return predefinedTicketSettings.items.find((item) => String(item.id) === String(itemId)) || null
+}
+
+function addStandalonePredefinedTicket() {
+    const label = newPredefinedTicketLabel.value.trim()
+    if (!label) return
+
+    const exists = predefinedTicketSettings.items.some((item) => item.kind === 'ticket' && item.label.trim().toLowerCase() === label.toLowerCase())
+    if (exists) {
+        alert('Ce ticket existe déjà.')
+        return
+    }
+
+    predefinedTicketSettings.items = reindexEntries([
+        ...predefinedTicketSettings.items,
+        {
+            id: createDraftId('ticket'),
+            label,
+            value: label,
+            is_active: true,
+            sort_order: 0,
+            kind: 'ticket',
+            tickets: [],
+        },
+    ])
+    newPredefinedTicketLabel.value = ''
+}
+
+function addPredefinedGroup() {
+    const label = newPredefinedGroupLabel.value.trim()
+    if (!label) return
+
+    const exists = predefinedTicketSettings.items.some((item) => item.kind === 'group' && item.label.trim().toLowerCase() === label.toLowerCase())
+    if (exists) {
+        alert('Ce groupe existe déjà.')
+        return
+    }
+
+    predefinedTicketSettings.items = reindexEntries([
+        ...predefinedTicketSettings.items,
+        {
+            id: createDraftId('group'),
+            label,
+            value: label,
+            is_active: true,
+            sort_order: 0,
+            kind: 'group',
+            tickets: [],
+        },
+    ])
+    newPredefinedGroupLabel.value = ''
+}
+
+function removePredefinedTicket(itemId) {
+    predefinedTicketSettings.items = reindexEntries(
+        predefinedTicketSettings.items.filter((item) => String(item.id) !== String(itemId))
+    )
+}
+
+function movePredefinedTicket(itemId, direction) {
+    const sourceIndex = predefinedTicketSettings.items.findIndex((item) => String(item.id) === String(itemId))
+    predefinedTicketSettings.items = reindexEntries(
+        moveInArray(predefinedTicketSettings.items, sourceIndex, sourceIndex + direction)
+    )
+}
+
+function addTicketToGroup(groupId) {
+    const group = getPredefinedTicketItem(groupId)
+    if (!group || group.kind !== 'group') return
+
+    group.tickets = reindexEntries([
+        ...(group.tickets || []),
+        {
+            id: createDraftId('ticket'),
+            label: '',
+            is_active: true,
+            sort_order: 0,
+        },
+    ])
+}
+
+function removeTicketFromGroup(groupId, ticketId) {
+    const group = getPredefinedTicketItem(groupId)
+    if (!group || group.kind !== 'group') return
+
+    group.tickets = reindexEntries(
+        (group.tickets || []).filter((ticket) => String(ticket.id) !== String(ticketId))
+    )
+}
+
+function moveTicketInGroup(groupId, ticketId, direction) {
+    const group = getPredefinedTicketItem(groupId)
+    if (!group || group.kind !== 'group') return
+
+    const sourceIndex = (group.tickets || []).findIndex((ticket) => String(ticket.id) === String(ticketId))
+    group.tickets = reindexEntries(
+        moveInArray(group.tickets || [], sourceIndex, sourceIndex + direction)
+    )
 }
 
 function addCustomServiceMode() {
     const label = newServiceModeLabel.value.trim()
+    if (!label) return
 
-    if (!label) {
-        return
-    }
-
-    const exists = serviceModeSettings.items.some(
-        (item) => item.label.trim().toLowerCase() === label.toLowerCase()
-    )
-
+    const exists = serviceModeSettings.items.some((item) => item.label.trim().toLowerCase() === label.toLowerCase())
     if (exists) {
         alert('Ce mode existe déjà dans la liste.')
         return
     }
 
-    serviceModeSettings.items.push({
-        id: createDraftId('mode'),
-        label,
-        value: label,
-        is_active: true,
-        sort_order: serviceModeSettings.items.length + 1,
-        operational_mode: 'pickup',
-        requires_delivery_agent: false,
-        tickets_without_group: [],
-        ticket_groups: [],
-    })
-    reindexServiceModeItems()
+    serviceModeSettings.items = reindexEntries([
+        ...serviceModeSettings.items,
+        {
+            id: createDraftId('mode'),
+            label,
+            value: label,
+            is_active: true,
+            sort_order: 0,
+        },
+    ])
     newServiceModeLabel.value = ''
 }
 
 function removeServiceMode(modeId) {
-    serviceModeSettings.items = serviceModeSettings.items.filter((item) => String(item.id) !== String(modeId))
-    reindexServiceModeItems()
+    serviceModeSettings.items = reindexEntries(
+        serviceModeSettings.items.filter((item) => String(item.id) !== String(modeId))
+    )
 }
 
 function moveServiceMode(modeId, direction) {
     const sourceIndex = serviceModeSettings.items.findIndex((item) => String(item.id) === String(modeId))
-    const targetIndex = sourceIndex + direction
-    serviceModeSettings.items = moveInArray(serviceModeSettings.items, sourceIndex, targetIndex)
-    reindexServiceModeItems()
+    serviceModeSettings.items = reindexEntries(
+        moveInArray(serviceModeSettings.items, sourceIndex, sourceIndex + direction)
+    )
 }
 
-function addTicketToServiceMode(modeId, groupId = null) {
-    const serviceMode = getServiceModeItem(modeId)
-    if (!serviceMode) {
+function addPaymentMode() {
+    const label = newPaymentModeLabel.value.trim()
+    if (!label) return
+
+    const exists = paymentModeSettings.items.some((item) => item.label.trim().toLowerCase() === label.toLowerCase())
+    if (exists) {
+        alert('Ce mode de paiement existe déjà.')
         return
     }
 
-    const ticket = {
-        id: createDraftId('ticket'),
-        label: '',
-        is_active: true,
-        sort_order: 0,
-    }
-
-    if (!groupId) {
-        serviceMode.tickets_without_group = reindexTickets([
-            ...serviceMode.tickets_without_group,
-            ticket,
-        ])
-        return
-    }
-
-    const group = getTicketGroup(modeId, groupId)
-    if (!group) return
-
-    group.tickets = reindexTickets([
-        ...group.tickets,
-        ticket,
-    ])
-}
-
-function addTicketGroupToServiceMode(modeId) {
-    const serviceMode = getServiceModeItem(modeId)
-    if (!serviceMode) {
-        return
-    }
-
-    serviceMode.ticket_groups = reindexTicketGroups([
-        ...serviceMode.ticket_groups,
+    paymentModeSettings.items = reindexEntries([
+        ...paymentModeSettings.items,
         {
-            id: createDraftId('group'),
-            label: '',
+            id: createDraftId('payment'),
+            label,
+            value: label,
             is_active: true,
             sort_order: 0,
-            tickets: [],
+            is_default: paymentModeSettings.items.length === 0,
         },
     ])
+    newPaymentModeLabel.value = ''
 }
 
-function addPredefinedTickets(modeId, groupId = null) {
-    predefinedTicketForms[predefinedTicketFormKey(modeId, groupId)] = createPredefinedTicketForm()
-}
-
-function closePredefinedTicketForm(modeId, groupId = null) {
-    delete predefinedTicketForms[predefinedTicketFormKey(modeId, groupId)]
-}
-
-function applyPredefinedTickets(modeId, groupId = null) {
-    const form = predefinedTicketForms[predefinedTicketFormKey(modeId, groupId)]
-    if (!form) {
-        return
-    }
-
-    const prefix = String(form.prefix || '').trim()
-    const start = Number(form.start)
-    const end = Number(form.end)
-
-    if (!prefix) {
-        alert('Veuillez renseigner un préfixe pour les tickets prédéfinis.')
-        return
-    }
-
-    if (!Number.isInteger(start) || !Number.isInteger(end) || start <= 0 || end < start) {
-        alert('La plage définie est invalide.')
-        return
-    }
-
-    for (let value = start; value <= end; value += 1) {
-        appendPredefinedTicket(modeId, `${prefix} ${value}`, groupId)
-    }
-
-    closePredefinedTicketForm(modeId, groupId)
-}
-
-function appendPredefinedTicket(modeId, label, groupId = null) {
-    const serviceMode = getServiceModeItem(modeId)
-    if (!serviceMode) {
-        return
-    }
-
-    const nextTicket = {
-        id: createDraftId('ticket'),
-        label,
-        is_active: true,
-        sort_order: 0,
-    }
-
-    if (!groupId) {
-        const exists = serviceMode.tickets_without_group.some(
-            (ticket) => ticket.label.trim().toLowerCase() === label.trim().toLowerCase()
-        )
-        if (exists) return
-
-        serviceMode.tickets_without_group = reindexTickets([
-            ...serviceMode.tickets_without_group,
-            nextTicket,
-        ])
-        return
-    }
-
-    const group = getTicketGroup(modeId, groupId)
-    if (!group) return
-
-    const exists = group.tickets.some(
-        (ticket) => ticket.label.trim().toLowerCase() === label.trim().toLowerCase()
+function removePaymentMode(modeId) {
+    paymentModeSettings.items = reindexEntries(
+        paymentModeSettings.items.filter((item) => String(item.id) !== String(modeId))
     )
-    if (exists) return
 
-    group.tickets = reindexTickets([
-        ...group.tickets,
-        nextTicket,
-    ])
+    if (!paymentModeSettings.items.some((item) => item.is_default) && paymentModeSettings.items.length > 0) {
+        paymentModeSettings.items[0].is_default = true
+    }
 }
 
-function removeServiceModeTicket(modeId, ticketId, groupId = null) {
-    const serviceMode = getServiceModeItem(modeId)
-    if (!serviceMode) {
-        return
-    }
-
-    if (!groupId) {
-        serviceMode.tickets_without_group = reindexTickets(
-            serviceMode.tickets_without_group.filter((ticket) => String(ticket.id) !== String(ticketId))
-        )
-        return
-    }
-
-    const group = getTicketGroup(modeId, groupId)
-    if (!group) return
-    group.tickets = reindexTickets(
-        group.tickets.filter((ticket) => String(ticket.id) !== String(ticketId))
+function movePaymentMode(modeId, direction) {
+    const sourceIndex = paymentModeSettings.items.findIndex((item) => String(item.id) === String(modeId))
+    paymentModeSettings.items = reindexEntries(
+        moveInArray(paymentModeSettings.items, sourceIndex, sourceIndex + direction)
     )
 }
 
-function moveServiceModeTicket(modeId, ticketId, direction, groupId = null) {
-    const serviceMode = getServiceModeItem(modeId)
-    if (!serviceMode) {
-        return
-    }
-
-    if (!groupId) {
-        const sourceIndex = serviceMode.tickets_without_group.findIndex((ticket) => String(ticket.id) === String(ticketId))
-        serviceMode.tickets_without_group = reindexTickets(
-            moveInArray(serviceMode.tickets_without_group, sourceIndex, sourceIndex + direction)
-        )
-        return
-    }
-
-    const group = getTicketGroup(modeId, groupId)
-    if (!group) return
-
-    const sourceIndex = group.tickets.findIndex((ticket) => String(ticket.id) === String(ticketId))
-    group.tickets = reindexTickets(
-        moveInArray(group.tickets, sourceIndex, sourceIndex + direction)
-    )
+function setDefaultPaymentMode(modeId) {
+    paymentModeSettings.items = paymentModeSettings.items.map((item) => ({
+        ...item,
+        is_default: String(item.id) === String(modeId),
+    }))
 }
 
-function removeTicketGroup(modeId, groupId) {
-    const serviceMode = getServiceModeItem(modeId)
-    if (!serviceMode) {
-        return
-    }
-
-    serviceMode.ticket_groups = reindexTicketGroups(
-        serviceMode.ticket_groups.filter((group) => String(group.id) !== String(groupId))
-    )
-}
-
-function moveTicketGroup(modeId, groupId, direction) {
-    const serviceMode = getServiceModeItem(modeId)
-    if (!serviceMode) {
-        return
-    }
-
-    const sourceIndex = serviceMode.ticket_groups.findIndex((group) => String(group.id) === String(groupId))
-    serviceMode.ticket_groups = reindexTicketGroups(
-        moveInArray(serviceMode.ticket_groups, sourceIndex, sourceIndex + direction)
-    )
+function resetPredefinedTicketForm() {
+    newPredefinedTicketLabel.value = ''
+    newPredefinedGroupLabel.value = ''
+    customListsStore.fetchList('tickets_predefinis', { force: true }).then(hydratePredefinedTicketForm)
 }
 
 function resetServiceModeForm() {
     newServiceModeLabel.value = ''
-    loadServiceModeList()
+    customListsStore.fetchList('mode_de_service', { force: true }).then(hydrateServiceModeForm)
+}
+
+function resetPaymentModeForm() {
+    newPaymentModeLabel.value = ''
+    customListsStore.fetchList('mode_de_paiement', { force: true }).then(hydratePaymentModeForm)
 }
 
 function resetSettings() {
@@ -1199,10 +1230,10 @@ async function saveSettings() {
         const settingsArray = Object.entries(settings).map(([key, value]) => {
             let type = 'string'
             let group = 'general'
-            
+
             if (typeof value === 'boolean') type = 'boolean'
             else if (typeof value === 'number') type = 'number'
-            
+
             if (key.startsWith('currency_')) group = 'currency'
             else if (key.startsWith('tax_')) group = 'tax'
             else if (key.startsWith('receipt_')) group = 'receipt'
@@ -1211,10 +1242,10 @@ async function saveSettings() {
             else if (key.startsWith('pos_')) group = 'pos'
             else if (key.startsWith('commission_')) group = 'commission'
             else if (key.startsWith('subscription_')) group = 'subscription'
-            
+
             return { key, value, type, group }
         })
-        
+
         await settingsApi.update(settingsArray)
         settingsStore.loaded = false
         await settingsStore.fetchSettings()
@@ -1227,79 +1258,133 @@ async function saveSettings() {
     }
 }
 
-async function saveServiceModeList() {
-    customListSaving.value = true
+async function saveCustomList(tabId, listName, payload, hydrateForm, successMessage) {
+    savingCustomListTab.value = tabId
 
     try {
-        const payload = {
-            is_active: serviceModeSettings.is_active,
-            items: serviceModeSettings.items.map((item, index) => {
-                const parsedId = Number(item.id)
+        const { data } = await customListsApi.update(listName, payload)
+        customListsStore.setList(listName, data)
+        hydrateForm(data)
+        alert(successMessage)
+    } catch (error) {
+        console.error(`Failed to save custom list "${listName}":`, error)
+        alert(error.response?.data?.message || 'Erreur lors de l\'enregistrement.')
+    } finally {
+        savingCustomListTab.value = ''
+    }
+}
+
+async function savePredefinedTicketsList() {
+    const payload = {
+        is_active: true,
+        items: predefinedTicketSettings.items
+            .filter((item) => item.label.trim() !== '')
+            .map((item, index) => {
+                const itemId = Number(item.id)
 
                 return {
-                    id: Number.isInteger(parsedId) && parsedId > 0 ? parsedId : undefined,
+                    id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
                     label: item.label.trim(),
-                    value: (item.value || item.label).trim(),
+                    value: item.label.trim(),
                     is_active: item.is_active !== false,
-                    operational_mode: item.operational_mode || 'pickup',
-                    requires_delivery_agent: item.requires_delivery_agent === true,
                     sort_order: index + 1,
-                    tickets_without_group: (item.tickets_without_group || [])
-                        .filter((ticket) => ticket.label.trim() !== '')
-                        .map((ticket, ticketIndex) => {
-                            const ticketId = Number(ticket.id)
+                    kind: item.kind,
+                    tickets: item.kind === 'group'
+                        ? (item.tickets || [])
+                            .filter((ticket) => ticket.label.trim() !== '')
+                            .map((ticket, ticketIndex) => {
+                                const ticketId = Number(ticket.id)
 
-                            return {
-                                id: Number.isInteger(ticketId) && ticketId > 0 ? ticketId : undefined,
-                                label: ticket.label.trim(),
-                                is_active: ticket.is_active !== false,
-                                sort_order: ticketIndex + 1,
-                            }
-                        }),
-                    ticket_groups: (item.ticket_groups || [])
-                        .filter((group) => group.label.trim() !== '')
-                        .map((group, groupIndex) => {
-                            const groupId = Number(group.id)
-
-                            return {
-                                id: Number.isInteger(groupId) && groupId > 0 ? groupId : undefined,
-                                label: group.label.trim(),
-                                is_active: group.is_active !== false,
-                                sort_order: groupIndex + 1,
-                                tickets: (group.tickets || [])
-                                    .filter((ticket) => ticket.label.trim() !== '')
-                                    .map((ticket, ticketIndex) => {
-                                        const ticketId = Number(ticket.id)
-
-                                        return {
-                                            id: Number.isInteger(ticketId) && ticketId > 0 ? ticketId : undefined,
-                                            label: ticket.label.trim(),
-                                            is_active: ticket.is_active !== false,
-                                            sort_order: ticketIndex + 1,
-                                        }
-                                    }),
-                            }
-                        }),
+                                return {
+                                    id: Number.isInteger(ticketId) && ticketId > 0 ? ticketId : undefined,
+                                    label: ticket.label.trim(),
+                                    is_active: ticket.is_active !== false,
+                                    sort_order: ticketIndex + 1,
+                                }
+                            })
+                        : [],
                 }
             }),
-        }
-
-        const { data } = await customListsApi.update('mode_de_service', payload)
-        customListsStore.setList('mode_de_service', data)
-        hydrateServiceModeForm(data)
-        alert('Modes de service enregistrés avec succès!')
-    } catch (error) {
-        console.error('Failed to save service modes:', error)
-        alert(error.response?.data?.message || 'Erreur lors de l\'enregistrement des modes de service.')
-    } finally {
-        customListSaving.value = false
     }
+
+    await saveCustomList(
+        'tickets',
+        'tickets_predefinis',
+        payload,
+        hydratePredefinedTicketForm,
+        'Tickets prédéfinis enregistrés avec succès!'
+    )
+}
+
+async function saveServiceModeList() {
+    const payload = {
+        is_active: true,
+        items: serviceModeSettings.items
+            .filter((item) => item.label.trim() !== '')
+            .map((item, index) => {
+                const itemId = Number(item.id)
+                const meta = inferServiceModeMeta(item.label)
+
+                return {
+                    id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
+                    label: item.label.trim(),
+                    value: item.label.trim(),
+                    is_active: item.is_active !== false,
+                    sort_order: index + 1,
+                    operational_mode: meta.operational_mode,
+                    requires_delivery_agent: meta.requires_delivery_agent,
+                }
+            }),
+    }
+
+    await saveCustomList(
+        'service_modes',
+        'mode_de_service',
+        payload,
+        hydrateServiceModeForm,
+        'Modes de service enregistrés avec succès!'
+    )
+}
+
+async function savePaymentModeList() {
+    const filteredItems = paymentModeSettings.items.filter((item) => item.label.trim() !== '')
+
+    if (filteredItems.length > 0 && !filteredItems.some((item) => item.is_default)) {
+        filteredItems[0].is_default = true
+    }
+
+    const payload = {
+        is_active: true,
+        items: filteredItems.map((item, index) => {
+            const itemId = Number(item.id)
+            const meta = inferPaymentModeMeta(item.label)
+
+            return {
+                id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
+                label: item.label.trim(),
+                value: item.label.trim(),
+                is_active: item.is_active !== false,
+                sort_order: index + 1,
+                payment_type: meta.payment_type,
+                transfer_mode: meta.transfer_mode,
+                is_default: item.is_default === true,
+            }
+        }),
+    }
+
+    await saveCustomList(
+        'payment_modes',
+        'mode_de_paiement',
+        payload,
+        hydratePaymentModeForm,
+        'Modes de paiement enregistrés avec succès!'
+    )
 }
 
 onMounted(async () => {
     await Promise.all([
         loadSettings(),
-        loadServiceModeList(),
+        loadCustomLists(),
     ])
 })
 </script>

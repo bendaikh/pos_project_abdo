@@ -52,7 +52,7 @@
                         <div v-if="activeTab === 'liste'" class="space-y-5">
                             <div class="flex items-center justify-between gap-3 rounded-[20px] bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 <p>
-                                    {{ canSaveCurrentCart ? `Choisissez l’emplacement où enregistrer le ticket actuel pour ${formatDeliveryMode(currentServiceMode)}.` : 'Ajoutez des articles au ticket avant de choisir un emplacement.' }}
+                                    {{ canSaveCurrentCart ? 'Choisissez un ticket prédéfini pour enregistrer le ticket actuel.' : 'Ajoutez des articles au ticket avant de choisir un emplacement.' }}
                                 </p>
                                 <button
                                     type="button"
@@ -139,7 +139,7 @@
                             </div>
 
                             <div v-if="!ungroupedBoardTickets.length && !groupedBoardTickets.length" class="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
-                                Aucun emplacement n’est configuré pour ce mode de service.
+                                Aucun ticket prédéfini n’est configuré.
                             </div>
                         </div>
 
@@ -455,10 +455,9 @@ const serviceModeEnabled = computed(() => {
 })
 
 const canSaveCurrentCart = computed(() => props.cartItems.length > 0)
-const currentServiceMode = computed(() => normalizeDeliveryMode(props.defaultDeliveryMode))
 
 const configuredBoardEntries = computed(() => {
-    const config = customListsStore.getServiceModeTickets(currentServiceMode.value)
+    const config = customListsStore.getPredefinedTickets()
     const entries = []
 
     for (const ticket of config.tickets_without_group || []) {
@@ -490,9 +489,8 @@ const configuredBoardEntries = computed(() => {
     return entries.filter((entry) => entry.name)
 })
 
-const currentModeSavedTicketEntries = computed(() => {
+const existingBoardTicketEntries = computed(() => {
     return (props.savedTickets || [])
-        .filter((ticket) => normalizeDeliveryMode(ticket?.service_mode || ticket?.delivery_mode) === currentServiceMode.value)
         .map((ticket) => {
             const name = String(ticket?.ticket_name || ticket?.reference || `Ticket #${ticket?.id || '-'}`).trim()
             if (!name) return null
@@ -525,7 +523,7 @@ const ticketBoardTiles = computed(() => {
         })
     }
 
-    currentModeSavedTicketEntries.value.forEach((entry, index) => {
+    existingBoardTicketEntries.value.forEach((entry, index) => {
         const existing = tiles.get(entry.key)
         tiles.set(entry.key, {
             ...(existing || {}),
@@ -628,7 +626,10 @@ watch(commandDeliveryModes, () => {
 }, { deep: true })
 
 onMounted(async () => {
-    await customListsStore.fetchList('mode_de_service')
+    await Promise.all([
+        customListsStore.fetchList('mode_de_service'),
+        customListsStore.fetchList('tickets_predefinis'),
+    ])
     commandForm.value.delivery_mode = normalizeDeliveryMode(commandForm.value.delivery_mode)
     if (activeTab.value === 'commande') {
         await fetchCustomers()
@@ -787,6 +788,7 @@ async function saveCommandeTicket() {
         return
     }
 
+    const printTargetWindow = openPrintWindowSafely()
     saving.value = true
 
     try {
@@ -828,8 +830,10 @@ async function saveCommandeTicket() {
             finalSale = refreshed.data
         }
 
-        printSale(finalSale, 'commande')
-        alert('Commande enregistrée et envoyée à l’impression.')
+        const printed = printSale(finalSale, 'commande', null, printTargetWindow)
+        alert(printed
+            ? 'Commande enregistrée et envoyée à l’impression.'
+            : 'Commande enregistrée. Impression bloquée par le navigateur.')
         emit('saved', finalSale)
     } catch (error) {
         console.error('Erreur enregistrement commande:', error)
@@ -859,6 +863,7 @@ async function resolveCustomerId() {
 }
 
 async function saveAndPrint({ title, payload, saleId = null }) {
+    const printTargetWindow = openPrintWindowSafely()
     saving.value = true
     try {
         let savedSaleId = saleId
@@ -871,8 +876,10 @@ async function saveAndPrint({ title, payload, saleId = null }) {
         }
 
         const refreshed = await salesApi.get(savedSaleId)
-        printSale(refreshed.data, payload.ticket_type || 'liste', title)
-        alert('Ticket enregistré et envoyé à l’impression.')
+        const printed = printSale(refreshed.data, payload.ticket_type || 'liste', title, printTargetWindow)
+        alert(printed
+            ? 'Ticket enregistré et envoyé à l’impression.'
+            : 'Ticket enregistré. Impression bloquée par le navigateur.')
         emit('saved', refreshed.data)
     } catch (error) {
         console.error('Erreur enregistrement ticket:', error)
@@ -951,11 +958,46 @@ async function handleBoardTicketClick(ticket) {
     await saveListedTicket(ticket)
 }
 
-function printSale(sale, mode, forcedTitle = null) {
-    const printWindow = window.open('', '_blank', 'width=420,height=760')
-    if (!printWindow) {
+function openPrintWindowSafely() {
+    const printTargetWindow = window.open('', '_blank', 'width=420,height=760')
+    if (!printTargetWindow) {
+        return null
+    }
+
+    printTargetWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <title>Préparation impression</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #334155;
+                }
+            </style>
+        </head>
+        <body>Préparation du ticket...</body>
+        </html>
+    `)
+    printTargetWindow.document.close()
+    return printTargetWindow
+}
+
+function printSale(sale, mode, forcedTitle = null, printTargetWindow = null) {
+    return printSaleToWindow(printTargetWindow, sale, mode, forcedTitle)
+}
+
+function printSaleToWindow(printTargetWindow, sale, mode, forcedTitle = null) {
+    const activePrintWindow = printTargetWindow || window.open('', '_blank', 'width=420,height=760')
+    if (!activePrintWindow) {
         alert('La fenêtre d’impression a été bloquée par le navigateur.')
-        return
+        return false
     }
 
     const title = forcedTitle || sale.ticket_name || sale.order_number || sale.reference || 'Ticket'
@@ -983,7 +1025,7 @@ function printSale(sale, mode, forcedTitle = null) {
         ? `<div class="note-box"><strong>Note:</strong><br>${escapeHtml(sale.notes).replace(/\n/g, '<br>')}</div>`
         : ''
 
-    printWindow.document.write(`
+    activePrintWindow.document.write(`
         <!DOCTYPE html>
         <html lang="fr">
         <head>
@@ -1109,12 +1151,14 @@ function printSale(sale, mode, forcedTitle = null) {
         </body>
         </html>
     `)
-    printWindow.document.close()
-    printWindow.focus()
-    printWindow.onload = () => {
-        printWindow.print()
-        setTimeout(() => printWindow.close(), 300)
+    activePrintWindow.document.close()
+    activePrintWindow.focus()
+    activePrintWindow.onload = () => {
+        activePrintWindow.print()
+        setTimeout(() => activePrintWindow.close(), 300)
     }
+
+    return true
 }
 
 function escapeHtml(value) {

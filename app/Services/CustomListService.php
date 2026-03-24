@@ -8,9 +8,15 @@ use Illuminate\Support\Str;
 
 class CustomListService
 {
+    public const PREDEFINED_TICKET_LIST = 'tickets_predefinis';
     public const SERVICE_MODE_LIST = 'mode_de_service';
+    public const PAYMENT_MODE_LIST = 'mode_de_paiement';
 
     private const DEFAULT_LISTS = [
+        self::PREDEFINED_TICKET_LIST => [
+            'is_active' => true,
+            'items' => [],
+        ],
         self::SERVICE_MODE_LIST => [
             'is_active' => true,
             'items' => [
@@ -21,8 +27,6 @@ class CustomListService
                     'metadata' => [
                         'operational_mode' => 'dine_in',
                         'requires_delivery_agent' => false,
-                        'tickets_without_group' => [],
-                        'ticket_groups' => [],
                     ],
                 ],
                 [
@@ -32,8 +36,6 @@ class CustomListService
                     'metadata' => [
                         'operational_mode' => 'pickup',
                         'requires_delivery_agent' => false,
-                        'tickets_without_group' => [],
-                        'ticket_groups' => [],
                     ],
                 ],
                 [
@@ -43,8 +45,71 @@ class CustomListService
                     'metadata' => [
                         'operational_mode' => 'delivery',
                         'requires_delivery_agent' => true,
-                        'tickets_without_group' => [],
-                        'ticket_groups' => [],
+                    ],
+                ],
+            ],
+        ],
+        self::PAYMENT_MODE_LIST => [
+            'is_active' => true,
+            'items' => [
+                [
+                    'label' => 'Espèce',
+                    'value' => 'Espèce',
+                    'sort_order' => 1,
+                    'metadata' => [
+                        'payment_type' => 'cash',
+                        'transfer_mode' => null,
+                        'is_default' => true,
+                    ],
+                ],
+                [
+                    'label' => 'Carte',
+                    'value' => 'Carte',
+                    'sort_order' => 2,
+                    'metadata' => [
+                        'payment_type' => 'card',
+                        'transfer_mode' => null,
+                        'is_default' => false,
+                    ],
+                ],
+                [
+                    'label' => 'Mobile',
+                    'value' => 'Mobile',
+                    'sort_order' => 3,
+                    'metadata' => [
+                        'payment_type' => 'mobile',
+                        'transfer_mode' => null,
+                        'is_default' => false,
+                    ],
+                ],
+                [
+                    'label' => 'Virement instantané',
+                    'value' => 'Virement instantané',
+                    'sort_order' => 4,
+                    'metadata' => [
+                        'payment_type' => 'virement',
+                        'transfer_mode' => 'instant',
+                        'is_default' => false,
+                    ],
+                ],
+                [
+                    'label' => 'Virement simple',
+                    'value' => 'Virement simple',
+                    'sort_order' => 5,
+                    'metadata' => [
+                        'payment_type' => 'virement',
+                        'transfer_mode' => 'simple',
+                        'is_default' => false,
+                    ],
+                ],
+                [
+                    'label' => 'Crédit',
+                    'value' => 'Crédit',
+                    'sort_order' => 6,
+                    'metadata' => [
+                        'payment_type' => 'credit',
+                        'transfer_mode' => null,
+                        'is_default' => false,
                     ],
                 ],
             ],
@@ -154,7 +219,9 @@ class CustomListService
             $submittedIds[] = $record->id;
         }
 
-        if (! empty($submittedIds)) {
+        if (empty($submittedIds)) {
+            $list->items()->delete();
+        } else {
             $list->items()->whereNotIn('id', $submittedIds)->delete();
         }
 
@@ -216,6 +283,7 @@ class CustomListService
         );
 
         $this->ensureDefaultItems($list, $defaults['items']);
+        $this->migrateLegacyTicketsIfNeeded($list);
 
         return $list->fresh('items');
     }
@@ -278,48 +346,251 @@ class CustomListService
             'value' => $item->value ?: $item->label,
             'is_active' => (bool) $item->is_active,
             'sort_order' => (int) $item->sort_order,
+            'kind' => $metadata['kind'],
+            'tickets' => $metadata['tickets'],
             'operational_mode' => $metadata['operational_mode'],
             'requires_delivery_agent' => $metadata['requires_delivery_agent'],
-            'tickets_without_group' => $metadata['tickets_without_group'],
-            'ticket_groups' => $metadata['ticket_groups'],
+            'payment_type' => $metadata['payment_type'],
+            'transfer_mode' => $metadata['transfer_mode'],
+            'is_default' => $metadata['is_default'],
         ];
     }
 
     private function buildItemMetadata(string $listName, array $item): ?array
     {
-        if ($listName !== self::SERVICE_MODE_LIST) {
-            return null;
+        if ($listName === self::PREDEFINED_TICKET_LIST) {
+            return [
+                'kind' => $this->normalizePredefinedTicketKind($item),
+                'tickets' => $this->normalizeTicketCollection($item['tickets'] ?? []),
+            ];
         }
 
-        $fallback = $this->resolveFallbackServiceModeMetadata($item['label'] ?? '');
+        if ($listName === self::SERVICE_MODE_LIST) {
+            $fallback = $this->resolveFallbackServiceModeMetadata($item['label'] ?? '');
 
-        return [
-            'operational_mode' => $item['operational_mode'] ?? $fallback['operational_mode'],
-            'requires_delivery_agent' => (bool) ($item['requires_delivery_agent'] ?? $fallback['requires_delivery_agent']),
-            'tickets_without_group' => $this->normalizeTicketCollection($item['tickets_without_group'] ?? []),
-            'ticket_groups' => $this->normalizeTicketGroups($item['ticket_groups'] ?? []),
-        ];
+            return [
+                'operational_mode' => $item['operational_mode'] ?? $fallback['operational_mode'],
+                'requires_delivery_agent' => (bool) ($item['requires_delivery_agent'] ?? $fallback['requires_delivery_agent']),
+            ];
+        }
+
+        if ($listName === self::PAYMENT_MODE_LIST) {
+            $fallback = $this->resolveFallbackPaymentModeMetadata($item['label'] ?? '');
+
+            return [
+                'payment_type' => $item['payment_type'] ?? $fallback['payment_type'],
+                'transfer_mode' => $item['transfer_mode'] ?? $fallback['transfer_mode'],
+                'is_default' => (bool) ($item['is_default'] ?? $fallback['is_default']),
+            ];
+        }
+
+        return null;
     }
 
     private function normalizeSerializedMetadata(string $listName, CustomListItem $item): array
     {
-        if ($listName !== self::SERVICE_MODE_LIST) {
+        if ($listName === self::PREDEFINED_TICKET_LIST) {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+            $tickets = $this->normalizeTicketCollection($metadata['tickets'] ?? []);
+            $kind = $metadata['kind'] ?? ($tickets !== [] ? 'group' : 'ticket');
+
             return [
+                'kind' => $kind === 'group' ? 'group' : 'ticket',
+                'tickets' => $tickets,
                 'operational_mode' => 'pickup',
                 'requires_delivery_agent' => false,
-                'tickets_without_group' => [],
-                'ticket_groups' => [],
+                'payment_type' => 'other',
+                'transfer_mode' => null,
+                'is_default' => false,
             ];
         }
 
-        $metadata = is_array($item->metadata) ? $item->metadata : [];
-        $fallback = $this->resolveFallbackServiceModeMetadata($item->label);
+        if ($listName === self::SERVICE_MODE_LIST) {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+            $fallback = $this->resolveFallbackServiceModeMetadata($item->label);
+
+            return [
+                'kind' => 'ticket',
+                'tickets' => [],
+                'operational_mode' => $metadata['operational_mode'] ?? $fallback['operational_mode'],
+                'requires_delivery_agent' => (bool) ($metadata['requires_delivery_agent'] ?? $fallback['requires_delivery_agent']),
+                'payment_type' => 'other',
+                'transfer_mode' => null,
+                'is_default' => false,
+            ];
+        }
+
+        if ($listName === self::PAYMENT_MODE_LIST) {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+            $fallback = $this->resolveFallbackPaymentModeMetadata($item->label);
+
+            return [
+                'kind' => 'ticket',
+                'tickets' => [],
+                'operational_mode' => 'pickup',
+                'requires_delivery_agent' => false,
+                'payment_type' => $metadata['payment_type'] ?? $fallback['payment_type'],
+                'transfer_mode' => $metadata['transfer_mode'] ?? $fallback['transfer_mode'],
+                'is_default' => (bool) ($metadata['is_default'] ?? $fallback['is_default']),
+            ];
+        }
 
         return [
-            'operational_mode' => $metadata['operational_mode'] ?? $fallback['operational_mode'],
-            'requires_delivery_agent' => (bool) ($metadata['requires_delivery_agent'] ?? $fallback['requires_delivery_agent']),
-            'tickets_without_group' => $this->normalizeTicketCollection($metadata['tickets_without_group'] ?? []),
-            'ticket_groups' => $this->normalizeTicketGroups($metadata['ticket_groups'] ?? []),
+            'kind' => 'ticket',
+            'tickets' => [],
+            'operational_mode' => 'pickup',
+            'requires_delivery_agent' => false,
+            'payment_type' => 'other',
+            'transfer_mode' => null,
+            'is_default' => false,
+        ];
+    }
+
+    private function migrateLegacyTicketsIfNeeded(CustomList $list): void
+    {
+        if ($list->name !== self::PREDEFINED_TICKET_LIST || $list->items()->exists()) {
+            return;
+        }
+
+        $serviceModeList = CustomList::query()
+            ->where('name', self::SERVICE_MODE_LIST)
+            ->with('items')
+            ->first();
+
+        if (! $serviceModeList) {
+            return;
+        }
+
+        $ungroupedTickets = [];
+        $ticketGroups = [];
+
+        foreach ($serviceModeList->items as $item) {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+
+            foreach ($this->normalizeTicketCollection($metadata['tickets_without_group'] ?? []) as $ticket) {
+                $key = $this->normalizeKey($ticket['label']);
+                if ($key === '' || array_key_exists($key, $ungroupedTickets)) {
+                    continue;
+                }
+
+                $ungroupedTickets[$key] = $ticket;
+            }
+
+            foreach ($this->normalizeTicketGroups($metadata['ticket_groups'] ?? []) as $group) {
+                $groupKey = $this->normalizeKey($group['label']);
+                if ($groupKey === '') {
+                    continue;
+                }
+
+                if (! array_key_exists($groupKey, $ticketGroups)) {
+                    $ticketGroups[$groupKey] = [
+                        'label' => $group['label'],
+                        'tickets' => [],
+                    ];
+                }
+
+                foreach ($group['tickets'] as $ticket) {
+                    $ticketKey = $this->normalizeKey($ticket['label']);
+                    if ($ticketKey === '' || array_key_exists($ticketKey, $ticketGroups[$groupKey]['tickets'])) {
+                        continue;
+                    }
+
+                    $ticketGroups[$groupKey]['tickets'][$ticketKey] = $ticket;
+                }
+            }
+        }
+
+        $sortOrder = 1;
+
+        foreach (array_values($ungroupedTickets) as $ticket) {
+            $list->items()->create([
+                'label' => $ticket['label'],
+                'value' => $ticket['label'],
+                'metadata' => [
+                    'kind' => 'ticket',
+                    'tickets' => [],
+                ],
+                'is_active' => (bool) ($ticket['is_active'] ?? true),
+                'sort_order' => $sortOrder++,
+            ]);
+        }
+
+        foreach (array_values($ticketGroups) as $group) {
+            $list->items()->create([
+                'label' => $group['label'],
+                'value' => $group['label'],
+                'metadata' => [
+                    'kind' => 'group',
+                    'tickets' => array_values($group['tickets']),
+                ],
+                'is_active' => true,
+                'sort_order' => $sortOrder++,
+            ]);
+        }
+    }
+
+    private function normalizePredefinedTicketKind(array $item): string
+    {
+        return ($item['kind'] ?? null) === 'group' ? 'group' : 'ticket';
+    }
+
+    private function resolveFallbackPaymentModeMetadata(string $value): array
+    {
+        $normalized = $this->normalizeKey($value);
+
+        if (in_array($normalized, ['espece', 'especes', 'cash', 'liquide'], true)) {
+            return [
+                'payment_type' => 'cash',
+                'transfer_mode' => null,
+                'is_default' => true,
+            ];
+        }
+
+        if (str_contains($normalized, 'carte') || str_contains($normalized, 'card')) {
+            return [
+                'payment_type' => 'card',
+                'transfer_mode' => null,
+                'is_default' => false,
+            ];
+        }
+
+        if (str_contains($normalized, 'mobile')) {
+            return [
+                'payment_type' => 'mobile',
+                'transfer_mode' => null,
+                'is_default' => false,
+            ];
+        }
+
+        if ((str_contains($normalized, 'instant') || str_contains($normalized, 'instantane'))
+            && (str_contains($normalized, 'virement') || str_contains($normalized, 'transfer'))) {
+            return [
+                'payment_type' => 'virement',
+                'transfer_mode' => 'instant',
+                'is_default' => false,
+            ];
+        }
+
+        if (str_contains($normalized, 'virement') || str_contains($normalized, 'transfer')) {
+            return [
+                'payment_type' => 'virement',
+                'transfer_mode' => 'simple',
+                'is_default' => false,
+            ];
+        }
+
+        if (str_contains($normalized, 'credit') || str_contains($normalized, 'lcn')) {
+            return [
+                'payment_type' => 'credit',
+                'transfer_mode' => null,
+                'is_default' => false,
+            ];
+        }
+
+        return [
+            'payment_type' => 'other',
+            'transfer_mode' => null,
+            'is_default' => false,
         ];
     }
 
