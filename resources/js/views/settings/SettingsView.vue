@@ -457,10 +457,13 @@
                                                 <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
                                                 <span class="whitespace-nowrap">Afficher dans le POS</span>
                                             </label>
+                                            <span v-if="item.is_system" class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 shrink-0">
+                                                Officiel
+                                            </span>
                                             <div class="flex items-center gap-2 shrink-0">
                                                 <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveServiceMode(item.id, -1)">↑ Monter</button>
                                                 <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveServiceMode(item.id, 1)">↓ Descendre</button>
-                                                <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeServiceMode(item.id)">✕ Supprimer</button>
+                                                <button v-if="canDeleteServiceMode(item)" type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeServiceMode(item.id)">✕ Supprimer</button>
                                             </div>
                                         </div>
                                     </div>
@@ -485,6 +488,7 @@
                                             Ajouter
                                         </button>
                                     </div>
+                                    <p class="mt-3 text-xs text-slate-500">Les plateformes créées dans le module livreurs sont ajoutées ici automatiquement pour être utilisées directement dans le POS.</p>
                                 </div>
 
                                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
@@ -509,21 +513,51 @@
                                         <div
                                             v-for="item in paymentModeSettings.items"
                                             :key="item.id"
-                                            class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center hover:bg-slate-100 transition-colors"
+                                            class="rounded-lg border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100 transition-colors"
                                         >
-                                            <input v-model.trim="item.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du mode (ex: Espèces)">
-                                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
-                                                <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
-                                                <span class="whitespace-nowrap">Afficher</span>
-                                            </label>
-                                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
-                                                <input :checked="item.is_default" type="radio" name="payment_default" class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500" @change="setDefaultPaymentMode(item.id)">
-                                                <span class="whitespace-nowrap">Par défaut</span>
-                                            </label>
-                                            <div class="flex items-center gap-2 shrink-0">
-                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePaymentMode(item.id, -1)">↑ Monter</button>
-                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePaymentMode(item.id, 1)">↓ Descendre</button>
-                                                <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removePaymentMode(item.id)">✕ Supprimer</button>
+                                            <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                                                <div class="flex-1 space-y-3">
+                                                    <div class="grid gap-3 lg:grid-cols-2">
+                                                        <input v-model.trim="item.label" type="text" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du mode (ex: Espèces)">
+                                                        <select v-model="item.payment_timing" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                                            <option value="immediate">Type du mode : Immédiat</option>
+                                                            <option value="deferred">Type du mode : Différé</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                                        <label
+                                                            v-for="field in paymentFieldOptions"
+                                                            :key="`${item.id}-${field.key}`"
+                                                            class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                                                        >
+                                                            <input v-model="item[field.key]" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                                            <span>{{ field.label }}</span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex flex-col gap-3 xl:items-end">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
+                                                            <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                                            <span class="whitespace-nowrap">Afficher</span>
+                                                        </label>
+                                                        <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
+                                                            <input :checked="item.is_default" type="radio" name="payment_default" class="h-4 w-4 border-slate-300 text-emerald-600 focus:ring-emerald-500" @change="setDefaultPaymentMode(item.id)">
+                                                            <span class="whitespace-nowrap">Par défaut</span>
+                                                        </label>
+                                                        <span v-if="item.is_system" class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                                            Officiel
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePaymentMode(item.id, -1)">↑ Monter</button>
+                                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="movePaymentMode(item.id, 1)">↓ Descendre</button>
+                                                        <button v-if="canDeletePaymentMode(item)" type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removePaymentMode(item.id)">✕ Supprimer</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -531,14 +565,32 @@
 
                                 <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 mt-4">
                                     <label class="block text-sm font-semibold text-slate-900 mb-3">➕ Ajouter un mode de paiement</label>
-                                    <div class="flex flex-col gap-3 md:flex-row">
+                                    <div class="grid gap-3 lg:grid-cols-2">
                                         <input
-                                            v-model.trim="newPaymentModeLabel"
+                                            v-model.trim="newPaymentMode.label"
                                             type="text"
-                                            placeholder="Exemple : Espèces, Carte bancaire, Chèque, Virement, Bon cadeau"
-                                            class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                            placeholder="Nom du mode"
+                                            class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                                             @keydown.enter.prevent="addPaymentMode"
                                         >
+                                        <select v-model="newPaymentMode.payment_timing" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                            <option value="immediate">Type du mode : Immédiat</option>
+                                            <option value="deferred">Type du mode : Différé</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                        <label
+                                            v-for="field in paymentFieldOptions"
+                                            :key="`new-${field.key}`"
+                                            class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                                        >
+                                            <input v-model="newPaymentMode[field.key]" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                            <span>{{ field.label }}</span>
+                                        </label>
+                                    </div>
+
+                                    <div class="mt-4 flex justify-end">
                                         <button
                                             type="button"
                                             class="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
@@ -722,7 +774,15 @@ const activeCustomListTab = ref('tickets')
 const newServiceModeLabel = ref('')
 const newPredefinedTicketLabel = ref('')
 const newPredefinedGroupLabel = ref('')
-const newPaymentModeLabel = ref('')
+const newPaymentMode = reactive(createPaymentModeDraft())
+const paymentFieldOptions = [
+    { key: 'show_transaction_number', label: 'N° Transaction' },
+    { key: 'show_piece_number', label: 'N° pièce' },
+    { key: 'show_issue_date', label: "Date d'émission" },
+    { key: 'show_due_date', label: "Date d'échéance" },
+    { key: 'show_bank_name', label: 'Banque' },
+    { key: 'show_notes', label: 'Note' },
+]
 
 const tabs = [
     { id: 'general', label: 'Infos Générales' },
@@ -912,6 +972,11 @@ function normalizeServiceModeItems(items) {
             value: item.value || item.label || '',
             is_active: item.is_active !== false,
             sort_order: Number(item.sort_order ?? index + 1),
+            operational_mode: item.operational_mode || inferServiceModeMeta(item.label || item.value || '').operational_mode,
+            requires_delivery_agent: item.requires_delivery_agent === true,
+            is_system: item.is_system === true,
+            system_key: item.system_key || null,
+            source: item.source || null,
         }))
         .sort((a, b) => a.sort_order - b.sort_order)
 }
@@ -925,6 +990,15 @@ function normalizePaymentModeItems(items) {
             is_active: item.is_active !== false,
             sort_order: Number(item.sort_order ?? index + 1),
             is_default: item.is_default === true,
+            payment_timing: item.payment_timing === 'deferred' ? 'deferred' : 'immediate',
+            show_transaction_number: item.show_transaction_number === true,
+            show_piece_number: item.show_piece_number === true,
+            show_issue_date: item.show_issue_date === true,
+            show_due_date: item.show_due_date === true,
+            show_bank_name: item.show_bank_name === true,
+            show_notes: item.show_notes !== false,
+            is_system: item.is_system === true,
+            system_key: item.system_key || null,
         }))
         .sort((a, b) => a.sort_order - b.sort_order)
 }
@@ -1011,6 +1085,23 @@ function inferPaymentModeMeta(label) {
     }
 
     return { payment_type: 'other', transfer_mode: null }
+}
+
+function createPaymentModeDraft() {
+    return {
+        label: '',
+        payment_timing: 'immediate',
+        show_transaction_number: false,
+        show_piece_number: false,
+        show_issue_date: false,
+        show_due_date: false,
+        show_bank_name: false,
+        show_notes: true,
+    }
+}
+
+function resetPaymentModeDraft() {
+    Object.assign(newPaymentMode, createPaymentModeDraft())
 }
 
 function isSavingCustomList(tabId) {
@@ -1136,12 +1227,20 @@ function addCustomServiceMode() {
             value: label,
             is_active: true,
             sort_order: 0,
+            operational_mode: inferServiceModeMeta(label).operational_mode,
+            requires_delivery_agent: inferServiceModeMeta(label).requires_delivery_agent,
+            source: null,
         },
     ])
     newServiceModeLabel.value = ''
 }
 
 function removeServiceMode(modeId) {
+    const target = serviceModeSettings.items.find((item) => String(item.id) === String(modeId))
+    if (!canDeleteServiceMode(target)) {
+        return
+    }
+
     serviceModeSettings.items = reindexEntries(
         serviceModeSettings.items.filter((item) => String(item.id) !== String(modeId))
     )
@@ -1155,7 +1254,7 @@ function moveServiceMode(modeId, direction) {
 }
 
 function addPaymentMode() {
-    const label = newPaymentModeLabel.value.trim()
+    const label = newPaymentMode.label.trim()
     if (!label) return
 
     const exists = paymentModeSettings.items.some((item) => item.label.trim().toLowerCase() === label.toLowerCase())
@@ -1173,12 +1272,26 @@ function addPaymentMode() {
             is_active: true,
             sort_order: 0,
             is_default: paymentModeSettings.items.length === 0,
+            payment_timing: newPaymentMode.payment_timing,
+            show_transaction_number: newPaymentMode.show_transaction_number,
+            show_piece_number: newPaymentMode.show_piece_number,
+            show_issue_date: newPaymentMode.show_issue_date,
+            show_due_date: newPaymentMode.show_due_date,
+            show_bank_name: newPaymentMode.show_bank_name,
+            show_notes: newPaymentMode.show_notes,
+            is_system: false,
+            system_key: null,
         },
     ])
-    newPaymentModeLabel.value = ''
+    resetPaymentModeDraft()
 }
 
 function removePaymentMode(modeId) {
+    const target = paymentModeSettings.items.find((item) => String(item.id) === String(modeId))
+    if (!canDeletePaymentMode(target)) {
+        return
+    }
+
     paymentModeSettings.items = reindexEntries(
         paymentModeSettings.items.filter((item) => String(item.id) !== String(modeId))
     )
@@ -1202,6 +1315,14 @@ function setDefaultPaymentMode(modeId) {
     }))
 }
 
+function canDeleteServiceMode(item) {
+    return item?.is_system !== true
+}
+
+function canDeletePaymentMode(item) {
+    return item?.is_system !== true
+}
+
 function resetPredefinedTicketForm() {
     newPredefinedTicketLabel.value = ''
     newPredefinedGroupLabel.value = ''
@@ -1214,7 +1335,7 @@ function resetServiceModeForm() {
 }
 
 function resetPaymentModeForm() {
-    newPaymentModeLabel.value = ''
+    resetPaymentModeDraft()
     customListsStore.fetchList('mode_de_paiement', { force: true }).then(hydratePaymentModeForm)
 }
 
@@ -1323,7 +1444,14 @@ async function saveServiceModeList() {
             .filter((item) => item.label.trim() !== '')
             .map((item, index) => {
                 const itemId = Number(item.id)
-                const meta = inferServiceModeMeta(item.label)
+                const meta = item.source === 'platform'
+                    ? { operational_mode: 'delivery', requires_delivery_agent: false }
+                    : {
+                        operational_mode: item.operational_mode ?? inferServiceModeMeta(item.label).operational_mode,
+                        requires_delivery_agent: item.requires_delivery_agent === true
+                            ? true
+                            : inferServiceModeMeta(item.label).requires_delivery_agent,
+                    }
 
                 return {
                     id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
@@ -1368,6 +1496,13 @@ async function savePaymentModeList() {
                 payment_type: meta.payment_type,
                 transfer_mode: meta.transfer_mode,
                 is_default: item.is_default === true,
+                payment_timing: item.payment_timing === 'deferred' ? 'deferred' : 'immediate',
+                show_transaction_number: item.show_transaction_number === true,
+                show_piece_number: item.show_piece_number === true,
+                show_issue_date: item.show_issue_date === true,
+                show_due_date: item.show_due_date === true,
+                show_bank_name: item.show_bank_name === true,
+                show_notes: item.show_notes !== false,
             }
         }),
     }

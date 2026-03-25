@@ -27,6 +27,8 @@ class CustomListService
                     'metadata' => [
                         'operational_mode' => 'dine_in',
                         'requires_delivery_agent' => false,
+                        'is_system' => true,
+                        'system_key' => 'sur_place',
                     ],
                 ],
                 [
@@ -36,6 +38,8 @@ class CustomListService
                     'metadata' => [
                         'operational_mode' => 'pickup',
                         'requires_delivery_agent' => false,
+                        'is_system' => true,
+                        'system_key' => 'emporte',
                     ],
                 ],
                 [
@@ -45,6 +49,8 @@ class CustomListService
                     'metadata' => [
                         'operational_mode' => 'delivery',
                         'requires_delivery_agent' => true,
+                        'is_system' => true,
+                        'system_key' => 'livraison',
                     ],
                 ],
             ],
@@ -60,6 +66,17 @@ class CustomListService
                         'payment_type' => 'cash',
                         'transfer_mode' => null,
                         'is_default' => true,
+                        'payment_timing' => 'immediate',
+                        'fields' => [
+                            'transaction_number' => false,
+                            'piece_number' => false,
+                            'issue_date' => false,
+                            'due_date' => false,
+                            'bank_name' => false,
+                            'notes' => true,
+                        ],
+                        'is_system' => true,
+                        'system_key' => 'espece',
                     ],
                 ],
                 [
@@ -70,6 +87,17 @@ class CustomListService
                         'payment_type' => 'card',
                         'transfer_mode' => null,
                         'is_default' => false,
+                        'payment_timing' => 'immediate',
+                        'fields' => [
+                            'transaction_number' => true,
+                            'piece_number' => false,
+                            'issue_date' => false,
+                            'due_date' => false,
+                            'bank_name' => false,
+                            'notes' => true,
+                        ],
+                        'is_system' => true,
+                        'system_key' => 'carte',
                     ],
                 ],
                 [
@@ -80,6 +108,17 @@ class CustomListService
                         'payment_type' => 'mobile',
                         'transfer_mode' => null,
                         'is_default' => false,
+                        'payment_timing' => 'immediate',
+                        'fields' => [
+                            'transaction_number' => true,
+                            'piece_number' => false,
+                            'issue_date' => false,
+                            'due_date' => false,
+                            'bank_name' => false,
+                            'notes' => true,
+                        ],
+                        'is_system' => true,
+                        'system_key' => 'mobile',
                     ],
                 ],
                 [
@@ -90,6 +129,17 @@ class CustomListService
                         'payment_type' => 'virement',
                         'transfer_mode' => 'instant',
                         'is_default' => false,
+                        'payment_timing' => 'immediate',
+                        'fields' => [
+                            'transaction_number' => true,
+                            'piece_number' => false,
+                            'issue_date' => false,
+                            'due_date' => false,
+                            'bank_name' => true,
+                            'notes' => true,
+                        ],
+                        'is_system' => true,
+                        'system_key' => 'virement_instantane',
                     ],
                 ],
                 [
@@ -100,6 +150,17 @@ class CustomListService
                         'payment_type' => 'virement',
                         'transfer_mode' => 'simple',
                         'is_default' => false,
+                        'payment_timing' => 'deferred',
+                        'fields' => [
+                            'transaction_number' => true,
+                            'piece_number' => true,
+                            'issue_date' => true,
+                            'due_date' => true,
+                            'bank_name' => true,
+                            'notes' => true,
+                        ],
+                        'is_system' => true,
+                        'system_key' => 'virement_simple',
                     ],
                 ],
                 [
@@ -110,6 +171,17 @@ class CustomListService
                         'payment_type' => 'credit',
                         'transfer_mode' => null,
                         'is_default' => false,
+                        'payment_timing' => 'deferred',
+                        'fields' => [
+                            'transaction_number' => false,
+                            'piece_number' => true,
+                            'issue_date' => true,
+                            'due_date' => true,
+                            'bank_name' => true,
+                            'notes' => true,
+                        ],
+                        'is_system' => true,
+                        'system_key' => 'credit',
                     ],
                 ],
             ],
@@ -206,10 +278,12 @@ class CustomListService
                 ]);
             }
 
+            $existingMetadata = is_array($record->metadata) ? $record->metadata : [];
+
             $record->fill([
                 'label' => trim((string) $item['label']),
                 'value' => trim((string) ($item['value'] ?? $item['label'])),
-                'metadata' => $this->buildItemMetadata($name, $item),
+                'metadata' => $this->buildItemMetadata($name, $item, $existingMetadata),
                 'is_active' => (bool) ($item['is_active'] ?? true),
                 'sort_order' => (int) ($item['sort_order'] ?? ($index + 1)),
             ]);
@@ -220,9 +294,50 @@ class CustomListService
         }
 
         if (empty($submittedIds)) {
-            $list->items()->delete();
+            $list->items()
+                ->get()
+                ->reject(fn (CustomListItem $item) => $this->isSystemItem($item->metadata))
+                ->each
+                ->delete();
         } else {
-            $list->items()->whereNotIn('id', $submittedIds)->delete();
+            $list->items()
+                ->whereNotIn('id', $submittedIds)
+                ->get()
+                ->reject(fn (CustomListItem $item) => $this->isSystemItem($item->metadata))
+                ->each
+                ->delete();
+        }
+
+        return $this->serializeList($list->fresh('items'));
+    }
+
+    public function syncPlatformServiceMode(?string $platformName): array
+    {
+        $label = trim((string) $platformName);
+        if ($label === '') {
+            return $this->get(self::SERVICE_MODE_LIST);
+        }
+
+        $list = $this->ensureList(self::SERVICE_MODE_LIST);
+        $normalized = $this->normalizeKey($label);
+
+        $matched = $list->items->first(
+            fn (CustomListItem $item) => $this->normalizeKey($item->label) === $normalized
+                || $this->normalizeKey($item->value ?: $item->label) === $normalized
+        );
+
+        if (! $matched) {
+            $list->items()->create([
+                'label' => $label,
+                'value' => $label,
+                'metadata' => [
+                    'operational_mode' => 'delivery',
+                    'requires_delivery_agent' => false,
+                    'source' => 'platform',
+                ],
+                'is_active' => true,
+                'sort_order' => ((int) $list->items()->max('sort_order')) + 1,
+            ]);
         }
 
         return $this->serializeList($list->fresh('items'));
@@ -294,14 +409,22 @@ class CustomListService
             return;
         }
 
-        $existingLabels = $list->items()
-            ->get()
-            ->map(fn (CustomListItem $item) => $this->normalizeKey($item->label))
-            ->all();
+        $existingItems = $list->items()->get()->keyBy(
+            fn (CustomListItem $item) => $this->normalizeKey($item->label)
+        );
 
         foreach ($defaultItems as $item) {
             $normalizedLabel = $this->normalizeKey($item['label']);
-            if (in_array($normalizedLabel, $existingLabels, true)) {
+            $existing = $existingItems->get($normalizedLabel);
+
+            if ($existing) {
+                $existingMetadata = is_array($existing->metadata) ? $existing->metadata : [];
+                $mergedMetadata = $this->mergeMetadata($existingMetadata, $item['metadata'] ?? []);
+
+                if ($mergedMetadata !== $existingMetadata) {
+                    $existing->forceFill(['metadata' => $mergedMetadata])->save();
+                }
+
                 continue;
             }
 
@@ -312,7 +435,6 @@ class CustomListService
                 'is_active' => true,
                 'sort_order' => (int) $item['sort_order'],
             ]);
-            $existingLabels[] = $normalizedLabel;
         }
     }
 
@@ -353,10 +475,20 @@ class CustomListService
             'payment_type' => $metadata['payment_type'],
             'transfer_mode' => $metadata['transfer_mode'],
             'is_default' => $metadata['is_default'],
+            'payment_timing' => $metadata['payment_timing'],
+            'show_transaction_number' => $metadata['show_transaction_number'],
+            'show_piece_number' => $metadata['show_piece_number'],
+            'show_issue_date' => $metadata['show_issue_date'],
+            'show_due_date' => $metadata['show_due_date'],
+            'show_bank_name' => $metadata['show_bank_name'],
+            'show_notes' => $metadata['show_notes'],
+            'is_system' => $metadata['is_system'],
+            'system_key' => $metadata['system_key'],
+            'source' => $metadata['source'],
         ];
     }
 
-    private function buildItemMetadata(string $listName, array $item): ?array
+    private function buildItemMetadata(string $listName, array $item, array $existingMetadata = []): ?array
     {
         if ($listName === self::PREDEFINED_TICKET_LIST) {
             return [
@@ -368,20 +500,22 @@ class CustomListService
         if ($listName === self::SERVICE_MODE_LIST) {
             $fallback = $this->resolveFallbackServiceModeMetadata($item['label'] ?? '');
 
-            return [
+            return $this->mergeMetadata($existingMetadata, [
                 'operational_mode' => $item['operational_mode'] ?? $fallback['operational_mode'],
                 'requires_delivery_agent' => (bool) ($item['requires_delivery_agent'] ?? $fallback['requires_delivery_agent']),
-            ];
+            ]);
         }
 
         if ($listName === self::PAYMENT_MODE_LIST) {
             $fallback = $this->resolveFallbackPaymentModeMetadata($item['label'] ?? '');
 
-            return [
+            return $this->mergeMetadata($existingMetadata, [
                 'payment_type' => $item['payment_type'] ?? $fallback['payment_type'],
                 'transfer_mode' => $item['transfer_mode'] ?? $fallback['transfer_mode'],
                 'is_default' => (bool) ($item['is_default'] ?? $fallback['is_default']),
-            ];
+                'payment_timing' => $item['payment_timing'] ?? $fallback['payment_timing'],
+                'fields' => $this->normalizePaymentFieldConfig($item),
+            ]);
         }
 
         return null;
@@ -402,6 +536,16 @@ class CustomListService
                 'payment_type' => 'other',
                 'transfer_mode' => null,
                 'is_default' => false,
+                'payment_timing' => 'immediate',
+                'show_transaction_number' => false,
+                'show_piece_number' => false,
+                'show_issue_date' => false,
+                'show_due_date' => false,
+                'show_bank_name' => false,
+                'show_notes' => false,
+                'is_system' => false,
+                'system_key' => null,
+                'source' => null,
             ];
         }
 
@@ -417,12 +561,23 @@ class CustomListService
                 'payment_type' => 'other',
                 'transfer_mode' => null,
                 'is_default' => false,
+                'payment_timing' => 'immediate',
+                'show_transaction_number' => false,
+                'show_piece_number' => false,
+                'show_issue_date' => false,
+                'show_due_date' => false,
+                'show_bank_name' => false,
+                'show_notes' => false,
+                'is_system' => (bool) ($metadata['is_system'] ?? false),
+                'system_key' => $metadata['system_key'] ?? null,
+                'source' => $metadata['source'] ?? null,
             ];
         }
 
         if ($listName === self::PAYMENT_MODE_LIST) {
             $metadata = is_array($item->metadata) ? $item->metadata : [];
             $fallback = $this->resolveFallbackPaymentModeMetadata($item->label);
+            $fieldConfig = $this->normalizePaymentFieldConfig($metadata);
 
             return [
                 'kind' => 'ticket',
@@ -432,6 +587,16 @@ class CustomListService
                 'payment_type' => $metadata['payment_type'] ?? $fallback['payment_type'],
                 'transfer_mode' => $metadata['transfer_mode'] ?? $fallback['transfer_mode'],
                 'is_default' => (bool) ($metadata['is_default'] ?? $fallback['is_default']),
+                'payment_timing' => $metadata['payment_timing'] ?? $fallback['payment_timing'],
+                'show_transaction_number' => $fieldConfig['transaction_number'],
+                'show_piece_number' => $fieldConfig['piece_number'],
+                'show_issue_date' => $fieldConfig['issue_date'],
+                'show_due_date' => $fieldConfig['due_date'],
+                'show_bank_name' => $fieldConfig['bank_name'],
+                'show_notes' => $fieldConfig['notes'],
+                'is_system' => (bool) ($metadata['is_system'] ?? false),
+                'system_key' => $metadata['system_key'] ?? null,
+                'source' => $metadata['source'] ?? null,
             ];
         }
 
@@ -443,6 +608,16 @@ class CustomListService
             'payment_type' => 'other',
             'transfer_mode' => null,
             'is_default' => false,
+            'payment_timing' => 'immediate',
+            'show_transaction_number' => false,
+            'show_piece_number' => false,
+            'show_issue_date' => false,
+            'show_due_date' => false,
+            'show_bank_name' => false,
+            'show_notes' => false,
+            'is_system' => false,
+            'system_key' => null,
+            'source' => null,
         ];
     }
 
@@ -543,6 +718,8 @@ class CustomListService
                 'payment_type' => 'cash',
                 'transfer_mode' => null,
                 'is_default' => true,
+                'payment_timing' => 'immediate',
+                'fields' => $this->normalizePaymentFieldConfig([]),
             ];
         }
 
@@ -551,6 +728,11 @@ class CustomListService
                 'payment_type' => 'card',
                 'transfer_mode' => null,
                 'is_default' => false,
+                'payment_timing' => 'immediate',
+                'fields' => $this->normalizePaymentFieldConfig([
+                    'show_transaction_number' => true,
+                    'show_notes' => true,
+                ]),
             ];
         }
 
@@ -559,6 +741,11 @@ class CustomListService
                 'payment_type' => 'mobile',
                 'transfer_mode' => null,
                 'is_default' => false,
+                'payment_timing' => 'immediate',
+                'fields' => $this->normalizePaymentFieldConfig([
+                    'show_transaction_number' => true,
+                    'show_notes' => true,
+                ]),
             ];
         }
 
@@ -568,6 +755,12 @@ class CustomListService
                 'payment_type' => 'virement',
                 'transfer_mode' => 'instant',
                 'is_default' => false,
+                'payment_timing' => 'immediate',
+                'fields' => $this->normalizePaymentFieldConfig([
+                    'show_transaction_number' => true,
+                    'show_bank_name' => true,
+                    'show_notes' => true,
+                ]),
             ];
         }
 
@@ -576,6 +769,15 @@ class CustomListService
                 'payment_type' => 'virement',
                 'transfer_mode' => 'simple',
                 'is_default' => false,
+                'payment_timing' => 'deferred',
+                'fields' => $this->normalizePaymentFieldConfig([
+                    'show_transaction_number' => true,
+                    'show_piece_number' => true,
+                    'show_issue_date' => true,
+                    'show_due_date' => true,
+                    'show_bank_name' => true,
+                    'show_notes' => true,
+                ]),
             ];
         }
 
@@ -584,6 +786,14 @@ class CustomListService
                 'payment_type' => 'credit',
                 'transfer_mode' => null,
                 'is_default' => false,
+                'payment_timing' => 'deferred',
+                'fields' => $this->normalizePaymentFieldConfig([
+                    'show_piece_number' => true,
+                    'show_issue_date' => true,
+                    'show_due_date' => true,
+                    'show_bank_name' => true,
+                    'show_notes' => true,
+                ]),
             ];
         }
 
@@ -591,6 +801,10 @@ class CustomListService
             'payment_type' => 'other',
             'transfer_mode' => null,
             'is_default' => false,
+            'payment_timing' => 'immediate',
+            'fields' => $this->normalizePaymentFieldConfig([
+                'show_notes' => true,
+            ]),
         ];
     }
 
@@ -684,5 +898,34 @@ class CustomListService
             ->lower()
             ->replaceMatches('/[^a-z0-9]+/', '')
             ->trim();
+    }
+
+    private function normalizePaymentFieldConfig(array $item): array
+    {
+        $fields = is_array($item['fields'] ?? null) ? $item['fields'] : $item;
+
+        return [
+            'transaction_number' => (bool) ($fields['transaction_number'] ?? $fields['show_transaction_number'] ?? false),
+            'piece_number' => (bool) ($fields['piece_number'] ?? $fields['show_piece_number'] ?? false),
+            'issue_date' => (bool) ($fields['issue_date'] ?? $fields['show_issue_date'] ?? false),
+            'due_date' => (bool) ($fields['due_date'] ?? $fields['show_due_date'] ?? false),
+            'bank_name' => (bool) ($fields['bank_name'] ?? $fields['show_bank_name'] ?? false),
+            'notes' => (bool) ($fields['notes'] ?? $fields['show_notes'] ?? false),
+        ];
+    }
+
+    private function mergeMetadata(array $existing, array $incoming): array
+    {
+        if (array_key_exists('fields', $existing) || array_key_exists('fields', $incoming)) {
+            $existing['fields'] = $this->normalizePaymentFieldConfig($existing);
+            $incoming['fields'] = $this->normalizePaymentFieldConfig($incoming);
+        }
+
+        return array_replace_recursive($existing, $incoming);
+    }
+
+    private function isSystemItem(mixed $metadata): bool
+    {
+        return is_array($metadata) && (bool) ($metadata['is_system'] ?? false);
     }
 }

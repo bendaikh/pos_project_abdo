@@ -559,10 +559,12 @@
             :saved-tickets="savedTickets"
             :saved-tickets-loading="savedTicketsLoading"
             :loading-saved-ticket-id="loadingSavedTicketId"
+            :deleting-saved-ticket-id="deletingSavedTicketId"
             :current-sale-id="cartStore.currentSaleId"
             :current-service-mode="cartStore.deliveryMode"
             @close="showOpenTicketsModal = false"
             @refresh-tickets="fetchSavedTickets"
+            @delete-ticket="deleteSavedTicket"
             @load-ticket="handleOpenTicketModalLoad"
         />
 
@@ -1104,7 +1106,12 @@ function formatDeliveryAgentLabel(agent) {
 }
 
 function isSavedTicket(sale) {
-    return ['liste', 'personnalise'].includes(String(sale?.ticket_type || '').toLowerCase())
+    const type = String(sale?.ticket_type || '').toLowerCase()
+    const origin = String(sale?.origin || '').toLowerCase()
+
+    return ['liste', 'personnalise', 'commande'].includes(type)
+        || origin === 'menu_commande'
+        || origin === 'livraison'
 }
 
 function getSavedTicketTitle(ticket) {
@@ -1115,6 +1122,9 @@ function formatSavedTicketType(ticket) {
     const type = String(ticket?.ticket_type || '').toLowerCase()
     if (type === 'liste') return ticket?.ticket_group ? `Liste · ${ticket.ticket_group}` : 'Ticket liste'
     if (type === 'personnalise') return ticket?.ticket_group ? `Personnalisé · ${ticket.ticket_group}` : 'Ticket personnalisé'
+    if (type === 'commande' || ['menu_commande', 'livraison'].includes(String(ticket?.origin || '').toLowerCase())) {
+        return 'Commande'
+    }
     return 'Ticket'
 }
 

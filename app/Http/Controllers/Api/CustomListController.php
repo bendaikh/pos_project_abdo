@@ -49,6 +49,13 @@ class CustomListController extends Controller
             'items.*.payment_type' => 'nullable|in:cash,card,mobile,virement,credit,other',
             'items.*.transfer_mode' => 'nullable|in:simple,instant',
             'items.*.is_default' => 'nullable|boolean',
+            'items.*.payment_timing' => 'nullable|in:immediate,deferred',
+            'items.*.show_transaction_number' => 'nullable|boolean',
+            'items.*.show_piece_number' => 'nullable|boolean',
+            'items.*.show_issue_date' => 'nullable|boolean',
+            'items.*.show_due_date' => 'nullable|boolean',
+            'items.*.show_bank_name' => 'nullable|boolean',
+            'items.*.show_notes' => 'nullable|boolean',
         ]);
 
         $labels = collect($validated['items'])

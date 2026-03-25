@@ -157,7 +157,8 @@ class PaymentController extends Controller
 
         $requiresConfirmation = $this->paymentWorkflow->requiresConfirmation(
             $validated['payment_type'],
-            $validated['transfer_mode'] ?? null
+            $validated['transfer_mode'] ?? null,
+            $notes
         );
         $collectionStatus = $requiresConfirmation ? 'pending' : 'collected';
 

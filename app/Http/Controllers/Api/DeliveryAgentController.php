@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryAgent;
+use App\Services\CustomListService;
 use App\Services\SalePaymentWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,9 +12,10 @@ use Illuminate\Validation\Rule;
 
 class DeliveryAgentController extends Controller
 {
-    public function __construct(private readonly SalePaymentWorkflowService $paymentWorkflow)
-    {
-    }
+    public function __construct(
+        private readonly SalePaymentWorkflowService $paymentWorkflow,
+        private readonly CustomListService $customListService,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -34,6 +36,10 @@ class DeliveryAgentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $deliveryAgent = DeliveryAgent::create($this->validatedPayload($request));
+
+        if ($deliveryAgent->type === 'platform' && $deliveryAgent->platform_name) {
+            $this->customListService->syncPlatformServiceMode($deliveryAgent->platform_name);
+        }
 
         return response()->json($deliveryAgent, 201);
     }
@@ -58,6 +64,10 @@ class DeliveryAgentController extends Controller
     public function update(Request $request, DeliveryAgent $deliveryAgent): JsonResponse
     {
         $deliveryAgent->update($this->validatedPayload($request, $deliveryAgent));
+
+        if ($deliveryAgent->type === 'platform' && $deliveryAgent->platform_name) {
+            $this->customListService->syncPlatformServiceMode($deliveryAgent->platform_name);
+        }
 
         return response()->json($deliveryAgent->fresh());
     }

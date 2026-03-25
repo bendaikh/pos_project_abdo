@@ -121,7 +121,7 @@ class SaleController extends Controller
 
     public function pending(): JsonResponse
     {
-        $sales = Sale::with(['customer', 'items.article', 'payments', 'deliveryAgent'])
+        $sales = Sale::with(['customer', 'user', 'items.article', 'payments', 'deliveryAgent'])
             ->pending()
             ->latest()
             ->get();

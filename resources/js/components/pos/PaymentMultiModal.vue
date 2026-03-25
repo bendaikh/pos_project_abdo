@@ -155,61 +155,34 @@
                             </div>
                         </template>
 
-                        <template v-if="['card', 'mobile', 'instant_transfer'].includes(selectedMethod.id)">
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Numéro de Transaction *</label>
+                        <div v-if="selectedMethod.id !== 'cash' && hasVisibleExtraFields" class="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
+                            <div v-if="selectedMethod.show_transaction_number">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ transactionFieldLabel }} *</label>
                                 <input
                                     v-model="paymentForm.transaction_number"
                                     type="text"
-                                    placeholder="Ex: 12345678, ABC123XYZ"
+                                    :placeholder="transactionFieldPlaceholder"
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                 >
                             </div>
-                        </template>
-
-                        <template v-if="['simple_transfer', 'credit'].includes(selectedMethod.id)">
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ transactionLabel }}{{ requiresTransaction ? ' *' : '' }}</label>
-                                    <input
-                                        v-model="paymentForm.transaction_number"
-                                        type="text"
-                                        :placeholder="transactionPlaceholder"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    >
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ pieceLabel }}</label>
-                                    <input
-                                        v-model="paymentForm.piece_number"
-                                        type="text"
-                                        :placeholder="piecePlaceholder"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    >
-                                </div>
+                            <div v-if="selectedMethod.show_piece_number">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ pieceFieldLabel }} *</label>
+                                <input
+                                    v-model="paymentForm.piece_number"
+                                    type="text"
+                                    :placeholder="pieceFieldPlaceholder"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
                             </div>
-
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Date d'émission *</label>
-                                    <input
-                                        v-model="paymentForm.issue_date"
-                                        type="date"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    >
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Banque {{ requiresBankName ? '*' : '' }}</label>
-                                    <input
-                                        v-model="paymentForm.bank_name"
-                                        type="text"
-                                        :placeholder="bankPlaceholder"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    >
-                                </div>
+                            <div v-if="selectedMethod.show_issue_date">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date d'émission *</label>
+                                <input
+                                    v-model="paymentForm.issue_date"
+                                    type="date"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
                             </div>
-
-                            <div>
+                            <div v-if="selectedMethod.show_due_date">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance *</label>
                                 <input
                                     v-model="paymentForm.due_date"
@@ -218,12 +191,22 @@
                                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                 >
                             </div>
-                            <p class="text-xs text-orange-700 mt-2">
-                                Ce mode de paiement est différé et sera suivi dans le module Encaissement.
-                            </p>
-                        </template>
+                            <div v-if="selectedMethod.show_bank_name">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ bankFieldLabel }} *</label>
+                                <input
+                                    v-model="paymentForm.bank_name"
+                                    type="text"
+                                    :placeholder="bankFieldPlaceholder"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
+                            </div>
+                        </div>
 
-                        <div class="mt-4">
+                        <p v-if="selectedMethod.paymentTiming === 'deferred'" class="text-xs text-orange-700 mt-2">
+                            Ce mode de paiement est différé et sera suivi dans le module Encaissement.
+                        </p>
+
+                        <div v-if="selectedMethod.show_notes" class="mt-4">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Notes (optionnel)</label>
                             <textarea
                                 v-model="paymentForm.notes"
@@ -350,6 +333,13 @@ const paymentMethods = computed(() => {
         description: describePaymentMethod(item),
         icon: iconForPaymentMethod(item),
         isDefault: item.is_default === true,
+        paymentTiming: item.payment_timing === 'deferred' ? 'deferred' : 'immediate',
+        show_transaction_number: item.show_transaction_number === true,
+        show_piece_number: item.show_piece_number === true,
+        show_issue_date: item.show_issue_date === true,
+        show_due_date: item.show_due_date === true,
+        show_bank_name: item.show_bank_name === true,
+        show_notes: item.show_notes !== false,
     }))
 })
 
@@ -395,28 +385,15 @@ const canAddPayment = computed(() => {
         return paymentForm.value.received_amount && paymentForm.value.received_amount >= paymentForm.value.amount
     }
 
-    if (['card', 'mobile', 'instant_transfer'].includes(selectedMethod.value.id)) {
-        return !!paymentForm.value.transaction_number
-    }
+    const requiredFields = [
+        !selectedMethod.value.show_transaction_number || !!paymentForm.value.transaction_number,
+        !selectedMethod.value.show_piece_number || !!paymentForm.value.piece_number,
+        !selectedMethod.value.show_issue_date || !!paymentForm.value.issue_date,
+        !selectedMethod.value.show_due_date || !!paymentForm.value.due_date,
+        !selectedMethod.value.show_bank_name || !!paymentForm.value.bank_name,
+    ]
 
-    if (selectedMethod.value.id === 'simple_transfer') {
-        return !!(
-            paymentForm.value.transaction_number &&
-            paymentForm.value.bank_name &&
-            paymentForm.value.issue_date &&
-            paymentForm.value.due_date
-        )
-    }
-
-    if (selectedMethod.value.id === 'credit') {
-        return !!(
-            paymentForm.value.piece_number &&
-            paymentForm.value.issue_date &&
-            paymentForm.value.due_date
-        )
-    }
-
-    return true
+    return requiredFields.every(Boolean)
 })
 
 const canConfirmPayments = computed(() => {
@@ -425,30 +402,40 @@ const canConfirmPayments = computed(() => {
 
 const confirmLabelText = computed(() => props.confirmLabel || 'Finaliser le Paiement')
 
-const transactionLabel = computed(() => {
-    if (selectedMethod.value?.id === 'simple_transfer') return 'N° de transaction'
-    return 'Référence dossier'
+const hasVisibleExtraFields = computed(() => {
+    if (!selectedMethod.value) return false
+
+    return [
+        selectedMethod.value.show_transaction_number,
+        selectedMethod.value.show_piece_number,
+        selectedMethod.value.show_issue_date,
+        selectedMethod.value.show_due_date,
+        selectedMethod.value.show_bank_name,
+    ].some(Boolean)
 })
 
-const requiresTransaction = computed(() => ['simple_transfer'].includes(selectedMethod.value?.id))
-
-const transactionPlaceholder = computed(() => {
-    if (selectedMethod.value?.id === 'simple_transfer') return 'N° opération bancaire'
-    return 'Référence crédit (optionnel)'
+const transactionFieldLabel = computed(() => {
+    if (selectedMethod.value?.paymentType === 'virement') return 'N° de transaction'
+    return 'N° transaction'
 })
 
-const pieceLabel = computed(() => {
-    if (selectedMethod.value?.id === 'credit') return 'N° effet / LCN *'
-    return 'N° pièce (optionnel)'
+const transactionFieldPlaceholder = computed(() => {
+    if (selectedMethod.value?.paymentType === 'virement') return 'N° opération bancaire'
+    return 'Ex: 12345678, ABC123XYZ'
 })
 
-const piecePlaceholder = computed(() => {
-    if (selectedMethod.value?.id === 'credit') return 'N° effet / lettre de change'
+const pieceFieldLabel = computed(() => {
+    if (selectedMethod.value?.paymentType === 'credit') return 'N° pièce'
+    return 'N° pièce'
+})
+
+const pieceFieldPlaceholder = computed(() => {
+    if (selectedMethod.value?.paymentType === 'credit') return 'Référence dossier / effet / LCN'
     return 'CIN / justificatif'
 })
 
-const requiresBankName = computed(() => ['simple_transfer'].includes(selectedMethod.value?.id))
-const bankPlaceholder = computed(() => selectedMethod.value?.id === 'credit' ? 'Banque (optionnel)' : 'Nom de la banque')
+const bankFieldLabel = computed(() => 'Banque')
+const bankFieldPlaceholder = computed(() => 'Nom de la banque')
 
 function normalizeKey(value) {
     return String(value || '')
@@ -490,18 +477,21 @@ function describePaymentMethod(item) {
     return 'Mode personnalisé'
 }
 
-function encodePaymentModeLabel(label, notes) {
+function encodePaymentModeLabel(label, paymentTiming, notes) {
     const cleanNotes = String(notes || '')
+        .replace(/\[PAYMENT_TIMING:[^\]]+\]\s*/g, '')
         .replace(/\[PAYMENT_MODE_LABEL:[^\]]+\]\s*/g, '')
         .trim()
     const cleanLabel = String(label || '').trim()
+    const timing = paymentTiming === 'deferred' ? 'deferred' : 'immediate'
+    const timingMarker = `[PAYMENT_TIMING:${timing}]`
 
     if (!cleanLabel) {
-        return cleanNotes
+        return cleanNotes ? `${timingMarker} ${cleanNotes}` : timingMarker
     }
 
     const marker = `[PAYMENT_MODE_LABEL:${cleanLabel}]`
-    return cleanNotes ? `${marker} ${cleanNotes}` : marker
+    return cleanNotes ? `${marker} ${timingMarker} ${cleanNotes}` : `${marker} ${timingMarker}`
 }
 
 function selectDefaultMethod() {
@@ -550,7 +540,7 @@ function addPayment() {
         reference: selectedMethod.value.id === 'credit'
             ? paymentForm.value.piece_number
             : paymentForm.value.transaction_number || paymentForm.value.piece_number,
-        notes: encodePaymentModeLabel(selectedMethod.value.label, paymentForm.value.notes),
+        notes: encodePaymentModeLabel(selectedMethod.value.label, selectedMethod.value.paymentTiming, paymentForm.value.notes),
         display_label: selectedMethod.value.label,
     })
 
@@ -596,7 +586,7 @@ watch(paymentMethods, () => {
 }, { immediate: true })
 
 onMounted(async () => {
-    await customListsStore.fetchList('mode_de_paiement')
+    await customListsStore.fetchList('mode_de_paiement', { force: true })
     selectDefaultMethod()
 })
 </script>

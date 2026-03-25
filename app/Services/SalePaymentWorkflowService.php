@@ -44,7 +44,8 @@ class SalePaymentWorkflowService
         $payment->setAttribute('reference_number', $this->paymentReferenceNumber($payment));
         $payment->setAttribute('requires_confirmation', $this->requiresConfirmation(
             $payment->payment_type,
-            $this->resolveTransferMode($payment->payment_type, $payment->transfer_mode, $payment->notes)
+            $this->resolveTransferMode($payment->payment_type, $payment->transfer_mode, $payment->notes),
+            $payment->notes
         ));
 
         $statusCode = $this->paymentWorkflowStatus($payment);
@@ -170,8 +171,17 @@ class SalePaymentWorkflowService
         return 'simple';
     }
 
-    public function requiresConfirmation(?string $paymentType, ?string $transferMode = null): bool
+    public function requiresConfirmation(?string $paymentType, ?string $transferMode = null, ?string $notes = null): bool
     {
+        $customTiming = $this->resolveCustomPaymentTiming($notes);
+        if ($customTiming === 'deferred') {
+            return true;
+        }
+
+        if ($customTiming === 'immediate') {
+            return false;
+        }
+
         $paymentType = $this->normalizePaymentType($paymentType);
 
         if (in_array($paymentType, ['cheque', 'credit'], true)) {
@@ -183,6 +193,19 @@ class SalePaymentWorkflowService
         }
 
         return false;
+    }
+
+    public function resolveCustomPaymentTiming(?string $notes): ?string
+    {
+        $notes = (string) $notes;
+
+        if (! preg_match('/\[PAYMENT_TIMING:([^\]]+)\]/', $notes, $matches)) {
+            return null;
+        }
+
+        $timing = trim((string) ($matches[1] ?? ''));
+
+        return in_array($timing, ['immediate', 'deferred'], true) ? $timing : null;
     }
 
     public function paymentMethodLabel(Payment $payment): string
@@ -324,7 +347,8 @@ class SalePaymentWorkflowService
     {
         return $this->requiresConfirmation(
             $payment->payment_type,
-            $this->resolveTransferMode($payment->payment_type, $payment->transfer_mode, $payment->notes)
+            $this->resolveTransferMode($payment->payment_type, $payment->transfer_mode, $payment->notes),
+            $payment->notes
         );
     }
 

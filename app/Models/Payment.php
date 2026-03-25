@@ -108,6 +108,10 @@ class Payment extends Model
 
     public function isDeferred(): bool
     {
+        if (str_contains((string) $this->notes, '[PAYMENT_TIMING:deferred]')) {
+            return true;
+        }
+
         if (in_array($this->payment_type, ['check', 'cheque', 'credit'], true)) {
             return true;
         }

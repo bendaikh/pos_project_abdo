@@ -28,6 +28,8 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 1,
             operational_mode: 'dine_in',
             requires_delivery_agent: false,
+            is_system: true,
+            system_key: 'sur_place',
         },
         {
             id: 'fallback-emporte',
@@ -37,6 +39,8 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 2,
             operational_mode: 'pickup',
             requires_delivery_agent: false,
+            is_system: true,
+            system_key: 'emporte',
         },
         {
             id: 'fallback-livraison',
@@ -46,6 +50,8 @@ const FALLBACK_SERVICE_MODE_LIST = {
             sort_order: 3,
             operational_mode: 'delivery',
             requires_delivery_agent: true,
+            is_system: true,
+            system_key: 'livraison',
         },
     ],
 }
@@ -64,6 +70,15 @@ const FALLBACK_PAYMENT_MODE_LIST = {
             payment_type: 'cash',
             transfer_mode: null,
             is_default: true,
+            payment_timing: 'immediate',
+            show_transaction_number: false,
+            show_piece_number: false,
+            show_issue_date: false,
+            show_due_date: false,
+            show_bank_name: false,
+            show_notes: true,
+            is_system: true,
+            system_key: 'espece',
         },
         {
             id: 'fallback-carte',
@@ -74,6 +89,15 @@ const FALLBACK_PAYMENT_MODE_LIST = {
             payment_type: 'card',
             transfer_mode: null,
             is_default: false,
+            payment_timing: 'immediate',
+            show_transaction_number: true,
+            show_piece_number: false,
+            show_issue_date: false,
+            show_due_date: false,
+            show_bank_name: false,
+            show_notes: true,
+            is_system: true,
+            system_key: 'carte',
         },
         {
             id: 'fallback-mobile',
@@ -84,6 +108,15 @@ const FALLBACK_PAYMENT_MODE_LIST = {
             payment_type: 'mobile',
             transfer_mode: null,
             is_default: false,
+            payment_timing: 'immediate',
+            show_transaction_number: true,
+            show_piece_number: false,
+            show_issue_date: false,
+            show_due_date: false,
+            show_bank_name: false,
+            show_notes: true,
+            is_system: true,
+            system_key: 'mobile',
         },
         {
             id: 'fallback-virement-instant',
@@ -94,6 +127,15 @@ const FALLBACK_PAYMENT_MODE_LIST = {
             payment_type: 'virement',
             transfer_mode: 'instant',
             is_default: false,
+            payment_timing: 'immediate',
+            show_transaction_number: true,
+            show_piece_number: false,
+            show_issue_date: false,
+            show_due_date: false,
+            show_bank_name: true,
+            show_notes: true,
+            is_system: true,
+            system_key: 'virement_instantane',
         },
         {
             id: 'fallback-virement-simple',
@@ -104,6 +146,15 @@ const FALLBACK_PAYMENT_MODE_LIST = {
             payment_type: 'virement',
             transfer_mode: 'simple',
             is_default: false,
+            payment_timing: 'deferred',
+            show_transaction_number: true,
+            show_piece_number: true,
+            show_issue_date: true,
+            show_due_date: true,
+            show_bank_name: true,
+            show_notes: true,
+            is_system: true,
+            system_key: 'virement_simple',
         },
         {
             id: 'fallback-credit',
@@ -114,6 +165,15 @@ const FALLBACK_PAYMENT_MODE_LIST = {
             payment_type: 'credit',
             transfer_mode: null,
             is_default: false,
+            payment_timing: 'deferred',
+            show_transaction_number: false,
+            show_piece_number: true,
+            show_issue_date: true,
+            show_due_date: true,
+            show_bank_name: true,
+            show_notes: true,
+            is_system: true,
+            system_key: 'credit',
         },
     ],
 }
@@ -155,31 +215,108 @@ function inferPaymentModeMeta(label, item = {}) {
     const normalized = normalizeKey(label || item?.value || '')
 
     if (['espece', 'especes', 'cash', 'liquide'].includes(normalized)) {
-        return { payment_type: 'cash', transfer_mode: null, is_default: true }
+        return {
+            payment_type: 'cash',
+            transfer_mode: null,
+            is_default: true,
+            payment_timing: 'immediate',
+            show_transaction_number: false,
+            show_piece_number: false,
+            show_issue_date: false,
+            show_due_date: false,
+            show_bank_name: false,
+            show_notes: true,
+        }
     }
 
     if (normalized.includes('carte') || normalized.includes('card')) {
-        return { payment_type: 'card', transfer_mode: null, is_default: false }
+        return {
+            payment_type: 'card',
+            transfer_mode: null,
+            is_default: false,
+            payment_timing: 'immediate',
+            show_transaction_number: true,
+            show_piece_number: false,
+            show_issue_date: false,
+            show_due_date: false,
+            show_bank_name: false,
+            show_notes: true,
+        }
     }
 
     if (normalized.includes('mobile')) {
-        return { payment_type: 'mobile', transfer_mode: null, is_default: false }
+        return {
+            payment_type: 'mobile',
+            transfer_mode: null,
+            is_default: false,
+            payment_timing: 'immediate',
+            show_transaction_number: true,
+            show_piece_number: false,
+            show_issue_date: false,
+            show_due_date: false,
+            show_bank_name: false,
+            show_notes: true,
+        }
     }
 
     if ((normalized.includes('instant') || normalized.includes('instantane'))
         && (normalized.includes('virement') || normalized.includes('transfer'))) {
-        return { payment_type: 'virement', transfer_mode: 'instant', is_default: false }
+        return {
+            payment_type: 'virement',
+            transfer_mode: 'instant',
+            is_default: false,
+            payment_timing: 'immediate',
+            show_transaction_number: true,
+            show_piece_number: false,
+            show_issue_date: false,
+            show_due_date: false,
+            show_bank_name: true,
+            show_notes: true,
+        }
     }
 
     if (normalized.includes('virement') || normalized.includes('transfer')) {
-        return { payment_type: 'virement', transfer_mode: 'simple', is_default: false }
+        return {
+            payment_type: 'virement',
+            transfer_mode: 'simple',
+            is_default: false,
+            payment_timing: 'deferred',
+            show_transaction_number: true,
+            show_piece_number: true,
+            show_issue_date: true,
+            show_due_date: true,
+            show_bank_name: true,
+            show_notes: true,
+        }
     }
 
     if (normalized.includes('credit') || normalized.includes('lcn')) {
-        return { payment_type: 'credit', transfer_mode: null, is_default: false }
+        return {
+            payment_type: 'credit',
+            transfer_mode: null,
+            is_default: false,
+            payment_timing: 'deferred',
+            show_transaction_number: false,
+            show_piece_number: true,
+            show_issue_date: true,
+            show_due_date: true,
+            show_bank_name: true,
+            show_notes: true,
+        }
     }
 
-    return { payment_type: 'other', transfer_mode: null, is_default: false }
+    return {
+        payment_type: item?.payment_type || 'other',
+        transfer_mode: item?.transfer_mode ?? null,
+        is_default: item?.is_default === true,
+        payment_timing: item?.payment_timing === 'deferred' ? 'deferred' : 'immediate',
+        show_transaction_number: item?.show_transaction_number === true,
+        show_piece_number: item?.show_piece_number === true,
+        show_issue_date: item?.show_issue_date === true,
+        show_due_date: item?.show_due_date === true,
+        show_bank_name: item?.show_bank_name === true,
+        show_notes: item?.show_notes !== false,
+    }
 }
 
 function normalizeTicket(ticket, index) {
@@ -218,6 +355,9 @@ function normalizeServiceModeItem(item, index) {
         operational_mode: item?.operational_mode || inferServiceModeMeta(item).operational_mode,
         requires_delivery_agent: item?.requires_delivery_agent === true
             || inferServiceModeMeta(item).requires_delivery_agent,
+        is_system: item?.is_system === true,
+        system_key: item?.system_key || null,
+        source: item?.source || null,
     }
 }
 
@@ -234,6 +374,15 @@ function normalizePaymentModeItem(item, index) {
         payment_type: item?.payment_type || inferred.payment_type,
         transfer_mode: item?.transfer_mode ?? inferred.transfer_mode,
         is_default: item?.is_default === true || (item?.is_default == null && inferred.is_default),
+        payment_timing: item?.payment_timing === 'deferred' ? 'deferred' : inferred.payment_timing,
+        show_transaction_number: item?.show_transaction_number ?? inferred.show_transaction_number,
+        show_piece_number: item?.show_piece_number ?? inferred.show_piece_number,
+        show_issue_date: item?.show_issue_date ?? inferred.show_issue_date,
+        show_due_date: item?.show_due_date ?? inferred.show_due_date,
+        show_bank_name: item?.show_bank_name ?? inferred.show_bank_name,
+        show_notes: item?.show_notes ?? inferred.show_notes,
+        is_system: item?.is_system === true,
+        system_key: item?.system_key || null,
     }
 }
 
