@@ -186,7 +186,6 @@ const LEGACY_SERVICE_MODE_LABELS = {
     takeaway: 'Emporté',
     delivery: 'Livraison',
     livraison: 'Livraison',
-    glovo: 'Livraison',
 }
 
 function clone(value) {

@@ -39,24 +39,56 @@
                                 </button>
                             </div>
 
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+                                <!-- Refresh Button -->
                                 <button
                                     type="button"
-                                    class="rounded-[16px] border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                                    class="rounded-[10px] border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50 shrink-0"
                                     :disabled="savedTicketsLoading"
                                     @click="$emit('refresh-tickets')"
+                                    title="Actualiser les tickets"
                                 >
-                                    {{ savedTicketsLoading ? 'Actualisation...' : 'Actualiser' }}
+                                    {{ savedTicketsLoading ? '...' : '⟳' }}
                                 </button>
 
-                                <label class="relative block min-w-[260px]">
+                                <!-- Date Filters - Compact -->
+                                <div class="flex items-end gap-2">
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-xs font-medium text-slate-600">Du</span>
+                                        <input
+                                            v-model="dateFromFilter"
+                                            type="date"
+                                            class="rounded-[10px] border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 outline-none transition focus:border-blue-500"
+                                        >
+                                    </label>
+                                    <label class="flex flex-col gap-1">
+                                        <span class="text-xs font-medium text-slate-600">Au</span>
+                                        <input
+                                            v-model="dateToFilter"
+                                            type="date"
+                                            class="rounded-[10px] border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 outline-none transition focus:border-blue-500"
+                                        >
+                                    </label>
+                                    <button
+                                        v-if="dateFromFilter || dateToFilter"
+                                        type="button"
+                                        class="rounded-[10px] border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                                        @click="clearDateFilter"
+                                        title="Effacer les dates"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <!-- Search -->
+                                <label class="relative block flex-1 min-w-[200px]">
                                     <input
                                         v-model.trim="searchQuery"
                                         type="text"
                                         placeholder="Rechercher..."
-                                        class="w-full rounded-[16px] border border-slate-200 bg-white px-4 py-2.5 pr-11 text-sm text-slate-700 outline-none transition focus:border-blue-500"
+                                        class="w-full rounded-[10px] border border-slate-300 bg-white px-3 py-1.5 pr-9 text-xs text-slate-700 outline-none transition focus:border-blue-500"
                                     >
-                                    <svg class="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <svg class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                         <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 3.473 9.765l2.63 2.631a.75.75 0 1 0 1.06-1.06l-2.63-2.632A5.5 5.5 0 0 0 9 3.5ZM5 9a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" clip-rule="evenodd" />
                                     </svg>
                                 </label>
@@ -370,6 +402,8 @@ const searchQuery = ref('')
 const selectedListGroup = ref('Tous')
 const selectedCommandStatus = ref('all')
 const selectedTicketId = ref(null)
+const dateFromFilter = ref('')
+const dateToFilter = ref('')
 
 const listTickets = computed(() => {
     return (props.savedTickets || [])
@@ -432,17 +466,31 @@ const filteredListTickets = computed(() => {
             return false
         }
 
+        if (!isWithinDateRange(ticket)) {
+            return false
+        }
+
         return matchesSearch(ticket, searchQuery.value)
     })
 })
 
 const filteredPersonalizedTickets = computed(() => {
-    return personalizedTickets.value.filter((ticket) => matchesSearch(ticket, searchQuery.value))
+    return personalizedTickets.value.filter((ticket) => {
+        if (!isWithinDateRange(ticket)) {
+            return false
+        }
+
+        return matchesSearch(ticket, searchQuery.value)
+    })
 })
 
 const filteredCommandTickets = computed(() => {
     return commandTickets.value.filter((ticket) => {
         if (selectedCommandStatus.value !== 'all' && String(ticket?.order_status || '') !== selectedCommandStatus.value) {
+            return false
+        }
+
+        if (!isWithinDateRange(ticket)) {
             return false
         }
 
@@ -653,6 +701,40 @@ function matchesSearch(ticket, query) {
         .toLowerCase()
 
     return haystack.includes(normalizedQuery)
+}
+
+function isWithinDateRange(ticket) {
+    const ticketDate = new Date(ticket?.updated_at || ticket?.created_at || null)
+    
+    if (isNaN(ticketDate.getTime())) {
+        return true
+    }
+
+    // Get date in local timezone (set to start of day)
+    const ticketDateOnly = new Date(ticketDate.getFullYear(), ticketDate.getMonth(), ticketDate.getDate())
+
+    if (dateFromFilter.value) {
+        const fromDate = new Date(dateFromFilter.value)
+        if (ticketDateOnly < fromDate) {
+            return false
+        }
+    }
+
+    if (dateToFilter.value) {
+        const toDate = new Date(dateToFilter.value)
+        // Add 1 day to include the entire "to" date
+        toDate.setDate(toDate.getDate() + 1)
+        if (ticketDateOnly >= toDate) {
+            return false
+        }
+    }
+
+    return true
+}
+
+function clearDateFilter() {
+    dateFromFilter.value = ''
+    dateToFilter.value = ''
 }
 
 function selectTicket(ticketId) {

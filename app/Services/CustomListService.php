@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CustomList;
 use App\Models\CustomListItem;
+use App\Models\DeliveryAgent;
 use Illuminate\Support\Str;
 
 class CustomListService
@@ -196,7 +197,6 @@ class CustomListService
         'takeaway' => 'Emporté',
         'delivery' => 'Livraison',
         'livraison' => 'Livraison',
-        'glovo' => 'Livraison',
     ];
 
     private const FALLBACK_SERVICE_MODE_METADATA = [
@@ -232,10 +232,6 @@ class CustomListService
             'operational_mode' => 'delivery',
             'requires_delivery_agent' => true,
         ],
-        'glovo' => [
-            'operational_mode' => 'delivery',
-            'requires_delivery_agent' => true,
-        ],
     ];
 
     public function all(bool $activeOnly = false): array
@@ -243,6 +239,8 @@ class CustomListService
         foreach (array_keys(self::DEFAULT_LISTS) as $name) {
             $this->ensureList($name);
         }
+
+        $this->syncPlatformServiceModesFromDeliveryAgents();
 
         $lists = CustomList::with('items')->get()->keyBy('name');
 
@@ -254,7 +252,11 @@ class CustomListService
 
     public function get(string $name, bool $activeOnly = false): array
     {
-        return $this->serializeList($this->ensureList($name), $activeOnly);
+        if ($name === self::SERVICE_MODE_LIST) {
+            $this->syncPlatformServiceModesFromDeliveryAgents();
+        }
+
+        return $this->serializeList($this->ensureList($name)->fresh('items'), $activeOnly);
     }
 
     public function update(string $name, bool $isActive, array $items): array
@@ -319,28 +321,16 @@ class CustomListService
         }
 
         $list = $this->ensureList(self::SERVICE_MODE_LIST);
-        $normalized = $this->normalizeKey($label);
+        $this->upsertPlatformServiceMode($list, $label, true);
 
-        $matched = $list->items->first(
-            fn (CustomListItem $item) => $this->normalizeKey($item->label) === $normalized
-                || $this->normalizeKey($item->value ?: $item->label) === $normalized
-        );
+        return $this->syncAllPlatformServiceModes();
+    }
 
-        if (! $matched) {
-            $list->items()->create([
-                'label' => $label,
-                'value' => $label,
-                'metadata' => [
-                    'operational_mode' => 'delivery',
-                    'requires_delivery_agent' => false,
-                    'source' => 'platform',
-                ],
-                'is_active' => true,
-                'sort_order' => ((int) $list->items()->max('sort_order')) + 1,
-            ]);
-        }
+    public function syncAllPlatformServiceModes(): array
+    {
+        $this->syncPlatformServiceModesFromDeliveryAgents();
 
-        return $this->serializeList($list->fresh('items'));
+        return $this->serializeList($this->ensureList(self::SERVICE_MODE_LIST)->fresh('items'));
     }
 
     public function resolveServiceMode(?string $serviceMode = null, ?string $legacyDeliveryMode = null): string
@@ -889,6 +879,114 @@ class CustomListService
         }
 
         return $trimmed;
+    }
+
+    private function syncPlatformServiceModesFromDeliveryAgents(): void
+    {
+        $list = $this->ensureList(self::SERVICE_MODE_LIST);
+        $platformStates = $this->resolvePlatformStates();
+
+        foreach ($platformStates as $platformState) {
+            $this->upsertPlatformServiceMode($list, $platformState['label'], $platformState['is_active']);
+        }
+
+        $list->items->each(function (CustomListItem $item) use ($platformStates) {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+            if (($metadata['source'] ?? null) !== 'platform') {
+                return;
+            }
+
+            $normalized = $this->normalizeKey($item->value ?: $item->label);
+            if ($normalized === '' || array_key_exists($normalized, $platformStates)) {
+                return;
+            }
+
+            if ($item->is_active) {
+                $item->forceFill(['is_active' => false])->save();
+            }
+        });
+    }
+
+    private function resolvePlatformStates(): array
+    {
+        $states = [];
+
+        DeliveryAgent::query()
+            ->where('type', 'platform')
+            ->get(['platform_name', 'active'])
+            ->each(function (DeliveryAgent $agent) use (&$states) {
+                $label = trim((string) $agent->platform_name);
+                $normalized = $this->normalizeKey($label);
+
+                if ($label === '' || $normalized === '') {
+                    return;
+                }
+
+                if (! array_key_exists($normalized, $states)) {
+                    $states[$normalized] = [
+                        'label' => $label,
+                        'is_active' => false,
+                    ];
+                }
+
+                $states[$normalized]['is_active'] = $states[$normalized]['is_active'] || (bool) $agent->active;
+            });
+
+        return $states;
+    }
+
+    private function upsertPlatformServiceMode(CustomList $list, string $label, bool $isActive): void
+    {
+        $normalized = $this->normalizeKey($label);
+        if ($normalized === '') {
+            return;
+        }
+
+        $matched = $list->items->first(
+            fn (CustomListItem $item) => $this->normalizeKey($item->label) === $normalized
+                || $this->normalizeKey($item->value ?: $item->label) === $normalized
+        );
+
+        $existingMetadata = is_array($matched?->metadata) ? $matched->metadata : [];
+        $metadata = $this->mergeMetadata(
+            $existingMetadata,
+            [
+                'operational_mode' => 'delivery',
+                'requires_delivery_agent' => false,
+                'source' => 'platform',
+            ]
+        );
+
+        if (! $matched) {
+            $created = $list->items()->create([
+                'label' => $label,
+                'value' => $label,
+                'metadata' => $metadata,
+                'is_active' => $isActive,
+                'sort_order' => ((int) $list->items()->max('sort_order')) + 1,
+            ]);
+
+            $list->setRelation('items', $list->items->push($created));
+            return;
+        }
+
+        $updates = [];
+
+        if ($matched->label !== $label) {
+            $updates['label'] = $label;
+        }
+
+        if (($matched->value ?: $matched->label) !== $label) {
+            $updates['value'] = $label;
+        }
+
+        if ($matched->metadata !== $metadata) {
+            $updates['metadata'] = $metadata;
+        }
+
+        if ($updates !== []) {
+            $matched->forceFill($updates)->save();
+        }
     }
 
     private function normalizeKey(string $value): string

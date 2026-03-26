@@ -100,14 +100,48 @@
                                 </div>
                             </div>
 
-                            <div v-if="groupedBoardTickets.length" class="space-y-3">
-                                <h3 class="text-xl font-semibold text-slate-700">Groupes</h3>
-                                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <div v-if="groupedBoardGroups.length" class="space-y-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <h3 class="text-xl font-semibold text-slate-700">
+                                        {{ selectedBoardGroup ? `Tables · ${selectedBoardGroup}` : 'Groupes' }}
+                                    </h3>
+                                    <button
+                                        v-if="selectedBoardGroup"
+                                        type="button"
+                                        class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                                        @click="selectedBoardGroup = null"
+                                    >
+                                        Retour aux groupes
+                                    </button>
+                                </div>
+
+                                <div v-if="!selectedBoardGroup" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    <button
+                                        v-for="group in groupedBoardGroups"
+                                        :key="group.group"
+                                        type="button"
+                                        class="rounded-[18px] bg-gradient-to-b from-blue-500 to-blue-600 p-4 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                        @click="selectedBoardGroup = group.group"
+                                    >
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-lg font-semibold">{{ group.group }}</p>
+                                                <p class="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
+                                                    {{ group.availableCount }} table{{ group.availableCount > 1 ? 's' : '' }} disponible{{ group.availableCount > 1 ? 's' : '' }}
+                                                </p>
+                                            </div>
+                                            <span class="shrink-0 rounded-full bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-50">
+                                                Ouvrir
+                                            </span>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                     <div
-                                        v-for="ticket in groupedBoardTickets"
+                                        v-for="ticket in selectedGroupedBoardTickets"
                                         :key="ticket.key"
-                                        class="relative rounded-[18px] bg-gradient-to-b from-blue-500 to-blue-600 p-3 text-white shadow-sm transition"
-                                        :class="ticket.ticket ? 'ring-2 ring-amber-200/70' : 'hover:-translate-y-0.5 hover:shadow-md'"
+                                        class="relative rounded-[18px] bg-gradient-to-b from-blue-500 to-blue-600 p-3 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                                     >
                                         <button
                                             type="button"
@@ -118,7 +152,7 @@
                                             <div class="flex items-start justify-between gap-3">
                                                 <div class="min-w-0">
                                                     <p class="truncate text-lg font-semibold">{{ ticket.name }}</p>
-                                                    <p v-if="ticket.group !== ticket.name" class="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
+                                                    <p class="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
                                                         {{ ticket.group }}
                                                     </p>
                                                 </div>
@@ -138,8 +172,8 @@
                                 </div>
                             </div>
 
-                            <div v-if="!ungroupedBoardTickets.length && !groupedBoardTickets.length" class="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
-                                Aucun ticket prédéfini n’est configuré.
+                            <div v-if="!ungroupedBoardTickets.length && !groupedBoardGroups.length" class="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+                                {{ configuredBoardEntries.length ? 'Tous les emplacements sont occupés. Seuls les tickets disponibles sont affichés ici.' : 'Aucun ticket prédéfini n’est configuré.' }}
                             </div>
                         </div>
 
@@ -419,6 +453,7 @@ const tabs = [
 ]
 
 const activeTab = ref('liste')
+const selectedBoardGroup = ref(null)
 const saving = ref(false)
 const customers = ref([])
 const loadingCustomers = ref(false)
@@ -560,12 +595,52 @@ const ticketBoardTiles = computed(() => {
     })
 })
 
-const ungroupedBoardTickets = computed(() => {
-    return ticketBoardTiles.value.filter((ticket) => isUngroupedTicket(ticket.group))
+const availableTicketBoardTiles = computed(() => {
+    return ticketBoardTiles.value.filter((ticket) => (
+        !ticket.ticket
+        || Number(ticket.ticket.id || 0) === Number(props.currentSaleId || 0)
+    ))
 })
 
-const groupedBoardTickets = computed(() => {
-    return ticketBoardTiles.value.filter((ticket) => !isUngroupedTicket(ticket.group))
+const ungroupedBoardTickets = computed(() => {
+    return availableTicketBoardTiles.value.filter((ticket) => isUngroupedTicket(ticket.group))
+})
+
+const groupedBoardGroups = computed(() => {
+    const groups = new Map()
+
+    availableTicketBoardTiles.value
+        .filter((ticket) => !isUngroupedTicket(ticket.group))
+        .forEach((ticket) => {
+            const existing = groups.get(ticket.group) || {
+                group: ticket.group,
+                group_sort_order: ticket.group_sort_order,
+                availableCount: 0,
+            }
+
+            existing.availableCount += 1
+            existing.group_sort_order = Math.min(existing.group_sort_order, ticket.group_sort_order)
+
+            groups.set(ticket.group, existing)
+        })
+
+    return Array.from(groups.values()).sort((a, b) => {
+        if (a.group_sort_order !== b.group_sort_order) {
+            return a.group_sort_order - b.group_sort_order
+        }
+
+        return a.group.localeCompare(b.group, 'fr')
+    })
+})
+
+const selectedGroupedBoardTickets = computed(() => {
+    if (!selectedBoardGroup.value) {
+        return []
+    }
+
+    return availableTicketBoardTiles.value.filter((ticket) => (
+        !isUngroupedTicket(ticket.group) && ticket.group === selectedBoardGroup.value
+    ))
 })
 
 const filteredCustomers = computed(() => {
@@ -601,8 +676,18 @@ const canSaveCommande = computed(() => {
 })
 
 watch(activeTab, async (tab) => {
+    if (tab !== 'liste') {
+        selectedBoardGroup.value = null
+    }
+
     if (tab === 'commande' && !customers.value.length) {
         await fetchCustomers()
+    }
+})
+
+watch(groupedBoardGroups, (groups) => {
+    if (selectedBoardGroup.value && !groups.some((group) => group.group === selectedBoardGroup.value)) {
+        selectedBoardGroup.value = null
     }
 })
 
@@ -627,8 +712,8 @@ watch(commandDeliveryModes, () => {
 
 onMounted(async () => {
     await Promise.all([
-        customListsStore.fetchList('mode_de_service'),
-        customListsStore.fetchList('tickets_predefinis'),
+        customListsStore.fetchList('mode_de_service', { force: true }),
+        customListsStore.fetchList('tickets_predefinis', { force: true }),
     ])
     commandForm.value.delivery_mode = normalizeDeliveryMode(commandForm.value.delivery_mode)
     if (activeTab.value === 'commande') {

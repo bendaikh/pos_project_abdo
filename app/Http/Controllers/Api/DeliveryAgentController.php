@@ -38,7 +38,7 @@ class DeliveryAgentController extends Controller
         $deliveryAgent = DeliveryAgent::create($this->validatedPayload($request));
 
         if ($deliveryAgent->type === 'platform' && $deliveryAgent->platform_name) {
-            $this->customListService->syncPlatformServiceMode($deliveryAgent->platform_name);
+            $this->customListService->syncAllPlatformServiceModes();
         }
 
         return response()->json($deliveryAgent, 201);
@@ -63,10 +63,13 @@ class DeliveryAgentController extends Controller
 
     public function update(Request $request, DeliveryAgent $deliveryAgent): JsonResponse
     {
+        $previousType = $deliveryAgent->type;
+        $previousPlatformName = $deliveryAgent->platform_name;
         $deliveryAgent->update($this->validatedPayload($request, $deliveryAgent));
 
-        if ($deliveryAgent->type === 'platform' && $deliveryAgent->platform_name) {
-            $this->customListService->syncPlatformServiceMode($deliveryAgent->platform_name);
+        if (($previousType === 'platform' && $previousPlatformName)
+            || ($deliveryAgent->type === 'platform' && $deliveryAgent->platform_name)) {
+            $this->customListService->syncAllPlatformServiceModes();
         }
 
         return response()->json($deliveryAgent->fresh());
@@ -74,10 +77,16 @@ class DeliveryAgentController extends Controller
 
     public function destroy(DeliveryAgent $deliveryAgent): JsonResponse
     {
+        $shouldSyncPlatforms = $deliveryAgent->type === 'platform' && $deliveryAgent->platform_name;
+
         $deliveryAgent->update([
             'status' => 'inactive',
             'active' => false,
         ]);
+
+        if ($shouldSyncPlatforms) {
+            $this->customListService->syncAllPlatformServiceModes();
+        }
 
         return response()->json([
             'message' => 'Livreur désactivé avec succès.',

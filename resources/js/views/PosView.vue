@@ -1,22 +1,23 @@
 <template>
-    <div ref="posRoot" class="h-screen flex flex-col bg-[#f4f3ef] overflow-hidden">
-        <header class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-3 bg-gray-900 text-white">
-            <div class="flex items-center gap-3 w-full sm:w-auto">
+    <div ref="posRoot" class="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#f4f3ef]">
+        <header class="flex gap-3 bg-gray-900 text-white" :class="headerClass">
+            <div class="flex items-center" :class="headerInfoWrapClass">
                 <button
                     @click="toggleAppSidebar"
-                    class="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    class="bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    :class="headerMenuButtonClass"
                     type="button"
                     title="Afficher/Masquer le menu"
                 >
-                    <Bars3Icon class="w-5 h-5" />
+                    <Bars3Icon :class="headerMenuIconClass" />
                 </button>
-                <div>
-                    <p class="text-xs uppercase text-gray-400">Catégorie active</p>
-                    <p class="text-lg font-semibold">{{ selectedCategoryName }}</p>
-                    <p class="text-xs text-gray-400">{{ totalArticles }} articles</p>
+                <div class="min-w-0">
+                    <p class="uppercase text-gray-400" :class="headerKickerClass">Catégorie active</p>
+                    <p class="truncate font-semibold" :class="headerTitleClass">{{ selectedCategoryName }}</p>
+                    <p class="text-gray-400" :class="headerCountClass">{{ totalArticles }} articles</p>
                 </div>
             </div>
-            <div class="flex-1 w-full">
+            <div class="flex-1 min-w-0" :class="headerSearchWrapClass">
                 <div class="relative">
                     <input
                         ref="searchField"
@@ -24,32 +25,35 @@
                         type="text"
                         autofocus
                         placeholder="Rechercher par nom ou code-barres"
-                        class="w-full rounded-xl border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        class="w-full border border-gray-700 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        :class="headerSearchInputClass"
                     >
-                    <MagnifyingGlassIcon class="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                    <MagnifyingGlassIcon class="text-gray-400 absolute top-1/2 -translate-y-1/2" :class="headerSearchIconClass" />
                 </div>
             </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <div class="flex items-center justify-between" :class="headerActionsWrapClass">
                 <button
                     @click="toggleMobileCart"
-                    class="sm:hidden flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    class="items-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    :class="[headerCartButtonClass, useBottomSheetCart ? 'flex' : 'hidden']"
                     type="button"
                 >
-                    <ShoppingCartIcon class="w-5 h-5" />
-                    <span class="text-xs font-semibold">{{ cartStore.items.length }}</span>
+                    <ShoppingCartIcon :class="headerActionIconClass" />
+                    <span class="font-semibold" :class="headerActionTextClass">{{ cartStore.items.length }}</span>
                 </button>
                 <button
                     @click="toggleFullscreen"
-                    class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    class="rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    :class="headerIconButtonClass"
                     type="button"
                     :title="isFullscreen ? 'Quitter le plein écran' : 'Plein écran'"
                 >
-                    <span class="text-lg leading-none">⛶</span>
+                    <span class="leading-none" :class="headerFullscreenIconClass">⛶</span>
                 </button>
             </div>
         </header>
 
-        <div class="flex flex-1 overflow-hidden">
+        <div class="flex min-h-0 flex-1 overflow-hidden">
             <div
                 v-if="isMobile && uiStore.posSidebarOpen"
                 class="fixed inset-0 bg-black/40 z-40"
@@ -80,31 +84,35 @@
                 </aside>
             </transition>
 
-            <div class="flex-1 flex flex-col overflow-hidden">
-                <div v-if="effectiveCategoriesDisplayMode === 'top' && !appSidebarOpen" class="border-b border-gray-200 bg-white px-3 py-2">
-                        <div class="flex gap-3 overflow-x-auto">
+            <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div v-if="effectiveCategoriesDisplayMode === 'top' && !appSidebarOpen" class="border-b border-gray-200 bg-white px-2 py-1" :class="isTablet && isLandscape ? 'py-0.5' : 'py-1'">
+                    <div :class="isTablet && isLandscape ? 'flex gap-1 overflow-x-auto' : 'flex gap-2 overflow-x-auto'">
                         <button
                             v-for="button in categoryButtons"
                             :key="button.id + '-top'"
                             @click="selectCategory(button.id)"
                             type="button"
-                                class="flex items-center gap-2 rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-wide transition-colors whitespace-nowrap"
-                            :class="selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'"
+                            class="flex items-center gap-1 rounded-md border transition-colors shrink-0"
+                            :class="[
+                                selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
+                                isTablet && isLandscape ? 'px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider whitespace-nowrap' : 'px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap'
+                            ]"
                         >
-                                <span class="text-lg">{{ button.icon }}</span>
+                            <span :class="isTablet && isLandscape ? 'text-xs' : 'text-base'">{{ button.icon }}</span>
                             <span>{{ button.label }}</span>
                         </button>
                     </div>
                 </div>
-                <div class="flex-1 overflow-hidden p-4 bg-[#f8f8f8]" :class="contentPaddingClass">
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                <div class="min-h-0 flex-1 overflow-hidden bg-[#f8f8f8] p-4" :class="contentPaddingClass">
+                    <div :class="articleGridClass">
                         <div
                             v-for="article in paginatedArticles"
                             :key="article.id"
-                            class="cursor-pointer rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition-shadow h-full flex flex-col"
+                            class="cursor-pointer overflow-hidden border border-gray-200 bg-white transition-shadow hover:shadow-lg"
+                            :class="articleCardClass"
                             @click="addToCart(article)"
                         >
-                            <div class="aspect-[4/3] rounded-t-2xl bg-gray-100 flex items-center justify-center overflow-hidden">
+                            <div :class="articleMediaClass">
                                 <img
                                     v-if="article.photo"
                                     :src="article.photo"
@@ -113,9 +121,9 @@
                                 >
                                 <span v-else class="text-3xl">📦</span>
                             </div>
-                            <div class="p-3 space-y-1">
-                                <h3 class="text-sm font-semibold text-gray-900 truncate">{{ article.name }}</h3>
-                                <p class="text-base font-bold text-primary-600">{{ formatCurrency(article.sell_price) }}</p>
+                            <div :class="articleBodyClass">
+                                <h3 :class="articleTitleClass">{{ article.name }}</h3>
+                                <p :class="articlePriceClass">{{ formatCurrency(article.sell_price) }}</p>
                             </div>
                         </div>
                         <div v-if="paginatedArticles.length === 0" class="col-span-full rounded-2xl border border-dashed border-gray-300 bg-white/80 p-6 text-center text-sm text-gray-500">
@@ -145,16 +153,16 @@
                 </div>
 
                 <div v-if="effectiveCategoriesDisplayMode === 'bottom'" class="border-t border-gray-200 bg-white px-3 py-2">
-                        <div class="flex gap-3 overflow-x-auto">
+                    <div :class="bottomCategoriesRailClass">
                         <button
                             v-for="button in categoryButtons"
                             :key="button.id + '-bottom'"
                             @click="selectCategory(button.id)"
                             type="button"
-                                class="flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors"
-                            :class="selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'"
+                            class="flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors"
+                            :class="[bottomCategoryButtonClass, selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50']"
                         >
-                                <span class="text-lg">{{ button.icon }}</span>
+                            <span class="text-lg">{{ button.icon }}</span>
                             <span>{{ button.label }}</span>
                         </button>
                     </div>
@@ -162,13 +170,13 @@
             </div>
 
             <section
-                class="bg-[#f2f2f4] flex flex-col transition-all duration-300"
+                class="flex min-h-0 flex-col bg-[#f2f2f4] transition-all duration-300"
                 :class="ticketPanelClass"
             >
                 <!-- Mobile ticket handle strip — 3 states: collapsed / half / fullscreen -->
                 <div
-                    class="sm:hidden flex flex-col items-center cursor-pointer select-none transition-all duration-300 shrink-0"
-                    :class="isCartExpanded ? 'bg-white border-b border-gray-100' : 'bg-gradient-to-r from-blue-600 to-blue-500 rounded-t-2xl shadow-lg'"
+                    class="flex-col items-center cursor-pointer select-none shrink-0 transition-all duration-300"
+                    :class="[useBottomSheetCart ? 'flex' : 'hidden', isCartExpanded ? 'bg-white border-b border-gray-100' : 'bg-gradient-to-r from-blue-600 to-blue-500 rounded-t-2xl shadow-lg']"
                     @click="toggleMobileCart"
                 >
                     <!-- Drag handle pill -->
@@ -256,12 +264,12 @@
                     </div>
                 </div>
 
-                <div class="flex-1 flex flex-col overflow-hidden h-full">
+                <div class="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
                     <!-- Desktop: styled card wrapper -->
-                    <div class="hidden sm:flex flex-col p-4 h-full">
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 flex flex-col flex-1 overflow-hidden">
+                    <div :class="desktopCartLayoutClass">
+                        <div class="flex min-h-0 flex-1 flex-col rounded-2xl border border-gray-200 bg-white shadow-sm" :class="desktopCartCardClass">
                             <!-- Client -->
-                            <div class="p-4 border-b border-gray-200 space-y-3">
+                            <div class="shrink-0 border-b border-gray-200 space-y-3" :class="desktopPanelPaddingClass">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2 text-sm font-semibold text-gray-800">
                                         <span>Client</span>
@@ -281,9 +289,9 @@
                                 </div>
                             </div>
                             <!-- Service mode -->
-                            <div v-if="serviceModesEnabled" class="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                                <div class="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
-                                    <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button" class="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors shrink-0" :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'">
+                            <div v-if="serviceModesEnabled" class="shrink-0 border-b border-gray-200 bg-gray-50" :class="desktopPanelPaddingClass">
+                                <div :class="desktopServiceModesWrapClass">
+                                    <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button" class="flex items-center gap-2 rounded-lg border font-semibold transition-colors shrink-0" :class="[desktopServiceModeButtonClass, serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300']">
                                         <span class="text-base">{{ mode.icon }}</span>
                                         <span>{{ mode.label }}</span>
                                     </button>
@@ -298,7 +306,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="px-4 py-3 border-b border-gray-200 bg-white">
+                            <div class="shrink-0 border-b border-gray-200 bg-white" :class="desktopPanelPaddingClass">
                                 <button
                                     type="button"
                                     class="w-full rounded-2xl border border-gray-200 bg-gray-50 p-3 text-left transition hover:border-gray-300 hover:bg-white"
@@ -322,12 +330,12 @@
                                 </button>
                             </div>
                             <!-- Articles header -->
-                            <div class="px-4 py-2 border-b border-gray-200 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500">
+                            <div class="shrink-0 border-b border-gray-200 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500" :class="desktopHeaderRowClass">
                                 <span>Articles</span>
                                 <span>{{ cartStore.items.length }} articles</span>
                             </div>
                             <!-- Articles list -->
-                            <div class="flex-1 overflow-y-auto">
+                            <div :class="desktopItemsListClass">
                                 <div v-if="cartStore.items.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400">
                                     <ShoppingCartIcon class="w-12 h-12 mb-2" />
                                     <p class="text-sm">Ticket vide</p>
@@ -359,14 +367,14 @@
                                 </div>
                             </div>
                             <!-- Totals -->
-                            <div class="px-4 py-3 border-t border-gray-200 space-y-2 text-sm">
+                            <div class="shrink-0 border-t border-gray-200 space-y-2 text-sm bg-white" :class="desktopPanelPaddingClass">
                                 <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">Total HT :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.subtotal) }}</span></div>
                                 <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">TVA :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.taxAmount) }}</span></div>
                                 <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">Remise :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.discountTotal) }}</span></div>
                                 <div class="flex items-baseline justify-between pt-2"><span class="text-lg font-bold text-gray-900">TOTAL TTC :</span><span class="text-2xl font-bold text-green-600">{{ formatCurrency(cartStore.total) }}</span></div>
                             </div>
                             <!-- Buttons -->
-                            <div class="px-4 py-3 border-t border-gray-200 space-y-2">
+                            <div class="shrink-0 border-t border-gray-200 space-y-2 bg-white" :class="desktopPanelPaddingClass">
                                 <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">PASSER AU PAIEMENT</button>
                                 <button @click="openSaveTicketModal" :disabled="!canSaveCurrentTicket" class="w-full py-3 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">Sauvegarder</button>
                             </div>
@@ -374,7 +382,7 @@
                     </div>
 
                     <!-- Mobile: flat layout (no extra card) -->
-                    <div v-show="isCartExpanded" class="sm:hidden flex flex-col flex-1 overflow-hidden bg-white">
+                    <div v-show="useBottomSheetCart && isCartExpanded" class="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
                         <!-- Client row (compact) -->
                         <div class="px-3 py-2 border-b border-gray-100 flex items-center justify-between gap-2">
                             <div class="flex items-center gap-1.5 min-w-0">
@@ -937,6 +945,8 @@ const itemsPerPage = ref(20)
 const creatingOption = ref(false)
 const posRoot = ref(null)
 const isFullscreen = ref(false)
+const viewportWidth = ref(0)
+const viewportHeight = ref(0)
 const screenMode = ref('desktop')
 const isCartExpanded = ref(true)
 const isCartFullscreen = ref(false)
@@ -970,6 +980,14 @@ const categoryButtons = computed(() => {
 
 const isMobile = computed(() => screenMode.value === 'mobile')
 const isTablet = computed(() => screenMode.value === 'tablet')
+const isLandscape = computed(() => viewportWidth.value > viewportHeight.value)
+const isPhoneLandscape = computed(() => isMobile.value && isLandscape.value)
+const isPhonePortrait = computed(() => isMobile.value && !isLandscape.value)
+const isTabletPortrait = computed(() => isTablet.value && !isLandscape.value)
+const isSmallPhone = computed(() => viewportWidth.value > 0 && viewportWidth.value < 430)
+const isCompactViewport = computed(() => viewportHeight.value > 0 && viewportHeight.value < 820)
+const useBottomSheetCart = computed(() => isMobile.value)
+const useSideCartLayout = computed(() => !isMobile.value)
 const effectiveCategoriesDisplayMode = computed(() => {
     if (isMobile.value) {
         return 'top'
@@ -979,24 +997,249 @@ const effectiveCategoriesDisplayMode = computed(() => {
     }
     return categoriesDisplayMode.value
 })
+const headerClass = computed(() => {
+    if (isPhoneLandscape.value) {
+        return 'flex-row items-center px-3 py-2 gap-2'
+    }
+
+    return useBottomSheetCart.value
+        ? 'flex-col px-4 py-3'
+        : 'flex-row items-center px-3 py-2.5 sm:gap-3 lg:px-4 lg:py-3'
+})
+const headerInfoWrapClass = computed(() => {
+    if (isPhoneLandscape.value) {
+        return 'min-w-0 flex-shrink gap-2'
+    }
+
+    return isMobile.value ? 'w-full min-w-0 gap-3' : 'w-full min-w-0 sm:w-auto gap-3'
+})
+const headerMenuButtonClass = computed(() => {
+    return isPhoneLandscape.value ? 'p-1.5' : 'p-2'
+})
+const headerMenuIconClass = computed(() => {
+    return isPhoneLandscape.value ? 'w-4 h-4' : 'w-5 h-5'
+})
+const headerKickerClass = computed(() => {
+    return isPhoneLandscape.value ? 'text-[9px] tracking-[0.18em]' : 'text-xs'
+})
+const headerTitleClass = computed(() => {
+    return isPhoneLandscape.value ? 'text-base leading-tight' : 'text-lg'
+})
+const headerCountClass = computed(() => {
+    return isPhoneLandscape.value ? 'text-[10px]' : 'text-xs'
+})
+const headerSearchWrapClass = computed(() => {
+    return isPhoneLandscape.value ? 'max-w-none' : ''
+})
+const headerSearchInputClass = computed(() => {
+    return isPhoneLandscape.value
+        ? 'rounded-lg px-3 py-1.5 pr-9 text-xs'
+        : 'rounded-xl px-4 py-2.5 text-sm'
+})
+const headerSearchIconClass = computed(() => {
+    return isPhoneLandscape.value ? 'right-2.5 w-4 h-4' : 'right-3 w-5 h-5'
+})
+const headerActionsWrapClass = computed(() => {
+    if (isPhoneLandscape.value) {
+        return 'gap-1.5 w-auto flex-shrink-0'
+    }
+
+    return useBottomSheetCart.value ? 'gap-2 w-full' : 'gap-2 w-full sm:w-auto sm:justify-end'
+})
+const headerCartButtonClass = computed(() => {
+    return isPhoneLandscape.value ? 'gap-1.5 px-2.5 py-1.5' : 'gap-2 px-3 py-2'
+})
+const headerIconButtonClass = computed(() => {
+    return isPhoneLandscape.value ? 'p-1.5' : 'p-2'
+})
+const headerActionIconClass = computed(() => {
+    return isPhoneLandscape.value ? 'w-4 h-4' : 'w-5 h-5'
+})
+const headerActionTextClass = computed(() => {
+    return isPhoneLandscape.value ? 'text-[11px]' : 'text-xs'
+})
+const headerFullscreenIconClass = computed(() => {
+    return isPhoneLandscape.value ? 'text-base' : 'text-lg'
+})
 const contentPaddingClass = computed(() => {
-    if (!isMobile.value) return ''
+    if (!useBottomSheetCart.value) return ''
     if (!isCartExpanded.value) return 'pb-[88px]'
     if (isCartFullscreen.value) return 'pb-0'
     return 'pb-[55vh]'
 })
+const articleGridClass = computed(() => {
+    if (isPhoneLandscape.value) {
+        return 'grid h-full min-h-0 grid-cols-3 gap-2 overflow-y-auto pr-1 content-start'
+    }
+
+    if (useBottomSheetCart.value) {
+        return 'grid h-full min-h-0 grid-cols-1 gap-4 overflow-y-auto pr-1 content-start'
+    }
+
+    if (isTablet.value) {
+        if (isLandscape.value) {
+            return 'grid h-full min-h-0 grid-cols-4 gap-2.5 overflow-y-auto pr-1'
+        }
+        const gapClass = isCompactViewport.value ? 'gap-2' : 'gap-2.5'
+        return `grid h-full min-h-0 grid-cols-3 gap-2 overflow-y-auto pr-1 ${gapClass}`
+    }
+
+    const gapClass = isCompactViewport.value ? 'gap-2.5' : 'gap-3'
+    return `grid h-full min-h-0 grid-cols-4 grid-rows-5 auto-rows-fr ${gapClass}`
+})
+const articleCardClass = computed(() => {
+    if (isPhonePortrait.value) {
+        return 'flex min-h-[128px] flex-row rounded-[24px] shadow-md active:scale-[0.99]'
+    }
+
+    if (isPhoneLandscape.value) {
+        return 'flex min-h-[140px] flex-col rounded-[20px] shadow-sm active:scale-[0.99]'
+    }
+
+    return 'flex h-full min-h-0 flex-col rounded-2xl shadow-sm'
+})
+const articleMediaClass = computed(() => {
+    if (isPhonePortrait.value) {
+        return 'flex h-full w-[118px] min-w-[118px] items-center justify-center overflow-hidden rounded-l-[24px] bg-gray-100'
+    }
+
+    if (isPhoneLandscape.value) {
+        return 'aspect-[16/9] rounded-t-[20px] bg-gray-100 flex items-center justify-center overflow-hidden'
+    }
+
+    if (isTablet.value) {
+        if (isLandscape.value) {
+            const height = isCompactViewport.value ? 'min-h-[52px]' : 'min-h-[56px]'
+            return `flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-gray-100 ${height}`
+        }
+        const height = isCompactViewport.value ? 'min-h-[64px]' : 'min-h-[80px]'
+        return `flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-gray-100 ${height}`
+    }
+
+    const compactHeight = isCompactViewport.value
+        ? 'min-h-[56px]'
+        : 'min-h-[88px]'
+    return `flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-gray-100 ${compactHeight}`
+})
+const articleBodyClass = computed(() => {
+    if (isPhonePortrait.value) {
+        return 'flex min-w-0 flex-1 flex-col justify-between space-y-2 p-4'
+    }
+
+    if (isPhoneLandscape.value) {
+        return 'space-y-1.5 border-t border-gray-100 p-2.5'
+    }
+
+    if (isTablet.value) {
+        if (isLandscape.value) {
+            return 'space-y-0.5 border-t border-gray-100 px-1.5 py-1'
+        }
+        return isCompactViewport.value
+            ? 'space-y-0.5 border-t border-gray-100 px-2 py-1.5'
+            : 'space-y-0.5 border-t border-gray-100 px-2 py-2'
+    }
+
+    return isCompactViewport.value
+        ? 'space-y-0.5 border-t border-gray-100 px-2 py-1.5'
+        : 'space-y-1 border-t border-gray-100 px-3 py-2.5'
+})
+const articleTitleClass = computed(() => {
+    if (isPhoneLandscape.value) {
+        return 'line-clamp-2 text-xs font-semibold leading-snug text-gray-900'
+    }
+
+    if (isPhonePortrait.value) {
+        return 'line-clamp-2 text-lg font-semibold leading-snug text-gray-900'
+    }
+
+    if (isTablet.value) {
+        if (isLandscape.value) {
+            return 'line-clamp-1 text-[10px] font-semibold leading-tight text-gray-900'
+        }
+        return 'line-clamp-2 text-xs font-semibold leading-tight text-gray-900'
+    }
+
+    return isCompactViewport.value
+        ? 'overflow-hidden text-xs font-semibold leading-tight text-gray-900'
+        : 'overflow-hidden text-sm font-semibold leading-tight text-gray-900'
+})
+const articlePriceClass = computed(() => {
+    if (isPhoneLandscape.value) {
+        return 'text-sm font-bold text-primary-600'
+    }
+
+    if (isPhonePortrait.value) {
+        return 'text-xl font-bold text-primary-600'
+    }
+
+    if (isTablet.value) {
+        if (isLandscape.value) {
+            return 'text-[10px] font-bold text-primary-600'
+        }
+        return 'text-xs font-bold text-primary-600'
+    }
+
+    return isCompactViewport.value
+        ? 'text-sm font-bold text-primary-600'
+        : 'text-base font-bold text-primary-600'
+})
+const bottomCategoriesRailClass = computed(() => {
+    return 'grid max-h-[112px] grid-flow-col grid-rows-2 auto-cols-max gap-2 overflow-x-auto pb-1'
+})
+const bottomCategoryButtonClass = computed(() => {
+    return isCompactViewport.value ? 'min-w-[140px] justify-start' : 'min-w-[156px] justify-start'
+})
+const desktopCartLayoutClass = computed(() => {
+    if (!useSideCartLayout.value) {
+        return 'hidden'
+    }
+
+    return isCompactViewport.value || isPhoneLandscape.value
+        ? 'flex h-full min-h-0 flex-col p-3'
+        : 'flex h-full min-h-0 flex-col p-4'
+})
+const desktopCartCardClass = computed(() => {
+    return 'overflow-hidden'
+})
+const desktopPanelPaddingClass = computed(() => {
+    return isTabletPortrait.value || isPhoneLandscape.value ? 'px-3 py-2.5' : 'px-4 py-3'
+})
+const desktopHeaderRowClass = computed(() => {
+    return isTabletPortrait.value || isPhoneLandscape.value ? 'px-3 py-2' : 'px-4 py-2'
+})
+const desktopServiceModesWrapClass = computed(() => {
+    return isTabletPortrait.value || isPhoneLandscape.value
+        ? 'flex flex-wrap items-center gap-2'
+        : 'flex items-center gap-2 overflow-x-auto whitespace-nowrap'
+})
+const desktopServiceModeButtonClass = computed(() => {
+    return isTabletPortrait.value || isPhoneLandscape.value
+        ? 'px-2.5 py-2 text-[11px]'
+        : 'px-3 py-2 text-xs'
+})
+const desktopItemsListClass = computed(() => {
+    if (isTablet.value || isPhoneLandscape.value) {
+        return 'flex-1 min-h-[180px] overflow-y-auto'
+    }
+
+    return 'flex-1 min-h-[220px] overflow-y-auto'
+})
 const ticketPanelClass = computed(() => {
-    if (isMobile.value) {
+    if (useBottomSheetCart.value) {
         let h
         if (!isCartExpanded.value) h = 'h-[88px]'
         else if (isCartFullscreen.value) h = 'h-[100dvh]'
         else h = 'h-[60vh]'
         return `fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-gray-200 shadow-2xl overflow-hidden ${h}`
     }
-    if (isTablet.value) {
-        return 'w-80 flex-shrink-0 border-l border-gray-200 h-full overflow-hidden'
+    if (isPhoneLandscape.value) {
+        return 'w-[320px] flex-shrink-0 border-l border-gray-200 h-full overflow-hidden'
     }
-    return 'w-[380px] flex-shrink-0 border-l border-gray-200 h-full overflow-hidden'
+    if (isTablet.value) {
+        const widthClass = isLandscape.value || isCompactViewport.value ? 'w-[320px]' : 'w-[340px]'
+        return `${widthClass} flex-shrink-0 border-l border-gray-200 h-full overflow-hidden`
+    }
+    return `${isCompactViewport.value ? 'w-[350px]' : 'w-[380px]'} flex-shrink-0 border-l border-gray-200 h-full overflow-hidden`
 })
 
 const serviceModes = computed(() => {
@@ -1292,9 +1535,11 @@ function getServiceModeIcon(mode) {
 
 function normalizePlatformKey(value) {
     return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
         .trim()
         .toLowerCase()
-        .replace(/[\s_-]+/g, '')
+        .replace(/[^a-z0-9]+/g, '')
 }
 
 function ensureValidServiceModeSelection() {
@@ -1482,7 +1727,7 @@ function toggleAppSidebar() {
 }
 
 function toggleMobileCart() {
-    if (!isMobile.value) return
+    if (!useBottomSheetCart.value) return
     if (!isCartExpanded.value) {
         // collapsed → half
         isCartExpanded.value = true
@@ -1501,9 +1746,17 @@ function updateScreenMode() {
     const width = Math.round(
         window.visualViewport?.width || document.documentElement.clientWidth || window.innerWidth
     )
-    if (width < 768) {
+    const height = Math.round(
+        window.visualViewport?.height || document.documentElement.clientHeight || window.innerHeight
+    )
+    const shortEdge = Math.min(width, height)
+
+    viewportWidth.value = width
+    viewportHeight.value = height
+
+    if (shortEdge < 768) {
         screenMode.value = 'mobile'
-    } else if (width < 1024) {
+    } else if (width < 1280) {
         screenMode.value = 'tablet'
     } else {
         screenMode.value = 'desktop'
@@ -2126,7 +2379,7 @@ watch(showCustomerSelector, async (open) => {
     await fetchPosCustomers()
 })
 
-watch(isMobile, (value) => {
+watch(useBottomSheetCart, (value) => {
     if (value) {
         isCartExpanded.value = false
         isCartFullscreen.value = false
@@ -2284,7 +2537,7 @@ onMounted(async () => {
     document.addEventListener('fullscreenchange', handleFullscreenChange)
     handleFullscreenChange()
     await settingsStore.fetchSettings()
-    await customListsStore.fetchList('mode_de_service')
+    await customListsStore.fetchList('mode_de_service', { force: true })
     ensureValidServiceModeSelection()
     await articlesStore.refresh()
     await fetchPosCustomers()

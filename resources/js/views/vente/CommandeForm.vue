@@ -622,9 +622,11 @@ function formatDeliveryAgentLabel(agent) {
 
 function normalizePlatformKey(value) {
     return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
         .trim()
         .toLowerCase()
-        .replace(/[\s_-]+/g, '')
+        .replace(/[^a-z0-9]+/g, '')
 }
 
 function ensureValidServiceModeSelection() {
