@@ -75,7 +75,7 @@ class DeliveryAgentController extends Controller
         return response()->json($deliveryAgent->fresh());
     }
 
-    public function destroy(DeliveryAgent $deliveryAgent): JsonResponse
+    public function deactivate(DeliveryAgent $deliveryAgent): JsonResponse
     {
         $shouldSyncPlatforms = $deliveryAgent->type === 'platform' && $deliveryAgent->platform_name;
 
@@ -91,6 +91,24 @@ class DeliveryAgentController extends Controller
         return response()->json([
             'message' => 'Livreur désactivé avec succès.',
             'delivery_agent' => $deliveryAgent->fresh(),
+        ]);
+    }
+
+    public function destroy(DeliveryAgent $deliveryAgent): JsonResponse
+    {
+        $shouldSyncPlatforms = $deliveryAgent->type === 'platform' && $deliveryAgent->platform_name;
+        $deletedAgent = $deliveryAgent->replicate();
+        $deletedAgent->id = $deliveryAgent->id;
+
+        $deliveryAgent->delete();
+
+        if ($shouldSyncPlatforms) {
+            $this->customListService->syncAllPlatformServiceModes();
+        }
+
+        return response()->json([
+            'message' => 'Livreur supprimé avec succès.',
+            'delivery_agent' => $deletedAgent,
         ]);
     }
 

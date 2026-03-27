@@ -336,7 +336,7 @@
             :total="remainingAmount"
             :sale="commande"
             :allow-partial-confirmation="true"
-            confirm-label="Enregistrer le paiement"
+            confirm-label="Valider le paiement"
             @close="showPaymentModal = false"
             @complete="submitPaymentsFromModal"
         />

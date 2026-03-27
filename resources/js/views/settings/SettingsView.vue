@@ -252,7 +252,7 @@
                                     Listes personnalisées
                                 </h2>
                                 <p class="text-slate-700 font-medium mb-3">Structure simplifiée du POS</p>
-                                <p class="text-sm text-slate-600 leading-relaxed">Configurez les trois éléments clés du système POS de manière indépendante :</p>
+                                <p class="text-sm text-slate-600 leading-relaxed">Configurez les listes métier du POS et de la gestion en un seul endroit :</p>
                                 <ul class="mt-3 space-y-2 text-sm text-slate-600">
                                     <li class="flex items-center gap-2">
                                         <span class="inline-block w-2 h-2 bg-primary-500 rounded-full"></span>
@@ -265,6 +265,14 @@
                                     <li class="flex items-center gap-2">
                                         <span class="inline-block w-2 h-2 bg-emerald-500 rounded-full"></span>
                                         <strong>Modes de paiement</strong> - Méthodes de paiement disponibles (Espèces, Carte, Chèque, etc.)
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="inline-block w-2 h-2 bg-amber-500 rounded-full"></span>
+                                        <strong>Taxes et remises</strong> - Règles commerciales réutilisables dans le POS.
+                                    </li>
+                                    <li class="flex items-center gap-2">
+                                        <span class="inline-block w-2 h-2 bg-rose-500 rounded-full"></span>
+                                        <strong>Dépenses</strong> - Types de charges avec catégorie, nature et récurrence.
                                     </li>
                                 </ul>
                             </div>
@@ -286,12 +294,15 @@
                                 >
                                     <span v-if="tab.id === 'tickets'">🎫 {{ tab.label }}</span>
                                     <span v-else-if="tab.id === 'service_modes'">⚙️ {{ tab.label }}</span>
-                                    <span v-else>💳 {{ tab.label }}</span>
+                                    <span v-else-if="tab.id === 'payment_modes'">💳 {{ tab.label }}</span>
+                                    <span v-else-if="tab.id === 'taxes'">🧾 {{ tab.label }}</span>
+                                    <span v-else-if="tab.id === 'discounts'">🏷️ {{ tab.label }}</span>
+                                    <span v-else>💸 {{ tab.label }}</span>
                                 </button>
                             </div>
                         </div>
 
-                        <div class="p-6 space-y-6">
+                        <div v-if="['tickets', 'service_modes', 'payment_modes', 'taxes', 'discounts', 'expenses'].includes(activeCustomListTab)" class="p-6 space-y-6">
                             <template v-if="activeCustomListTab === 'tickets'">
                                 <div class="rounded-xl border-l-4 border-l-primary-500 border border-slate-200 bg-primary-50 p-4">
                                     <p class="text-sm font-bold text-primary-900">🎫 Tickets prédéfinis globaux</p>
@@ -452,7 +463,10 @@
                                             :key="item.id"
                                             class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center hover:bg-slate-100 transition-colors"
                                         >
-                                            <input v-model.trim="item.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du mode (ex: Sur place)">
+                                            <div class="flex-1 space-y-2">
+                                                <PlatformBadge v-if="item.source === 'platform'" :platform="item.label" size="sm" />
+                                                <input v-model.trim="item.label" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du mode (ex: Sur place)">
+                                            </div>
                                             <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
                                                 <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
                                                 <span class="whitespace-nowrap">Afficher dans le POS</span>
@@ -499,7 +513,7 @@
                                 </div>
                             </template>
 
-                            <template v-else>
+                            <template v-else-if="activeCustomListTab === 'payment_modes'">
                                 <div class="rounded-xl border-l-4 border-l-emerald-500 border border-slate-200 bg-emerald-50 p-4">
                                     <p class="text-sm font-bold text-emerald-900">💳 Modes de paiement visibles dans le POS</p>
                                     <p class="mt-2 text-sm text-emerald-700">Configurez les méthodes de paiement acceptées. Sélectionnez un mode par défaut pour les nouvelles transactions. Exemples : Espèces, Carte bancaire, Chèque, Virement, Bon cadeau.</p>
@@ -614,25 +628,347 @@
                 </div>
 
                 <!-- Taxes -->
-                <div v-show="activeTab === 'taxes'" class="space-y-4">
+                <div v-show="activeTab === 'custom_lists' && activeCustomListTab === 'taxes'" class="space-y-4">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                         <ReceiptPercentIcon class="w-5 h-5 mr-2 text-primary-500" />
                         Taxes
                     </h2>
-                    <div class="space-y-4">
-                        <div class="flex items-center space-x-3">
-                            <input v-model="settings.tax_enabled" type="checkbox" id="tax_enabled" class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500">
-                            <label for="tax_enabled" class="text-sm font-medium text-gray-700">Activer les taxes</label>
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+                        <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <p class="text-base font-bold text-slate-900">Liste des taxes</p>
+                                <p class="text-sm text-slate-500">Créez plusieurs taxes avec type, taux ou montant fixe, statut et taxe par défaut.</p>
+                            </div>
+                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <input v-model="taxSettings.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                Menu actif
+                            </label>
                         </div>
-                        <div v-if="settings.tax_enabled" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la taxe</label>
-                                <input v-model="settings.tax_name" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="TVA">
+
+                        <div v-if="taxSettings.items.length" class="space-y-3">
+                            <div
+                                v-for="tax in taxSettings.items"
+                                :key="tax.id"
+                                class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4"
+                            >
+                                <div class="grid gap-3 lg:grid-cols-4">
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la taxe</label>
+                                        <input v-model.trim="tax.label" type="text" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: TVA">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                        <select v-model="tax.tax_type" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                            <option value="percentage">Pourcentage</option>
+                                            <option value="fixed">Montant fixe</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ tax.tax_type === 'fixed' ? 'Montant' : 'Taux %' }}</label>
+                                        <input v-model.number="tax.tax_rate" type="number" min="0" step="0.01" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input v-model="tax.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                        Active
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input :checked="tax.tax_is_default" type="radio" name="default-tax" class="h-4 w-4 border-slate-300 text-primary-600 focus:ring-primary-500" @change="setDefaultTax(tax.id)">
+                                        Taxe par défaut
+                                    </label>
+                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveTax(tax.id, -1)">↑ Monter</button>
+                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveTax(tax.id, 1)">↓ Descendre</button>
+                                    <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeTax(tax.id)">✕ Supprimer</button>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Taux de taxe (%)</label>
-                                <input v-model.number="settings.tax_rate" type="number" min="0" max="100" step="0.1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        </div>
+                        <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucune taxe configurée.</p>
+
+                        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                            <label class="block text-sm font-semibold text-slate-900 mb-3">➕ Ajouter une taxe</label>
+                            <div class="grid gap-3 lg:grid-cols-4">
+                                <input
+                                    v-model.trim="newTax.label"
+                                    type="text"
+                                    placeholder="Nom de la taxe"
+                                    class="lg:col-span-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    @keydown.enter.prevent="addTax"
+                                >
+                                <select v-model="newTax.tax_type" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <option value="percentage">Pourcentage</option>
+                                    <option value="fixed">Montant fixe</option>
+                                </select>
+                                <input
+                                    v-model.number="newTax.tax_rate"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    :placeholder="newTax.tax_type === 'fixed' ? 'Montant' : 'Taux %'"
+                                    class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    @keydown.enter.prevent="addTax"
+                                >
                             </div>
+                            <div class="mt-4 flex justify-end">
+                                <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors" @click="addTax">
+                                    <PlusIcon class="w-4 h-4" />
+                                    Ajouter
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                            <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetTaxForm">Annuler</button>
+                            <button type="button" class="px-6 py-2.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('taxes')" @click="saveTaxList">
+                                {{ isSavingCustomList('taxes') ? '⏳ Enregistrement...' : '✓ Enregistrer' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Remises -->
+                <div v-show="activeTab === 'custom_lists' && activeCustomListTab === 'discounts'" class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <CurrencyDollarIcon class="w-5 h-5 mr-2 text-primary-500" />
+                        Remises
+                    </h2>
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+                        <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <p class="text-base font-bold text-slate-900">Liste des remises</p>
+                                <p class="text-sm text-slate-500">Créez des remises en pourcentage ou montant fixe avec une limite autorisée.</p>
+                            </div>
+                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <input v-model="discountSettings.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                Menu actif
+                            </label>
+                        </div>
+
+                        <div v-if="discountSettings.items.length" class="space-y-3">
+                            <div
+                                v-for="discount in discountSettings.items"
+                                :key="discount.id"
+                                class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4"
+                            >
+                                <div class="grid gap-3 lg:grid-cols-4">
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la remise</label>
+                                        <input v-model.trim="discount.label" type="text" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Remise fidélité">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                        <select v-model="discount.discount_type" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                            <option value="percentage">Pourcentage</option>
+                                            <option value="fixed">Montant fixe</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Valeur</label>
+                                        <input v-model.number="discount.discount_value" type="number" min="0" step="0.01" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    </div>
+                                </div>
+
+                                <div class="grid gap-3 lg:grid-cols-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Limite autorisée</label>
+                                        <input v-model.number="discount.discount_limit" type="number" min="0" step="0.01" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    </div>
+                                    <div class="lg:col-span-3 flex flex-wrap items-end gap-3">
+                                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                                            <input v-model="discount.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                            Active
+                                        </label>
+                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveDiscount(discount.id, -1)">↑ Monter</button>
+                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveDiscount(discount.id, 1)">↓ Descendre</button>
+                                        <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeDiscount(discount.id)">✕ Supprimer</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucune remise configurée.</p>
+
+                        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                            <label class="block text-sm font-semibold text-slate-900 mb-3">➕ Ajouter une remise</label>
+                            <div class="grid gap-3 lg:grid-cols-4">
+                                <input
+                                    v-model.trim="newDiscount.label"
+                                    type="text"
+                                    placeholder="Nom de la remise"
+                                    class="lg:col-span-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    @keydown.enter.prevent="addDiscount"
+                                >
+                                <select v-model="newDiscount.discount_type" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <option value="percentage">Pourcentage</option>
+                                    <option value="fixed">Montant fixe</option>
+                                </select>
+                                <input
+                                    v-model.number="newDiscount.discount_value"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="Valeur"
+                                    class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    @keydown.enter.prevent="addDiscount"
+                                >
+                            </div>
+                            <div class="mt-3 grid gap-3 lg:grid-cols-4">
+                                <input
+                                    v-model.number="newDiscount.discount_limit"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="Limite autorisée"
+                                    class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    @keydown.enter.prevent="addDiscount"
+                                >
+                                <div class="lg:col-span-3 flex items-center">
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input v-model="newDiscount.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                        Active
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-end">
+                                <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors" @click="addDiscount">
+                                    <PlusIcon class="w-4 h-4" />
+                                    Ajouter
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                            <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetDiscountForm">Annuler</button>
+                            <button type="button" class="px-6 py-2.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('discounts')" @click="saveDiscountList">
+                                {{ isSavingCustomList('discounts') ? '⏳ Enregistrement...' : '✓ Enregistrer' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dépenses -->
+                <div v-show="activeTab === 'custom_lists' && activeCustomListTab === 'expenses'" class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <BanknotesIcon class="w-5 h-5 mr-2 text-primary-500" />
+                        Dépenses
+                    </h2>
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+                        <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <p class="text-base font-bold text-slate-900">Liste des dépenses</p>
+                                <p class="text-sm text-slate-500">Créez des modèles de dépenses avec catégorie, nature et récurrence.</p>
+                            </div>
+                            <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                <input v-model="expenseSettings.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                Menu actif
+                            </label>
+                        </div>
+
+                        <div v-if="expenseSettings.items.length" class="space-y-3">
+                            <div
+                                v-for="expense in expenseSettings.items"
+                                :key="expense.id"
+                                class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4"
+                            >
+                                <div class="grid gap-3 lg:grid-cols-4">
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom dépense</label>
+                                        <input v-model.trim="expense.label" type="text" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Loyer local">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Catégorie dépense</label>
+                                        <input v-model.trim="expense.expense_category" type="text" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Charges fixes">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                                        <select v-model="expense.expense_type" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                            <option value="fixed">Fixe</option>
+                                            <option value="variable">Variable</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid gap-3 lg:grid-cols-4">
+                                    <label class="flex items-center gap-2 text-sm text-slate-700 lg:col-span-1">
+                                        <input v-model="expense.expense_is_recurring" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                        Récurrente
+                                    </label>
+                                    <div class="lg:col-span-1">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Fréquence</label>
+                                        <select v-model="expense.expense_frequency" :disabled="!expense.expense_is_recurring" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-slate-100 disabled:text-slate-400">
+                                            <option value="monthly">Mensuelle</option>
+                                            <option value="quarterly">Trimestrielle</option>
+                                            <option value="semiannual">Semestrielle</option>
+                                            <option value="annual">Annuelle</option>
+                                        </select>
+                                    </div>
+                                    <div class="lg:col-span-2 flex flex-wrap items-end gap-3">
+                                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                                            <input v-model="expense.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                            Active
+                                        </label>
+                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveExpense(expense.id, -1)">↑ Monter</button>
+                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveExpense(expense.id, 1)">↓ Descendre</button>
+                                        <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeExpense(expense.id)">✕ Supprimer</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucune dépense configurée.</p>
+
+                        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                            <label class="block text-sm font-semibold text-slate-900 mb-3">➕ Ajouter une dépense</label>
+                            <div class="grid gap-3 lg:grid-cols-4">
+                                <input
+                                    v-model.trim="newExpense.label"
+                                    type="text"
+                                    placeholder="Nom dépense"
+                                    class="lg:col-span-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    @keydown.enter.prevent="addExpense"
+                                >
+                                <input
+                                    v-model.trim="newExpense.expense_category"
+                                    type="text"
+                                    placeholder="Catégorie dépense"
+                                    class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    @keydown.enter.prevent="addExpense"
+                                >
+                                <select v-model="newExpense.expense_type" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <option value="fixed">Fixe</option>
+                                    <option value="variable">Variable</option>
+                                </select>
+                            </div>
+                            <div class="mt-3 grid gap-3 lg:grid-cols-4">
+                                <label class="flex items-center gap-2 text-sm text-slate-700">
+                                    <input v-model="newExpense.expense_is_recurring" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                    Récurrente
+                                </label>
+                                <select v-model="newExpense.expense_frequency" :disabled="!newExpense.expense_is_recurring" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-slate-100 disabled:text-slate-400">
+                                    <option value="monthly">Mensuelle</option>
+                                    <option value="quarterly">Trimestrielle</option>
+                                    <option value="semiannual">Semestrielle</option>
+                                    <option value="annual">Annuelle</option>
+                                </select>
+                                <div class="lg:col-span-2 flex items-center">
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input v-model="newExpense.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                        Active
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-end">
+                                <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors" @click="addExpense">
+                                    <PlusIcon class="w-4 h-4" />
+                                    Ajouter
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                            <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetExpenseForm">Annuler</button>
+                            <button type="button" class="px-6 py-2.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('expenses')" @click="saveExpenseList">
+                                {{ isSavingCustomList('expenses') ? '⏳ Enregistrement...' : '✓ Enregistrer' }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -751,6 +1087,7 @@ import { customListsApi, settingsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 import { useCustomListsStore } from '../../stores/customLists'
 import AutomationRules from './AutomationRules.vue'
+import PlatformBadge from '../../components/common/PlatformBadge.vue'
 import {
     BuildingStorefrontIcon,
     PlusIcon,
@@ -775,6 +1112,9 @@ const newServiceModeLabel = ref('')
 const newPredefinedTicketLabel = ref('')
 const newPredefinedGroupLabel = ref('')
 const newPaymentMode = reactive(createPaymentModeDraft())
+const newTax = reactive(createTaxDraft())
+const newDiscount = reactive(createDiscountDraft())
+const newExpense = reactive(createExpenseDraft())
 const paymentFieldOptions = [
     { key: 'show_transaction_number', label: 'N° Transaction' },
     { key: 'show_piece_number', label: 'N° pièce' },
@@ -791,7 +1131,6 @@ const tabs = [
     { id: 'receipt', label: 'Format du Reçu' },
     { id: 'pos', label: 'POS' },
     { id: 'custom_lists', label: 'Listes personnalisées' },
-    { id: 'taxes', label: 'Taxes' },
     { id: 'commissions', label: 'Commissions' },
     { id: 'subscription', label: 'Abonnement' },
     { id: 'automation', label: 'Automatisation' },
@@ -801,6 +1140,9 @@ const customListTabs = [
     { id: 'tickets', label: 'Tickets prédéfinis' },
     { id: 'service_modes', label: 'Mode de service' },
     { id: 'payment_modes', label: 'Mode de paiement' },
+    { id: 'taxes', label: 'Taxes' },
+    { id: 'discounts', label: 'Remises' },
+    { id: 'expenses', label: 'Dépenses' },
 ]
 
 const settings = reactive({
@@ -865,6 +1207,18 @@ const serviceModeSettings = reactive({
     items: [],
 })
 const paymentModeSettings = reactive({
+    is_active: true,
+    items: [],
+})
+const taxSettings = reactive({
+    is_active: true,
+    items: [],
+})
+const discountSettings = reactive({
+    is_active: true,
+    items: [],
+})
+const expenseSettings = reactive({
     is_active: true,
     items: [],
 })
@@ -1003,6 +1357,56 @@ function normalizePaymentModeItems(items) {
         .sort((a, b) => a.sort_order - b.sort_order)
 }
 
+function normalizeTaxItems(items) {
+    return [...items]
+        .map((item, index) => ({
+            id: item.id ?? createDraftId('tax'),
+            label: item.label || item.value || '',
+            value: item.value || item.label || '',
+            is_active: item.is_active !== false,
+            sort_order: Number(item.sort_order ?? index + 1),
+            tax_type: item.tax_type === 'fixed' ? 'fixed' : 'percentage',
+            tax_rate: Number(item.tax_rate ?? 0),
+            tax_is_default: item.tax_is_default === true,
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+function normalizeDiscountItems(items) {
+    return [...items]
+        .map((item, index) => ({
+            id: item.id ?? createDraftId('discount'),
+            label: item.label || item.value || '',
+            value: item.value || item.label || '',
+            is_active: item.is_active !== false,
+            sort_order: Number(item.sort_order ?? index + 1),
+            discount_type: item.discount_type === 'fixed' ? 'fixed' : 'percentage',
+            discount_value: Number(item.discount_value ?? 0),
+            discount_limit: Number(item.discount_limit ?? 0),
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+function normalizeExpenseItems(items) {
+    return [...items]
+        .map((item, index) => {
+            const isRecurring = item.expense_is_recurring === true
+
+            return {
+                id: item.id ?? createDraftId('expense'),
+                label: item.label || item.value || '',
+                value: item.value || item.label || '',
+                is_active: item.is_active !== false,
+                sort_order: Number(item.sort_order ?? index + 1),
+                expense_category: item.expense_category || '',
+                expense_type: item.expense_type === 'variable' ? 'variable' : 'fixed',
+                expense_is_recurring: isRecurring,
+                expense_frequency: isRecurring ? (item.expense_frequency || 'monthly') : null,
+            }
+        })
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
 function hydratePredefinedTicketForm(list) {
     predefinedTicketSettings.is_active = list?.is_active !== false
     predefinedTicketSettings.items = normalizePredefinedTicketItems(list?.items || [])
@@ -1022,16 +1426,41 @@ function hydratePaymentModeForm(list) {
     }
 }
 
+function hydrateTaxForm(list) {
+    taxSettings.is_active = list?.is_active !== false
+    taxSettings.items = normalizeTaxItems(list?.items || [])
+
+    if (!taxSettings.items.some((item) => item.tax_is_default) && taxSettings.items.length > 0) {
+        taxSettings.items[0].tax_is_default = true
+    }
+}
+
+function hydrateDiscountForm(list) {
+    discountSettings.is_active = list?.is_active !== false
+    discountSettings.items = normalizeDiscountItems(list?.items || [])
+}
+
+function hydrateExpenseForm(list) {
+    expenseSettings.is_active = list?.is_active !== false
+    expenseSettings.items = normalizeExpenseItems(list?.items || [])
+}
+
 async function loadCustomLists() {
-    const [ticketsList, serviceModesList, paymentModesList] = await Promise.all([
+    const [ticketsList, serviceModesList, paymentModesList, taxesList, discountsList, expensesList] = await Promise.all([
         customListsStore.fetchList('tickets_predefinis', { force: true }),
         customListsStore.fetchList('mode_de_service', { force: true }),
         customListsStore.fetchList('mode_de_paiement', { force: true }),
+        customListsStore.fetchList('taxes', { force: true }),
+        customListsStore.fetchList('remises', { force: true }),
+        customListsStore.fetchList('depenses', { force: true }),
     ])
 
     hydratePredefinedTicketForm(ticketsList)
     hydrateServiceModeForm(serviceModesList)
     hydratePaymentModeForm(paymentModesList)
+    hydrateTaxForm(taxesList)
+    hydrateDiscountForm(discountsList)
+    hydrateExpenseForm(expensesList)
 }
 
 function inferServiceModeMeta(label) {
@@ -1100,8 +1529,50 @@ function createPaymentModeDraft() {
     }
 }
 
+function createTaxDraft() {
+    return {
+        label: '',
+        tax_type: 'percentage',
+        tax_rate: 0,
+        is_active: true,
+    }
+}
+
+function createDiscountDraft() {
+    return {
+        label: '',
+        discount_type: 'percentage',
+        discount_value: 0,
+        discount_limit: 0,
+        is_active: true,
+    }
+}
+
+function createExpenseDraft() {
+    return {
+        label: '',
+        expense_category: '',
+        expense_type: 'fixed',
+        expense_is_recurring: false,
+        expense_frequency: 'monthly',
+        is_active: true,
+    }
+}
+
 function resetPaymentModeDraft() {
     Object.assign(newPaymentMode, createPaymentModeDraft())
+}
+
+function resetTaxDraft() {
+    Object.assign(newTax, createTaxDraft())
+}
+
+function resetDiscountDraft() {
+    Object.assign(newDiscount, createDiscountDraft())
+}
+
+function resetExpenseDraft() {
+    Object.assign(newExpense, createExpenseDraft())
 }
 
 function isSavingCustomList(tabId) {
@@ -1315,6 +1786,137 @@ function setDefaultPaymentMode(modeId) {
     }))
 }
 
+function addTax() {
+    const label = newTax.label.trim()
+    if (!label) return
+
+    const exists = taxSettings.items.some((item) => item.label.trim().toLowerCase() === label.toLowerCase())
+    if (exists) {
+        alert('Cette taxe existe déjà.')
+        return
+    }
+
+    taxSettings.items = reindexEntries([
+        ...taxSettings.items,
+        {
+            id: createDraftId('tax'),
+            label,
+            value: label,
+            is_active: newTax.is_active !== false,
+            sort_order: 0,
+            tax_type: newTax.tax_type === 'fixed' ? 'fixed' : 'percentage',
+            tax_rate: Number(newTax.tax_rate || 0),
+            tax_is_default: taxSettings.items.length === 0,
+        },
+    ])
+    resetTaxDraft()
+}
+
+function removeTax(taxId) {
+    taxSettings.items = reindexEntries(
+        taxSettings.items.filter((item) => String(item.id) !== String(taxId))
+    )
+
+    if (!taxSettings.items.some((item) => item.tax_is_default) && taxSettings.items.length > 0) {
+        taxSettings.items[0].tax_is_default = true
+    }
+}
+
+function moveTax(taxId, direction) {
+    const sourceIndex = taxSettings.items.findIndex((item) => String(item.id) === String(taxId))
+    taxSettings.items = reindexEntries(
+        moveInArray(taxSettings.items, sourceIndex, sourceIndex + direction)
+    )
+}
+
+function setDefaultTax(taxId) {
+    taxSettings.items = taxSettings.items.map((item) => ({
+        ...item,
+        tax_is_default: String(item.id) === String(taxId),
+    }))
+}
+
+function addDiscount() {
+    const label = newDiscount.label.trim()
+    if (!label) return
+
+    const exists = discountSettings.items.some((item) => item.label.trim().toLowerCase() === label.toLowerCase())
+    if (exists) {
+        alert('Cette remise existe déjà.')
+        return
+    }
+
+    discountSettings.items = reindexEntries([
+        ...discountSettings.items,
+        {
+            id: createDraftId('discount'),
+            label,
+            value: label,
+            is_active: newDiscount.is_active !== false,
+            sort_order: 0,
+            discount_type: newDiscount.discount_type === 'fixed' ? 'fixed' : 'percentage',
+            discount_value: Number(newDiscount.discount_value || 0),
+            discount_limit: Number(newDiscount.discount_limit || 0),
+        },
+    ])
+    resetDiscountDraft()
+}
+
+function removeDiscount(discountId) {
+    discountSettings.items = reindexEntries(
+        discountSettings.items.filter((item) => String(item.id) !== String(discountId))
+    )
+}
+
+function moveDiscount(discountId, direction) {
+    const sourceIndex = discountSettings.items.findIndex((item) => String(item.id) === String(discountId))
+    discountSettings.items = reindexEntries(
+        moveInArray(discountSettings.items, sourceIndex, sourceIndex + direction)
+    )
+}
+
+function addExpense() {
+    const label = newExpense.label.trim()
+    if (!label) return
+
+    const exists = expenseSettings.items.some((item) => item.label.trim().toLowerCase() === label.toLowerCase())
+    if (exists) {
+        alert('Cette dépense existe déjà.')
+        return
+    }
+
+    expenseSettings.items = reindexEntries([
+        ...expenseSettings.items,
+        {
+            id: createDraftId('expense'),
+            label,
+            value: label,
+            is_active: newExpense.is_active !== false,
+            sort_order: 0,
+            expense_category: newExpense.expense_category.trim(),
+            expense_type: newExpense.expense_type === 'variable' ? 'variable' : 'fixed',
+            expense_is_recurring: newExpense.expense_is_recurring === true,
+            expense_frequency: newExpense.expense_is_recurring === true
+                ? newExpense.expense_frequency
+                : null,
+        },
+    ])
+    resetExpenseDraft()
+}
+
+function removeExpense(expenseId) {
+    expenseSettings.items = reindexEntries(
+        expenseSettings.items.filter((item) => String(item.id) !== String(expenseId))
+    )
+}
+
+function moveExpense(expenseId, direction) {
+    const sourceIndex = expenseSettings.items.findIndex((item) => String(item.id) === String(expenseId))
+    expenseSettings.items = reindexEntries(
+        moveInArray(expenseSettings.items, sourceIndex, sourceIndex + direction)
+    )
+}
+
 function canDeleteServiceMode(item) {
     return item?.is_system !== true
 }
@@ -1337,6 +1939,21 @@ function resetServiceModeForm() {
 function resetPaymentModeForm() {
     resetPaymentModeDraft()
     customListsStore.fetchList('mode_de_paiement', { force: true }).then(hydratePaymentModeForm)
+}
+
+function resetTaxForm() {
+    resetTaxDraft()
+    customListsStore.fetchList('taxes', { force: true }).then(hydrateTaxForm)
+}
+
+function resetDiscountForm() {
+    resetDiscountDraft()
+    customListsStore.fetchList('remises', { force: true }).then(hydrateDiscountForm)
+}
+
+function resetExpenseForm() {
+    resetExpenseDraft()
+    customListsStore.fetchList('depenses', { force: true }).then(hydrateExpenseForm)
 }
 
 function resetSettings() {
@@ -1513,6 +2130,103 @@ async function savePaymentModeList() {
         payload,
         hydratePaymentModeForm,
         'Modes de paiement enregistrés avec succès!'
+    )
+}
+
+async function saveTaxList() {
+    const filteredItems = taxSettings.items.filter((item) => item.label.trim() !== '')
+
+    if (filteredItems.length > 0 && !filteredItems.some((item) => item.tax_is_default)) {
+        filteredItems[0].tax_is_default = true
+    }
+
+    const payload = {
+        is_active: taxSettings.is_active !== false,
+        items: filteredItems.map((item, index) => {
+            const itemId = Number(item.id)
+
+            return {
+                id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
+                label: item.label.trim(),
+                value: item.label.trim(),
+                is_active: item.is_active !== false,
+                sort_order: index + 1,
+                tax_type: item.tax_type === 'fixed' ? 'fixed' : 'percentage',
+                tax_rate: Number(item.tax_rate || 0),
+                tax_is_default: item.tax_is_default === true,
+            }
+        }),
+    }
+
+    await saveCustomList(
+        'taxes',
+        'taxes',
+        payload,
+        hydrateTaxForm,
+        'Taxes enregistrées avec succès!'
+    )
+}
+
+async function saveDiscountList() {
+    const payload = {
+        is_active: discountSettings.is_active !== false,
+        items: discountSettings.items
+            .filter((item) => item.label.trim() !== '')
+            .map((item, index) => {
+                const itemId = Number(item.id)
+
+                return {
+                    id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
+                    label: item.label.trim(),
+                    value: item.label.trim(),
+                    is_active: item.is_active !== false,
+                    sort_order: index + 1,
+                    discount_type: item.discount_type === 'fixed' ? 'fixed' : 'percentage',
+                    discount_value: Number(item.discount_value || 0),
+                    discount_limit: Number(item.discount_limit || 0),
+                }
+            }),
+    }
+
+    await saveCustomList(
+        'discounts',
+        'remises',
+        payload,
+        hydrateDiscountForm,
+        'Remises enregistrées avec succès!'
+    )
+}
+
+async function saveExpenseList() {
+    const payload = {
+        is_active: expenseSettings.is_active !== false,
+        items: expenseSettings.items
+            .filter((item) => item.label.trim() !== '')
+            .map((item, index) => {
+                const itemId = Number(item.id)
+
+                return {
+                    id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
+                    label: item.label.trim(),
+                    value: item.label.trim(),
+                    is_active: item.is_active !== false,
+                    sort_order: index + 1,
+                    expense_category: item.expense_category.trim(),
+                    expense_type: item.expense_type === 'variable' ? 'variable' : 'fixed',
+                    expense_is_recurring: item.expense_is_recurring === true,
+                    expense_frequency: item.expense_is_recurring === true
+                        ? item.expense_frequency || 'monthly'
+                        : null,
+                }
+            }),
+    }
+
+    await saveCustomList(
+        'expenses',
+        'depenses',
+        payload,
+        hydrateExpenseForm,
+        'Dépenses enregistrées avec succès!'
     )
 }
 

@@ -1,15 +1,15 @@
 <template>
     <div class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex min-h-screen items-center justify-center px-4 py-6">
+        <div class="flex min-h-screen items-center justify-center px-2 py-4 sm:px-3 sm:py-5 lg:px-4 lg:py-6">
             <div class="fixed inset-0 bg-slate-900/45 backdrop-blur-[2px]" @click="$emit('close')"></div>
 
-            <div class="relative z-10 w-full max-w-3xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
-                <div class="border-b border-slate-100 px-6 py-4">
+            <div class="relative z-10 w-full max-w-6xl overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-2xl sm:rounded-[20px] lg:rounded-[24px]">
+                <div class="border-b border-slate-100 px-3 py-3 sm:px-4 sm:py-3.5 lg:px-5">
                     <div class="relative flex items-center justify-center">
-                        <h2 class="text-2xl font-semibold text-slate-900">Enregistrer</h2>
+                        <h2 class="text-xl font-semibold text-slate-900 sm:text-2xl">Enregistrer</h2>
                         <button
                             type="button"
-                            class="absolute right-0 inline-flex h-10 w-10 items-center justify-center rounded-full text-3xl leading-none text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                            class="absolute right-0 inline-flex h-8 w-8 items-center justify-center rounded-full text-2xl leading-none text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 sm:h-9 sm:w-9 sm:text-3xl"
                             @click="$emit('close')"
                         >
                             <span aria-hidden="true">&times;</span>
@@ -17,8 +17,8 @@
                     </div>
                 </div>
 
-                <div class="px-6 pt-4">
-                    <div class="grid gap-3 rounded-[24px] bg-slate-50 px-4 py-3 text-sm text-slate-600 sm:grid-cols-3">
+                <div class="px-3 pt-2.5 sm:px-4 sm:pt-3 lg:px-5">
+                    <div class="grid gap-1.5 rounded-[16px] bg-slate-50 px-2.5 py-2 text-[11px] text-slate-600 sm:grid-cols-3 sm:gap-2 sm:px-3 sm:py-2.5 sm:text-xs">
                         <div>
                             <span class="font-semibold text-slate-800">Client:</span>
                             {{ defaultCustomerName || 'Client anonyme' }}
@@ -34,13 +34,13 @@
                     </div>
                 </div>
 
-                <div class="px-6 pb-6 pt-4">
-                    <div class="flex flex-col gap-1 rounded-[22px] bg-slate-100 p-1 sm:flex-row">
+                <div class="px-3 pb-3 pt-2.5 sm:px-4 sm:pb-4 sm:pt-3 lg:px-5 lg:pb-5">
+                    <div class="flex flex-col gap-1 rounded-[14px] bg-slate-100 p-1 sm:flex-row sm:rounded-[16px]">
                         <button
                             v-for="tab in tabs"
                             :key="tab.value"
                             type="button"
-                            class="w-full rounded-[18px] px-4 py-2.5 text-sm font-semibold transition sm:w-auto sm:min-w-[180px]"
+                            class="w-full rounded-[10px] px-2 py-1 text-[10px] font-semibold transition sm:min-w-[96px] sm:px-2.5 sm:py-1.5 sm:text-[10px] md:min-w-[104px] lg:min-w-[118px] lg:rounded-[12px] lg:px-3 lg:py-1.5 lg:text-[11px]"
                             :class="activeTab === tab.value ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white/70'"
                             @click="activeTab = tab.value"
                         >
@@ -48,9 +48,9 @@
                         </button>
                     </div>
 
-                    <section class="mt-5 min-h-[460px]">
-                        <div v-if="activeTab === 'liste'" class="space-y-5">
-                            <div class="flex items-center justify-between gap-3 rounded-[20px] bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    <section class="mt-3 min-h-[380px] sm:min-h-[400px] lg:mt-4 lg:min-h-[420px]">
+                        <div v-if="activeTab === 'liste'" class="space-y-4">
+                            <div class="flex items-center justify-between gap-2 rounded-[14px] bg-slate-50 px-2.5 py-2 text-[11px] text-slate-600 sm:gap-3 sm:px-3 sm:py-2.5 sm:text-xs">
                                 <p>
                                     {{ canSaveCurrentCart ? 'Choisissez un ticket prédéfini pour enregistrer le ticket actuel.' : 'Ajoutez des articles au ticket avant de choisir un emplacement.' }}
                                 </p>
@@ -64,13 +64,13 @@
                                 </button>
                             </div>
 
-                            <div v-if="ungroupedBoardTickets.length" class="space-y-3">
-                                <h3 class="text-xl font-semibold text-slate-700">Sans groupe</h3>
-                                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <div v-if="ungroupedBoardTickets.length" class="space-y-2">
+                                <h3 class="text-base font-semibold text-slate-700 sm:text-lg">Sans groupe</h3>
+                                <div class="grid grid-cols-4 gap-1 sm:gap-1.5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
                                     <div
                                         v-for="ticket in ungroupedBoardTickets"
                                         :key="ticket.key"
-                                        class="relative rounded-[18px] border border-slate-200 bg-white p-3 shadow-sm transition"
+                                        class="relative rounded-[9px] border border-slate-200 bg-white p-1.5 shadow-sm transition sm:rounded-[10px] sm:p-1.5 md:rounded-[11px] md:p-2"
                                         :class="ticket.ticket ? 'border-amber-300 bg-amber-50/40' : 'hover:border-slate-300 hover:shadow-md'"
                                     >
                                         <button
@@ -79,19 +79,19 @@
                                             :disabled="isBoardTicketDisabled(ticket)"
                                             @click="handleBoardTicketClick(ticket)"
                                         >
-                                            <div class="flex items-start justify-between gap-3">
+                                            <div class="flex items-start justify-between gap-1">
                                                 <div class="min-w-0">
-                                                    <p class="truncate text-lg font-medium text-slate-700">{{ ticket.name }}</p>
-                                                    <p class="mt-1 text-xs font-medium text-slate-500">{{ getBoardTicketCaption(ticket) }}</p>
+                                                    <p class="truncate text-[9px] font-semibold leading-tight text-slate-700 sm:text-[10px] md:text-[11px]">{{ ticket.name }}</p>
+                                                    <p class="mt-0.5 text-[7px] font-medium leading-tight text-slate-500 sm:text-[8px] md:text-[9px]">{{ getBoardTicketCaption(ticket) }}</p>
                                                 </div>
                                                 <span
-                                                    class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
+                                                    class="shrink-0 rounded-full px-1 py-0.5 text-[7px] font-semibold uppercase tracking-[0.08em] sm:text-[8px]"
                                                     :class="getBoardTicketBadgeClass(ticket)"
                                                 >
                                                     {{ getBoardTicketBadgeLabel(ticket) }}
                                                 </span>
                                             </div>
-                                            <div v-if="ticket.ticket" class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+                                            <div v-if="ticket.ticket" class="mt-1 flex items-center justify-between gap-1 text-[7px] text-slate-500 sm:text-[8px] md:text-[9px]">
                                                 <span class="truncate">{{ ticket.ticket.customer?.name || 'Client anonyme' }}</span>
                                                 <span class="shrink-0 font-semibold text-amber-700">{{ formatCurrency(ticket.ticket.total || 0) }}</span>
                                             </div>
@@ -100,9 +100,9 @@
                                 </div>
                             </div>
 
-                            <div v-if="groupedBoardGroups.length" class="space-y-3">
+                            <div v-if="groupedBoardGroups.length" class="space-y-2">
                                 <div class="flex items-center justify-between gap-3">
-                                    <h3 class="text-xl font-semibold text-slate-700">
+                                    <h3 class="text-base font-semibold text-slate-700 sm:text-lg">
                                         {{ selectedBoardGroup ? `Tables · ${selectedBoardGroup}` : 'Groupes' }}
                                     </h3>
                                     <button
@@ -115,33 +115,33 @@
                                     </button>
                                 </div>
 
-                                <div v-if="!selectedBoardGroup" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                <div v-if="!selectedBoardGroup" class="grid grid-cols-4 gap-1 sm:gap-1.5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
                                     <button
                                         v-for="group in groupedBoardGroups"
                                         :key="group.group"
                                         type="button"
-                                        class="rounded-[18px] bg-gradient-to-b from-blue-500 to-blue-600 p-4 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                        class="rounded-[9px] bg-gradient-to-b from-blue-500 to-blue-600 px-1.5 py-1.5 text-left text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-[10px] sm:px-1.5 sm:py-1.5 md:rounded-[11px] md:px-2 md:py-2"
                                         @click="selectedBoardGroup = group.group"
                                     >
-                                        <div class="flex items-start justify-between gap-3">
+                                        <div class="flex items-start justify-between gap-1">
                                             <div class="min-w-0">
-                                                <p class="truncate text-lg font-semibold">{{ group.group }}</p>
-                                                <p class="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
+                                                <p class="truncate text-[9px] font-semibold leading-tight sm:text-[10px] md:text-[11px]">{{ group.group }}</p>
+                                                <p class="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.08em] leading-tight text-blue-100 sm:text-[8px] md:text-[9px]">
                                                     {{ group.availableCount }} table{{ group.availableCount > 1 ? 's' : '' }} disponible{{ group.availableCount > 1 ? 's' : '' }}
                                                 </p>
                                             </div>
-                                            <span class="shrink-0 rounded-full bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-50">
+                                            <span class="shrink-0 rounded-full bg-white/15 px-1 py-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] text-blue-50 sm:text-[8px]">
                                                 Ouvrir
                                             </span>
                                         </div>
                                     </button>
                                 </div>
 
-                                <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                <div v-else class="grid grid-cols-4 gap-1 sm:gap-1.5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
                                     <div
                                         v-for="ticket in selectedGroupedBoardTickets"
                                         :key="ticket.key"
-                                        class="relative rounded-[18px] bg-gradient-to-b from-blue-500 to-blue-600 p-3 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                                        class="relative rounded-[9px] bg-gradient-to-b from-blue-500 to-blue-600 p-1.5 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-[10px] sm:p-1.5 md:rounded-[11px] md:p-2"
                                     >
                                         <button
                                             type="button"
@@ -149,21 +149,21 @@
                                             :disabled="isBoardTicketDisabled(ticket)"
                                             @click="handleBoardTicketClick(ticket)"
                                         >
-                                            <div class="flex items-start justify-between gap-3">
+                                            <div class="flex items-start justify-between gap-1">
                                                 <div class="min-w-0">
-                                                    <p class="truncate text-lg font-semibold">{{ ticket.name }}</p>
-                                                    <p class="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100">
+                                                    <p class="truncate text-[9px] font-semibold leading-tight sm:text-[10px] md:text-[11px]">{{ ticket.name }}</p>
+                                                    <p class="mt-0.5 text-[7px] font-semibold uppercase tracking-[0.08em] leading-tight text-blue-100 sm:text-[8px] md:text-[9px]">
                                                         {{ ticket.group }}
                                                     </p>
                                                 </div>
                                                 <span
-                                                    class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
+                                                    class="shrink-0 rounded-full px-1 py-0.5 text-[7px] font-semibold uppercase tracking-[0.06em] sm:text-[8px]"
                                                     :class="ticket.ticket ? 'bg-amber-100 text-amber-700' : 'bg-white/15 text-blue-50'"
                                                 >
                                                     {{ getBoardTicketBadgeLabel(ticket) }}
                                                 </span>
                                             </div>
-                                            <div v-if="ticket.ticket" class="mt-3 flex items-center justify-between gap-3 text-xs text-blue-100">
+                                            <div v-if="ticket.ticket" class="mt-1 flex items-center justify-between gap-1 text-[7px] text-blue-100 sm:text-[8px] md:text-[9px]">
                                                 <span class="truncate">{{ ticket.ticket.customer?.name || 'Client anonyme' }}</span>
                                                 <span class="shrink-0 font-semibold text-amber-100">{{ formatCurrency(ticket.ticket.total || 0) }}</span>
                                             </div>

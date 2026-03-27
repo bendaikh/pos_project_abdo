@@ -56,6 +56,16 @@ class CustomListController extends Controller
             'items.*.show_due_date' => 'nullable|boolean',
             'items.*.show_bank_name' => 'nullable|boolean',
             'items.*.show_notes' => 'nullable|boolean',
+            'items.*.tax_type' => 'nullable|in:percentage,fixed',
+            'items.*.tax_rate' => 'nullable|numeric|min:0',
+            'items.*.tax_is_default' => 'nullable|boolean',
+            'items.*.discount_type' => 'nullable|in:percentage,fixed',
+            'items.*.discount_value' => 'nullable|numeric|min:0',
+            'items.*.discount_limit' => 'nullable|numeric|min:0',
+            'items.*.expense_category' => 'nullable|string|max:255',
+            'items.*.expense_type' => 'nullable|in:fixed,variable',
+            'items.*.expense_is_recurring' => 'nullable|boolean',
+            'items.*.expense_frequency' => 'nullable|in:monthly,quarterly,semiannual,annual',
         ]);
 
         $labels = collect($validated['items'])
@@ -95,6 +105,54 @@ class CustomListController extends Controller
                 throw ValidationException::withMessages([
                     'items' => 'Un seul mode de paiement peut être défini par défaut.',
                 ]);
+            }
+        }
+
+        if ($name === CustomListService::TAX_LIST) {
+            $defaultCount = collect($validated['items'])
+                ->filter(fn (array $item) => (bool) ($item['tax_is_default'] ?? false))
+                ->count();
+
+            if ($defaultCount > 1) {
+                throw ValidationException::withMessages([
+                    'items' => 'Une seule taxe peut être définie par défaut.',
+                ]);
+            }
+
+            foreach ($validated['items'] as $index => $item) {
+                if (($item['tax_type'] ?? 'percentage') === 'percentage' && (float) ($item['tax_rate'] ?? 0) > 100) {
+                    throw ValidationException::withMessages([
+                        "items.$index.tax_rate" => 'Le taux de taxe en pourcentage doit être inférieur ou égal à 100.',
+                    ]);
+                }
+            }
+        }
+
+        if ($name === CustomListService::DISCOUNT_LIST) {
+            foreach ($validated['items'] as $index => $item) {
+                if (($item['discount_type'] ?? 'percentage') === 'percentage') {
+                    if ((float) ($item['discount_value'] ?? 0) > 100) {
+                        throw ValidationException::withMessages([
+                            "items.$index.discount_value" => 'La valeur de remise en pourcentage doit être inférieure ou égale à 100.',
+                        ]);
+                    }
+
+                    if ((float) ($item['discount_limit'] ?? 0) > 100) {
+                        throw ValidationException::withMessages([
+                            "items.$index.discount_limit" => 'La limite de remise en pourcentage doit être inférieure ou égale à 100.',
+                        ]);
+                    }
+                }
+            }
+        }
+
+        if ($name === CustomListService::EXPENSE_LIST) {
+            foreach ($validated['items'] as $index => $item) {
+                if (($item['expense_is_recurring'] ?? false) && empty($item['expense_frequency'])) {
+                    throw ValidationException::withMessages([
+                        "items.$index.expense_frequency" => 'La fréquence est obligatoire pour une dépense récurrente.',
+                    ]);
+                }
             }
         }
 

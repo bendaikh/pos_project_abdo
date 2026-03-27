@@ -92,7 +92,10 @@
                             <td class="px-4 py-3">
                                 <div>
                                     <p class="font-semibold text-gray-900">{{ agent.name }}</p>
-                                    <p class="text-xs text-gray-500">{{ agent.type === 'platform' ? (agent.platform_name || 'Plateforme') : 'Livreur interne' }}</p>
+                                    <div v-if="agent.type === 'platform'" class="mt-1">
+                                        <PlatformBadge :platform="agent.platform_name" size="sm" />
+                                    </div>
+                                    <p v-else class="text-xs text-gray-500">Livreur interne</p>
                                 </div>
                             </td>
                             <td class="px-4 py-3">
@@ -107,7 +110,10 @@
                                     {{ agent.status === 'active' ? 'Actif' : 'Inactif' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ agent.platform_name || '-' }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                <PlatformBadge v-if="agent.platform_name" :platform="agent.platform_name" />
+                                <span v-else>-</span>
+                            </td>
                             <td class="px-4 py-3">
                                 <span :class="agent.active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'" class="px-2.5 py-1 rounded-full text-xs font-semibold">
                                     {{ agent.active ? 'Oui' : 'Non' }}
@@ -126,6 +132,13 @@
                                         @click="deactivateAgent(agent)"
                                     >
                                         Désactiver
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="px-3 py-1.5 text-xs rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
+                                        @click="deleteAgent(agent)"
+                                    >
+                                        Supprimer
                                     </button>
                                 </div>
                             </td>
@@ -170,7 +183,10 @@
                         <tr v-for="row in reportRows" :key="row.delivery_agent_id" class="hover:bg-gray-50">
                             <td class="px-4 py-3">
                                 <p class="font-semibold text-gray-900">{{ row.display_name }}</p>
-                                <p class="text-xs text-gray-500">{{ row.type === 'platform' ? 'Plateforme' : 'Interne' }}</p>
+                                <div v-if="row.type === 'platform'" class="mt-1">
+                                    <PlatformBadge :platform="row.platform_name || row.display_name" size="sm" />
+                                </div>
+                                <p v-else class="text-xs text-gray-500">Interne</p>
                             </td>
                             <td class="px-4 py-3 text-right font-medium text-gray-900">{{ row.orders_count }}</td>
                             <td class="px-4 py-3 text-right font-medium text-gray-900">{{ formatCurrency(row.total_delivery_amount) }}</td>
@@ -200,6 +216,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { deliveryAgentsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
+import PlatformBadge from '../../components/common/PlatformBadge.vue'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
@@ -317,6 +334,24 @@ async function deactivateAgent(agent) {
     } catch (error) {
         console.error('Erreur désactivation livreur:', error)
         alert(error.response?.data?.message || 'Impossible de désactiver ce livreur.')
+    }
+}
+
+async function deleteAgent(agent) {
+    if (!agent?.id) {
+        return
+    }
+
+    if (!window.confirm(`Supprimer définitivement ${agent.name} ?`)) {
+        return
+    }
+
+    try {
+        await deliveryAgentsApi.delete(agent.id)
+        await applyFilters()
+    } catch (error) {
+        console.error('Erreur suppression livreur:', error)
+        alert(error.response?.data?.message || 'Impossible de supprimer ce livreur.')
     }
 }
 

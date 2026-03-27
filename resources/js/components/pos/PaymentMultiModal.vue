@@ -1,277 +1,394 @@
 <template>
     <div class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="$emit('close')"></div>
+        <div class="flex min-h-screen items-end justify-center p-0 sm:items-center sm:p-3 md:p-4">
+            <div class="fixed inset-0 bg-slate-900/45 backdrop-blur-[1px]" @click="$emit('close')"></div>
 
-            <div class="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-auto z-10 max-h-[90vh] overflow-y-auto">
-                <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900">💳 Paiement Multiple</h3>
-                    <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
-                        <XMarkIcon class="w-6 h-6" />
-                    </button>
+            <div class="relative z-10 mx-auto flex max-h-[100dvh] w-full max-w-7xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-[#f6f8fc] shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:max-h-[94vh] sm:rounded-[28px]">
+                <div class="sticky top-0 z-10 border-b border-slate-200 bg-white px-3 py-2 sm:px-4 sm:py-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <button
+                            type="button"
+                            @click="$emit('close')"
+                            class="inline-flex items-center gap-1 rounded-lg border border-transparent px-2 py-1 text-xs font-semibold text-sky-700 transition-colors hover:border-sky-100 hover:bg-sky-50"
+                        >
+                            <ArrowLeftIcon class="h-4 w-4" />
+                            Retour
+                        </button>
+                        <div class="min-w-0 text-right">
+                            <p class="text-[9px] font-semibold uppercase tracking-[0.24em] text-slate-400">Caisse</p>
+                            <p class="truncate text-xs font-semibold text-slate-900 sm:text-sm">Paiement</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6 space-y-6">
-                    <div v-if="sale" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-                        <div class="grid gap-3 md:grid-cols-2 text-sm">
-                            <div>
-                                <p class="text-xs font-semibold uppercase text-slate-500">Commande N°</p>
-                                <p class="font-semibold text-slate-900">{{ sale.order_number || sale.reference || '-' }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase text-slate-500">Client</p>
-                                <p class="font-semibold text-slate-900">{{ sale.customer?.name || 'Client anonyme' }}</p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="text-xs font-semibold uppercase text-slate-500">Articles</p>
-                            <p class="text-sm text-slate-800">
-                                {{ orderArticles.length ? orderArticles.map((item) => `${item.article_name} x${item.quantity}`).join(', ') : '-' }}
-                            </p>
-                        </div>
-
-                        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5 text-sm">
-                            <div class="rounded-xl border border-slate-200 bg-white p-3">
-                                <p class="text-xs uppercase text-slate-500">Montant total</p>
-                                <p class="text-base font-semibold text-slate-900">{{ formatCurrency(sale.total || 0) }}</p>
-                            </div>
-                            <div class="rounded-xl border border-slate-200 bg-white p-3">
-                                <p class="text-xs uppercase text-slate-500">Montant déjà payé</p>
-                                <p class="text-base font-semibold text-emerald-700">{{ formatCurrency(paidConfirmedAmount) }}</p>
-                            </div>
-                            <div class="rounded-xl border border-slate-200 bg-white p-3">
-                                <p class="text-xs uppercase text-slate-500">En attente d'encaissement</p>
-                                <p class="text-base font-semibold text-amber-700">{{ formatCurrency(pendingCollectionAmount) }}</p>
-                            </div>
-                            <div class="rounded-xl border border-slate-200 bg-white p-3">
-                                <p class="text-xs uppercase text-slate-500">Reste à payer</p>
-                                <p class="text-base font-semibold text-slate-900">{{ formatCurrency(remainingToPayNow) }}</p>
-                            </div>
-                            <div class="rounded-xl border border-slate-200 bg-white p-3">
-                                <p class="text-xs uppercase text-slate-500">Statut paiement</p>
-                                <p class="text-base font-semibold text-slate-900">{{ sale.payment_status_label || 'À payer' }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-4 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                        <div class="text-center">
-                            <p class="text-xs text-gray-600 font-medium">Total à Payer</p>
-                            <p class="text-xl font-bold text-gray-900">{{ formatCurrency(total) }}</p>
-                        </div>
-                        <div class="text-center border-l border-r border-blue-200">
-                            <p class="text-xs text-gray-600 font-medium">Total Payé</p>
-                            <p class="text-xl font-bold text-green-600">{{ formatCurrency(totalPaid) }}</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-xs text-gray-600 font-medium">Restant</p>
-                            <p class="text-xl font-bold" :class="remaining <= 0 ? 'text-green-600' : 'text-orange-600'">
-                                {{ formatCurrency(remaining) }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-900 mb-3">🔵 Méthode de Paiement</label>
-                        <div v-if="paymentMethods.length" class="grid grid-cols-2 gap-3 md:grid-cols-3">
-                            <button
-                                v-for="method in paymentMethods"
-                                :key="method.id"
-                                @click="selectMethod(method)"
-                                class="p-4 border-2 rounded-lg flex flex-col items-center justify-center transition-all hover:shadow-md"
-                                :class="selectedMethod?.id === method.id
-                                    ? 'border-primary-500 bg-primary-50 shadow-md'
-                                    : 'border-gray-200 hover:border-gray-300'"
-                            >
-                                <span class="text-2xl mb-2">{{ method.icon }}</span>
-                                <span class="text-sm font-medium text-gray-900 text-center">{{ method.label }}</span>
-                                <span class="text-xs text-gray-500 mt-1">{{ method.description }}</span>
-                            </button>
-                        </div>
-                        <div v-else class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-500">
-                            Aucun mode de paiement actif n’est configuré dans les paramètres.
-                        </div>
-                    </div>
-
-                    <div v-if="selectedMethod" class="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h4 class="text-sm font-semibold text-gray-900 mb-4">{{ selectedMethod.label }} - Détails</h4>
-
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Montant *</label>
-                            <div class="flex gap-2">
-                                <input
-                                    v-model.number="paymentForm.amount"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    :max="remaining + 0.01"
-                                    placeholder="0.00"
-                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                >
-                                <span class="flex items-center px-3 text-gray-500 font-medium">{{ settingsStore.currencyCode }}</span>
-                            </div>
-                            <p v-if="paymentForm.amount > remaining" class="text-xs text-orange-600 mt-1">
-                                ⚠️ Montant supérieur au restant ({{ formatCurrency(remaining) }})
-                            </p>
-                        </div>
-
-                        <template v-if="selectedMethod.id === 'cash'">
-                            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="grid min-h-0 flex-1 xl:grid-cols-[220px_minmax(0,1fr)]">
+                    <aside class="border-b border-slate-200 bg-slate-50/90 xl:border-b-0 xl:border-r">
+                        <div class="flex h-full flex-col p-2.5 sm:p-3 md:p-3.5 lg:p-4">
+                            <div class="flex items-center justify-between">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Billets (montant reçu) *</label>
-                                    <div class="flex gap-2">
-                                        <input
-                                            v-model.number="paymentForm.received_amount"
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            placeholder="0.00"
-                                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                        >
-                                        <span class="flex items-center px-3 text-gray-500 font-medium">{{ settingsStore.currencyCode }}</span>
-                                    </div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Modes</p>
+                                    <h3 class="mt-0.5 text-xs font-semibold text-slate-900">Paiement</h3>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Monnaie (calculée)</label>
-                                    <div class="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg">
-                                        <span class="text-lg font-bold text-green-600">{{ formatCurrency(calculateChange) }}</span>
-                                    </div>
+                                <div class="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                                    {{ paymentMethods.length }}
                                 </div>
                             </div>
 
-                            <div class="mb-4">
-                                <p class="text-xs text-gray-600 mb-2">Montants rapides:</p>
-                                <div class="grid grid-cols-4 gap-2">
-                                    <button
-                                        v-for="amount in quickCashAmounts"
-                                        :key="amount"
-                                        @click="paymentForm.received_amount = amount"
-                                        class="py-2 px-3 text-sm border border-gray-300 rounded-lg hover:bg-primary-50 hover:border-primary-300 transition-colors font-medium"
-                                    >
-                                        {{ formatCurrency(amount) }}
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
-
-                        <div v-if="selectedMethod.id !== 'cash' && hasVisibleExtraFields" class="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
-                            <div v-if="selectedMethod.show_transaction_number">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ transactionFieldLabel }} *</label>
-                                <input
-                                    v-model="paymentForm.transaction_number"
-                                    type="text"
-                                    :placeholder="transactionFieldPlaceholder"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                >
-                            </div>
-                            <div v-if="selectedMethod.show_piece_number">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ pieceFieldLabel }} *</label>
-                                <input
-                                    v-model="paymentForm.piece_number"
-                                    type="text"
-                                    :placeholder="pieceFieldPlaceholder"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                >
-                            </div>
-                            <div v-if="selectedMethod.show_issue_date">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Date d'émission *</label>
-                                <input
-                                    v-model="paymentForm.issue_date"
-                                    type="date"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                >
-                            </div>
-                            <div v-if="selectedMethod.show_due_date">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance *</label>
-                                <input
-                                    v-model="paymentForm.due_date"
-                                    type="date"
-                                    :min="paymentForm.issue_date || undefined"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                >
-                            </div>
-                            <div v-if="selectedMethod.show_bank_name">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ bankFieldLabel }} *</label>
-                                <input
-                                    v-model="paymentForm.bank_name"
-                                    type="text"
-                                    :placeholder="bankFieldPlaceholder"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                >
-                            </div>
-                        </div>
-
-                        <p v-if="selectedMethod.paymentTiming === 'deferred'" class="text-xs text-orange-700 mt-2">
-                            Ce mode de paiement est différé et sera suivi dans le module Encaissement.
-                        </p>
-
-                        <div v-if="selectedMethod.show_notes" class="mt-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Notes (optionnel)</label>
-                            <textarea
-                                v-model="paymentForm.notes"
-                                placeholder="Remarques ou informations supplémentaires..."
-                                rows="2"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                            ></textarea>
-                        </div>
-
-                        <button
-                            @click="addPayment"
-                            :disabled="!canAddPayment"
-                            class="w-full mt-6 py-3 bg-primary-500 text-gray-900 font-bold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                        >
-                            <PlusIcon class="w-5 h-5 mr-2" />
-                            Ajouter ce paiement
-                        </button>
-                    </div>
-
-                    <div v-if="payments.length > 0" class="bg-white rounded-xl border border-gray-200 p-4">
-                        <h4 class="text-sm font-semibold text-gray-900 mb-3">📋 Paiements Ajoutés ({{ payments.length }})</h4>
-                        <div class="space-y-2">
-                            <div
-                                v-for="(payment, index) in payments"
-                                :key="index"
-                                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                            >
-                                <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-900">
-                                        {{ payment.display_label || getMethodLabel(payment.payment_type, payment.transfer_mode) }}
-                                    </p>
-                                    <p class="text-xs text-gray-500">
-                                        {{ payment.transaction_number || payment.reference || 'Aucune référence' }}
-                                    </p>
-                                </div>
-                                <div class="text-right mr-3">
-                                    <p class="text-lg font-bold text-gray-900">{{ formatCurrency(payment.amount) }}</p>
-                                </div>
+                            <div v-if="paymentMethods.length" class="mt-2 grid grid-cols-2 gap-1.5 pr-1 sm:grid-cols-3 sm:gap-2 xl:mt-3 xl:grid-cols-1 xl:overflow-y-auto xl:pb-0">
                                 <button
-                                    @click="removePayment(index)"
-                                    class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Supprimer ce paiement"
+                                    v-for="method in paymentMethods"
+                                    :key="method.id"
+                                    type="button"
+                                    @click="selectMethod(method)"
+                                    class="w-full rounded-[10px] border px-2 py-1.5 text-left transition-all duration-150 sm:rounded-[12px] sm:px-2.5 sm:py-2 xl:rounded-[14px] xl:px-3"
+                                    :class="selectedMethod?.id === method.id
+                                        ? 'border-sky-300 bg-white shadow-md ring-2 ring-sky-100'
+                                        : 'border-slate-200 bg-white/80 hover:border-slate-300 hover:bg-white'"
                                 >
-                                    <TrashIcon class="w-4 h-4" />
+                                    <div class="flex items-start gap-1.5">
+                                        <div
+                                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm sm:h-8 sm:w-8 sm:text-base xl:h-9 xl:w-9"
+                                            :class="selectedMethod?.id === method.id ? 'bg-sky-50' : 'bg-slate-100'"
+                                        >
+                                            {{ method.icon }}
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-[11px] font-semibold text-slate-900 sm:text-xs">{{ method.label }}</p>
+                                            <p class="mt-0.5 text-[8px] font-medium text-slate-500 sm:text-[9px]">{{ paymentTimingLabel(method) }}</p>
+                                            <p class="mt-0.5 text-[9px] font-semibold text-slate-700 sm:text-[10px]">{{ formatCurrency(getMethodAssignedAmount(method)) }}</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <div v-else class="mt-3 rounded-[16px] border border-dashed border-slate-300 bg-white px-3 py-4 text-center text-xs text-slate-500">
+                                Aucun mode
+                            </div>
+                        </div>
+                    </aside>
+
+                    <section class="flex min-h-0 flex-col">
+                        <div class="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4">
+                            <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
+                                <div class="rounded-[12px] border border-slate-200 bg-white p-2 shadow-sm sm:rounded-[16px] sm:p-2.5 lg:rounded-[18px] lg:p-3">
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">À payer</p>
+                                    <p class="mt-1 text-sm font-semibold tracking-tight text-sky-700 sm:mt-1.5 sm:text-base lg:mt-2 lg:text-xl">{{ formatCurrency(total) }}</p>
+                                </div>
+                                <div class="rounded-[12px] border sm:rounded-[16px] lg:rounded-[18px]" :class="remaining <= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'">
+                                    <div class="p-2 shadow-sm sm:p-2.5 lg:p-3">
+                                        <p class="text-[10px] font-semibold uppercase tracking-[0.16em]" :class="remaining <= 0 ? 'text-emerald-600' : 'text-amber-600'">Reste</p>
+                                        <p class="mt-1 text-sm font-semibold tracking-tight sm:mt-1.5 sm:text-base lg:mt-2 lg:text-xl" :class="remaining <= 0 ? 'text-emerald-700' : 'text-amber-700'">
+                                            {{ formatCurrency(remaining) }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="rounded-[12px] border border-emerald-200 bg-emerald-50 p-2 shadow-sm sm:rounded-[16px] sm:p-2.5 lg:rounded-[18px] lg:p-3">
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600">Affecté</p>
+                                    <p class="mt-1 text-sm font-semibold text-emerald-700 sm:mt-1.5 sm:text-base lg:mt-2 lg:text-xl">{{ formatCurrency(totalPaid) }}</p>
+                                </div>
+                            </div>
+
+                            <div v-if="selectedMethod" class="mt-2 rounded-[14px] border border-slate-200 bg-white p-2.5 shadow-sm sm:mt-3 sm:rounded-[16px] sm:p-3 lg:rounded-[18px] lg:p-4">
+                                <div class="mb-2 flex flex-col gap-2 border-b border-slate-200/80 pb-2 sm:mb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2.5 sm:pb-3">
+                                    <div class="flex min-w-0 items-center gap-2">
+                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/80 text-lg shadow-sm sm:h-9 sm:w-9 sm:text-xl md:h-10 md:w-10">
+                                            {{ selectedMethod.icon }}
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <h4 class="text-xs font-semibold text-slate-900 sm:text-sm">{{ selectedMethod.label }}</h4>
+                                                <span class="inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-xs" :class="selectedMethodTheme.chipClass">
+                                                    {{ paymentTimingLabel(selectedMethod) }}
+                                                </span>
+                                            </div>
+                                            <p class="mt-0.5 hidden text-[10px] text-slate-500 xl:block">{{ selectedMethod.description }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="hidden rounded-lg border border-white/70 bg-white/80 px-2 py-1.5 text-right shadow-sm shrink-0 sm:block sm:px-2.5 sm:py-2">
+                                        <p class="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montant</p>
+                                        <p class="mt-0.5 text-xs font-semibold text-slate-900 sm:mt-1 sm:text-sm">{{ formatCurrency(paymentForm.amount || 0) }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="grid gap-2 sm:gap-3 xl:grid-cols-[minmax(0,1fr)_200px] 2xl:grid-cols-[minmax(0,1fr)_220px]">
+                                    <div class="space-y-2 sm:space-y-2.5">
+                                        <div class="grid gap-1.5 xl:hidden" :class="selectedMethod.id === 'cash' ? 'grid-cols-3' : 'grid-cols-2'">
+                                            <div class="rounded-[10px] border border-white/70 bg-white/80 px-2 py-1.5 sm:rounded-[12px] sm:px-2.5 sm:py-2">
+                                                <p class="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Affecté</p>
+                                                <p class="mt-0.5 text-xs font-semibold text-slate-900 sm:text-sm">{{ formatCurrency(getMethodAssignedAmount(selectedMethod)) }}</p>
+                                            </div>
+                                            <div class="rounded-[10px] border border-white/70 bg-white/80 px-2 py-1.5 sm:rounded-[12px] sm:px-2.5 sm:py-2">
+                                                <p class="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Reste</p>
+                                                <p class="mt-0.5 text-xs font-semibold sm:text-sm" :class="remaining <= 0 ? 'text-emerald-700' : 'text-amber-700'">{{ formatCurrency(remaining) }}</p>
+                                            </div>
+                                            <div v-if="selectedMethod.id === 'cash'" class="rounded-[10px] border border-white/70 bg-white/80 px-2 py-1.5 sm:rounded-[12px] sm:px-2.5 sm:py-2">
+                                                <p class="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Monnaie</p>
+                                                <p class="mt-0.5 text-xs font-semibold text-slate-900 sm:text-sm">
+                                                    {{ formatCurrency(calculateChange) }}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="rounded-[12px] border border-slate-200 bg-white p-2.5 shadow-sm sm:rounded-[14px] sm:p-3">
+                                            <label class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montant à encaisser</label>
+                                            <div class="mt-2 flex flex-col gap-1.5 sm:flex-row">
+                                                <input
+                                                    v-model.number="paymentForm.amount"
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    :max="remaining + 0.01"
+                                                    placeholder="0.00"
+                                                    class="h-8 flex-1 rounded-[10px] border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:h-9 sm:rounded-[12px] sm:px-3 sm:text-sm sm:focus:ring-4"
+                                                >
+                                                <div class="flex min-w-[70px] items-center justify-center rounded-[10px] border border-slate-200 bg-slate-50 px-2.5 text-[10px] font-semibold text-slate-700 sm:min-w-[80px] sm:rounded-[12px] sm:px-3 sm:text-xs">
+                                                    {{ formatCurrency(paymentForm.amount || 0) }}
+                                                </div>
+                                            </div>
+                                            <p v-if="paymentForm.amount > remaining" class="mt-1.5 text-[10px] font-medium text-amber-700">
+                                                Dépasse le reste ({{ formatCurrency(remaining) }})
+                                            </p>
+                                        </div>
+
+                                        <template v-if="selectedMethod.id === 'cash'">
+                                            <div class="space-y-2 sm:space-y-2.5 xl:hidden">
+                                                <div class="rounded-[12px] border border-slate-200 bg-white p-2.5 shadow-sm sm:rounded-[14px] sm:p-3">
+                                                    <label class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montant reçu</label>
+                                                    <div class="mt-2 flex flex-col gap-1.5 sm:flex-row">
+                                                        <input
+                                                            v-model.number="paymentForm.received_amount"
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="0.00"
+                                                            class="h-8 flex-1 rounded-[10px] border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:h-9 sm:rounded-[12px] sm:px-3 sm:text-sm sm:focus:ring-4"
+                                                        >
+                                                        <div class="flex min-w-[70px] items-center justify-center rounded-[10px] border border-slate-200 bg-slate-50 px-2.5 text-[10px] font-semibold text-slate-700 sm:min-w-[80px] sm:rounded-[12px] sm:px-3 sm:text-xs">
+                                                            {{ settingsStore.currencyCode }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="rounded-[12px] border border-emerald-200 bg-emerald-50 p-2.5 shadow-sm sm:rounded-[14px] sm:p-3">
+                                                    <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600">Monnaie</p>
+                                                    <p class="mt-1.5 text-base font-semibold text-emerald-700 sm:text-lg">{{ formatCurrency(calculateChange) }}</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="rounded-[12px] border border-slate-200 bg-white p-2.5 shadow-sm sm:rounded-[14px] sm:p-3">
+                                                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montants rapides</p>
+                                                <div class="mt-2 grid grid-cols-3 gap-1 sm:gap-1.5 sm:grid-cols-4 xl:grid-cols-3">
+                                                    <button
+                                                        v-for="amount in quickCashAmounts"
+                                                        :key="amount"
+                                                        type="button"
+                                                        @click="paymentForm.received_amount = amount"
+                                                        class="rounded-[8px] border border-slate-200 bg-slate-50 px-1.5 py-1.5 text-[9px] font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 sm:rounded-[10px] sm:px-2 sm:py-2 sm:text-[10px]"
+                                                    >
+                                                        {{ formatCurrency(amount) }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <div v-if="selectedMethod.id !== 'cash' && hasVisibleExtraFields" class="rounded-[14px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[16px] sm:p-3.5">
+                                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Infos</p>
+                                            <div class="mt-2.5 grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                                                <div v-if="selectedMethod.show_transaction_number">
+                                                    <label class="mb-1 block text-xs font-medium text-slate-700">{{ transactionFieldLabel }} *</label>
+                                                    <input
+                                                        v-model="paymentForm.transaction_number"
+                                                        type="text"
+                                                        :placeholder="transactionFieldPlaceholder"
+                                                        class="w-full rounded-[10px] border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:rounded-[12px]"
+                                                    >
+                                                </div>
+                                                <div v-if="selectedMethod.show_piece_number">
+                                                    <label class="mb-1 block text-xs font-medium text-slate-700 sm:mb-2 sm:text-sm">{{ pieceFieldLabel }} *</label>
+                                                    <input
+                                                        v-model="paymentForm.piece_number"
+                                                        type="text"
+                                                        :placeholder="pieceFieldPlaceholder"
+                                                        class="w-full rounded-[10px] border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:rounded-[18px] sm:px-4 sm:py-3 sm:focus:ring-4"
+                                                    >
+                                                </div>
+                                                <div v-if="selectedMethod.show_issue_date">
+                                                    <label class="mb-1 block text-xs font-medium text-slate-700 sm:mb-2 sm:text-sm">Date d'émission *</label>
+                                                    <input
+                                                        v-model="paymentForm.issue_date"
+                                                        type="date"
+                                                        class="w-full rounded-[10px] border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:rounded-[18px] sm:px-4 sm:py-3 sm:focus:ring-4"
+                                                    >
+                                                </div>
+                                                <div v-if="selectedMethod.show_due_date">
+                                                    <label class="mb-1 block text-xs font-medium text-slate-700 sm:mb-2 sm:text-sm">Date d'échéance *</label>
+                                                    <input
+                                                        v-model="paymentForm.due_date"
+                                                        type="date"
+                                                        :min="paymentForm.issue_date || undefined"
+                                                        class="w-full rounded-[10px] border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:rounded-[18px] sm:px-4 sm:py-3 sm:focus:ring-4"
+                                                    >
+                                                </div>
+                                                <div v-if="selectedMethod.show_bank_name" class="md:col-span-2">
+                                                    <label class="mb-1 block text-xs font-medium text-slate-700 sm:mb-2 sm:text-sm">{{ bankFieldLabel }} *</label>
+                                                    <input
+                                                        v-model="paymentForm.bank_name"
+                                                        type="text"
+                                                        :placeholder="bankFieldPlaceholder"
+                                                        class="w-full rounded-[10px] border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:rounded-[18px] sm:px-4 sm:py-3 sm:focus:ring-4"
+                                                    >
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div v-if="selectedMethod.show_notes" class="rounded-[12px] border border-slate-200 bg-white p-2.5 shadow-sm sm:rounded-[14px] sm:p-3">
+                                            <label class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Note</label>
+                                            <textarea
+                                                v-model="paymentForm.notes"
+                                                placeholder="Remarques..."
+                                                rows="2"
+                                                class="mt-1.5 w-full rounded-[10px] border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 resize-none sm:mt-2 sm:rounded-[12px] sm:px-3 sm:py-2 sm:text-sm sm:focus:ring-4"
+                                            ></textarea>
+                                        </div>
+
+                                        <div v-if="selectedMethod.paymentTiming === 'deferred'" class="rounded-[12px] border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 sm:rounded-[14px] sm:px-3.5 sm:py-3 sm:text-sm">
+                                            Ce mode de paiement est différé et sera suivi dans le module Encaissement.
+                                        </div>
+
+                                        <p class="rounded-[10px] border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[9px] text-slate-500 sm:rounded-[12px] sm:px-3 sm:py-2 sm:text-[10px]">
+                                            Validez quand le ticket est soldé avec le bouton du bas.
+                                        </p>
+                                    </div>
+
+                                    <div class="hidden space-y-3 sm:space-y-4 xl:block">
+                                        <div class="overflow-hidden rounded-[18px] border border-slate-900/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] sm:rounded-[24px] lg:rounded-[28px]" :class="selectedMethodTheme.previewShell">
+                                            <div class="p-4 text-white sm:p-5">
+                                                <div class="flex items-center justify-between gap-4">
+                                                    <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm sm:px-3 sm:text-xs" :class="selectedMethodTheme.previewBadgeClass">
+                                                        {{ selectedMethodTheme.previewBadge }}
+                                                    </span>
+                                                    <span class="text-3xl sm:text-4xl">{{ selectedMethod.icon }}</span>
+                                                </div>
+                                                <div class="mt-6 sm:mt-8 lg:mt-10">
+                                                    <p class="text-xs font-semibold uppercase tracking-[0.26em] text-white/70">{{ selectedMethodTheme.previewTitle }}</p>
+                                                    <p class="mt-2.5 text-3xl font-semibold tracking-tight sm:mt-3 sm:text-4xl">{{ formatCurrency(paymentForm.amount || 0) }}</p>
+                                                    <p class="mt-2.5 max-w-xs text-xs leading-5 text-white/80 sm:mt-3 sm:text-sm sm:leading-6">{{ selectedMethodTheme.previewText }}</p>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 border-t border-white/10 bg-black/10 text-white/90">
+                                                <div class="px-4 py-3 sm:px-5 sm:py-4">
+                                                    <p class="text-[11px] uppercase tracking-[0.18em] text-white/60">Affecté</p>
+                                                    <p class="mt-1.5 text-lg font-semibold sm:mt-2 sm:text-xl">{{ formatCurrency(getMethodAssignedAmount(selectedMethod)) }}</p>
+                                                </div>
+                                                <div class="border-l border-white/10 px-4 py-3 sm:px-5 sm:py-4">
+                                                    <p class="text-[11px] uppercase tracking-[0.18em] text-white/60">Reste</p>
+                                                    <p class="mt-1.5 text-lg font-semibold sm:mt-2 sm:text-xl">{{ formatCurrency(remaining) }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                                            <div class="rounded-[16px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[18px] sm:p-4 lg:rounded-[22px]">
+                                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Résumé méthode</p>
+                                                <p class="mt-2 text-base font-semibold text-slate-900 sm:mt-3 sm:text-lg">{{ selectedMethod.label }}</p>
+                                                <p class="mt-1 text-xs text-slate-500 sm:text-sm">{{ selectedMethod.description }}</p>
+                                            </div>
+                                            <div class="rounded-[16px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[18px] sm:p-4 lg:rounded-[22px]">
+                                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Validation directe</p>
+                                                <p class="mt-2 text-xs leading-5 text-slate-600 sm:mt-3 sm:text-sm sm:leading-6">
+                                                    Utilisez <span class="font-semibold text-slate-900">Valider le paiement</span> directement pour le montant restant complet.
+                                                </p>
+                                            </div>
+                                            <div v-if="selectedMethod.id === 'cash'" class="rounded-[16px] border border-emerald-200 bg-emerald-50 p-3 shadow-sm sm:rounded-[18px] sm:p-4 lg:rounded-[22px]">
+                                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">Monnaie estimée</p>
+                                                <p class="mt-2 text-2xl font-semibold text-emerald-700 sm:mt-3 sm:text-3xl">{{ formatCurrency(calculateChange) }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="payments.length > 0" class="mt-2.5 rounded-[12px] border border-slate-200 bg-white p-2.5 shadow-sm sm:mt-3 sm:rounded-[14px] sm:p-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div>
+                                        <p class="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Paiements</p>
+                                        <h4 class="mt-0.5 text-xs font-semibold text-slate-900 sm:mt-1 sm:text-sm">{{ payments.length }} règlement{{ payments.length > 1 ? 's' : '' }}</h4>
+                                    </div>
+                                    <div class="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600 sm:px-2.5 sm:text-[10px]">
+                                        {{ formatCurrency(totalPaid) }}
+                                    </div>
+                                </div>
+
+                                <div class="mt-2 space-y-1.5">
+                                    <div
+                                        v-for="(payment, index) in payments"
+                                        :key="index"
+                                        class="flex flex-col gap-1.5 rounded-[10px] border border-slate-200 bg-slate-50 px-2 py-2 sm:flex-row sm:items-center sm:gap-2 sm:rounded-[12px] sm:px-3 sm:py-2.5"
+                                    >
+                                        <div class="flex min-w-0 flex-1 items-center gap-2">
+                                            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-sm shadow-sm sm:h-9 sm:w-9 sm:rounded-xl sm:text-base">
+                                                {{ findMethodIcon(payment) }}
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="truncate text-xs font-semibold text-slate-900 sm:text-sm">
+                                                    {{ payment.display_label || getMethodLabel(payment.payment_type, payment.transfer_mode) }}
+                                                </p>
+                                                <p class="truncate text-[10px] text-slate-500 sm:text-xs">
+                                                    {{ payment.transaction_number || payment.reference || 'Aucune réf.' }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-2 sm:justify-end">
+                                            <p class="text-sm font-semibold text-slate-900 sm:text-base">{{ formatCurrency(payment.amount) }}</p>
+                                            <button
+                                                type="button"
+                                                @click="removePayment(index)"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-500 transition hover:bg-rose-50 sm:h-9 sm:w-9 sm:rounded-xl"
+                                                title="Supprimer"
+                                            >
+                                                <TrashIcon class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sticky bottom-0 border-t border-slate-200 bg-white px-2.5 py-2.5 sm:px-4 sm:py-3 md:px-5 lg:px-6">
+                            <div class="flex flex-col gap-2 md:flex-row md:gap-2.5">
+                                <button
+                                    type="button"
+                                    @click="$emit('close')"
+                                    class="flex-1 rounded-[12px] border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    v-if="selectedMethod"
+                                    type="button"
+                                    @click="addPayment"
+                                    :disabled="!canAddPayment"
+                                    class="flex-1 rounded-[12px] bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
+                                >
+                                    <span class="inline-flex items-center justify-center gap-1.5">
+                                        <PlusIcon class="h-4 w-4 sm:h-5 sm:w-5" />
+                                        Ajouter
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="confirmPayments"
+                                    :disabled="!canConfirmPayments"
+                                    class="flex-[1.4] rounded-[12px] bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
+                                >
+                                    <span class="inline-flex items-center justify-center gap-1.5">
+                                        <CheckIcon class="h-4 w-4 sm:h-5 sm:w-5" />
+                                        <span class="hidden sm:inline">{{ confirmLabelText }}</span>
+                                        <span class="sm:hidden">Valider</span>
+                                    </span>
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex space-x-3">
-                    <button
-                        @click="$emit('close')"
-                        class="flex-1 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                        Annuler
-                    </button>
-                    <button
-                        @click="confirmPayments"
-                        :disabled="!canConfirmPayments"
-                        class="flex-1 py-3 bg-green-500 text-gray-900 font-bold rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                    >
-                        <CheckIcon class="w-5 h-5 mr-2" />
-                        {{ confirmLabelText }}
-                    </button>
+                    </section>
                 </div>
             </div>
         </div>
@@ -283,7 +400,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useSettingsStore } from '../../stores/settings'
 import { useCustomListsStore } from '../../stores/customLists'
 import {
-    XMarkIcon,
+    ArrowLeftIcon,
     PlusIcon,
     TrashIcon,
     CheckIcon
@@ -304,7 +421,7 @@ const props = defineProps({
     },
     confirmLabel: {
         type: String,
-        default: 'Finaliser le Paiement'
+        default: 'Valider le paiement'
     }
 })
 
@@ -357,13 +474,13 @@ function getEmptyForm() {
     }
 }
 
-const totalPaid = computed(() => {
-    return payments.value.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
-})
+function normalizeAmount(value) {
+    return Math.round(Number(value || 0) * 100) / 100
+}
 
-const remaining = computed(() => {
-    return Math.max(0, props.total - totalPaid.value)
-})
+const totalPaid = computed(() => payments.value.reduce((sum, payment) => sum + normalizeAmount(payment.amount), 0))
+
+const remaining = computed(() => Math.max(0, normalizeAmount(props.total) - totalPaid.value))
 
 const calculateChange = computed(() => {
     if (!paymentForm.value.received_amount || !paymentForm.value.amount) return 0
@@ -371,36 +488,238 @@ const calculateChange = computed(() => {
 })
 
 const quickCashAmounts = computed(() => {
-    const base = [100, 200, 500, 1000]
-    if (!base.includes(Math.ceil(props.total))) {
-        base.push(Math.ceil(props.total))
+    const base = [5, 10, 20, 50, 100, 200, 500, 1000]
+    const roundedRemaining = Math.ceil(Math.max(props.total, remaining.value, paymentForm.value.amount || 0))
+    if (roundedRemaining > 0 && !base.includes(roundedRemaining)) {
+        base.push(roundedRemaining)
     }
     return base.sort((a, b) => a - b)
 })
 
-const canAddPayment = computed(() => {
-    if (!selectedMethod.value || !paymentForm.value.amount || paymentForm.value.amount <= 0) return false
+function matchesMethod(payment, method) {
+    const paymentType = payment.payment_type || payment.type
+    const normalizedType = paymentType === 'check' ? 'cheque' : paymentType
 
-    if (selectedMethod.value.id === 'cash') {
-        return paymentForm.value.received_amount && paymentForm.value.received_amount >= paymentForm.value.amount
+    if (method.paymentType === 'virement' || ['simple_transfer', 'instant_transfer'].includes(method.id)) {
+        const methodTransferMode = method.transferMode || (method.id === 'instant_transfer' ? 'instant' : 'simple')
+        const paymentTransferMode = normalizedType === 'instant_transfer'
+            ? 'instant'
+            : (normalizedType === 'simple_transfer' ? 'simple' : (payment.transfer_mode || 'simple'))
+
+        return (normalizedType === 'virement' || normalizedType === 'simple_transfer' || normalizedType === 'instant_transfer')
+            && methodTransferMode === paymentTransferMode
+    }
+
+    return method.paymentType === normalizedType
+}
+
+function getMethodAssignedAmount(method) {
+    return payments.value.reduce((sum, payment) => {
+        if (!matchesMethod(payment, method)) {
+            return sum
+        }
+
+        return sum + normalizeAmount(payment.amount)
+    }, 0)
+}
+
+function paymentTimingLabel(method) {
+    return method?.paymentTiming === 'deferred' ? 'Différé' : 'Immédiat'
+}
+
+function findMethodIcon(payment) {
+    const method = paymentMethods.value.find((item) => matchesMethod(payment, item))
+    return method?.icon || '🧾'
+}
+
+function resolveMethodTheme(method) {
+    if (!method) {
+        return {
+            panelShell: 'border-slate-200 bg-white',
+            chipClass: 'bg-slate-100 text-slate-600',
+            previewShell: 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700',
+            previewBadgeClass: 'bg-white/15 text-white',
+            previewBadge: 'Paiement',
+            previewTitle: 'Validation',
+            previewText: 'Paiement prêt à être enregistré.',
+            description: 'Renseignez les informations nécessaires puis enregistrez ou validez.',
+        }
+    }
+
+    if (method.id === 'cash') {
+        return {
+            panelShell: 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100/80',
+            chipClass: 'bg-emerald-100 text-emerald-700',
+            previewShell: 'bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-500',
+            previewBadgeClass: 'bg-white/15 text-white',
+            previewBadge: 'Espèces',
+            previewTitle: 'Station caisse',
+            previewText: 'Encaissement immédiat avec billets reçus et calcul automatique de la monnaie.',
+            description: 'Saisissez le montant reçu ou utilisez les montants rapides pour aller plus vite en caisse.',
+        }
+    }
+
+    if (method.id === 'card') {
+        return {
+            panelShell: 'border-blue-200 bg-gradient-to-br from-blue-50 via-white to-sky-100/70',
+            chipClass: 'bg-blue-100 text-blue-700',
+            previewShell: 'bg-gradient-to-br from-blue-900 via-blue-700 to-sky-500',
+            previewBadgeClass: 'bg-white/15 text-white',
+            previewBadge: 'Carte',
+            previewTitle: 'Terminal carte',
+            previewText: 'Confirmez la référence de transaction avant validation du règlement.',
+            description: 'Paiement électronique immédiat avec référence de transaction.',
+        }
+    }
+
+    if (method.id === 'mobile') {
+        return {
+            panelShell: 'border-fuchsia-200 bg-gradient-to-br from-fuchsia-50 via-white to-violet-100/70',
+            chipClass: 'bg-fuchsia-100 text-fuchsia-700',
+            previewShell: 'bg-gradient-to-br from-fuchsia-900 via-violet-700 to-fuchsia-500',
+            previewBadgeClass: 'bg-white/15 text-white',
+            previewBadge: 'Mobile',
+            previewTitle: 'Paiement mobile',
+            previewText: 'Gardez le numéro de transaction à portée de main pour un encaissement rapide.',
+            description: 'Paiement mobile avec saisie de la référence de transaction.',
+        }
+    }
+
+    if (method.paymentType === 'cheque') {
+        return {
+            panelShell: 'border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-100/70',
+            chipClass: 'bg-amber-100 text-amber-700',
+            previewShell: 'bg-gradient-to-br from-amber-900 via-amber-700 to-orange-500',
+            previewBadgeClass: 'bg-white/15 text-white',
+            previewBadge: 'Chèque',
+            previewTitle: 'Instrument différé',
+            previewText: 'Renseignez les références et dates avant l’enregistrement pour le suivi d’encaissement.',
+            description: 'Paiement différé avec numéro de chèque, banque et dates de suivi.',
+        }
+    }
+
+    if (method.paymentType === 'credit') {
+        return {
+            panelShell: 'border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-slate-100',
+            chipClass: 'bg-indigo-100 text-indigo-700',
+            previewShell: 'bg-gradient-to-br from-indigo-900 via-slate-800 to-indigo-500',
+            previewBadgeClass: 'bg-white/15 text-white',
+            previewBadge: 'Crédit',
+            previewTitle: 'Lettre de change',
+            previewText: 'Préparez le dossier de crédit avec la pièce et l’échéance de règlement.',
+            description: 'Paiement différé type crédit ou lettre de change avec pièce justificative.',
+        }
+    }
+
+    if (method.paymentType === 'virement') {
+        return {
+            panelShell: 'border-cyan-200 bg-gradient-to-br from-cyan-50 via-white to-sky-100/70',
+            chipClass: 'bg-cyan-100 text-cyan-700',
+            previewShell: 'bg-gradient-to-br from-cyan-900 via-sky-700 to-cyan-500',
+            previewBadgeClass: 'bg-white/15 text-white',
+            previewBadge: method.transferMode === 'instant' ? 'Virement instantané' : 'Virement simple',
+            previewTitle: 'Transfert bancaire',
+            previewText: 'Utilisez la référence bancaire pour rattacher le règlement au bon transfert.',
+            description: method.transferMode === 'instant'
+                ? 'Paiement par virement instantané avec validation immédiate.'
+                : 'Virement bancaire simple avec référence et éventuel suivi.',
+        }
+    }
+
+    return {
+        panelShell: 'border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100',
+        chipClass: 'bg-slate-100 text-slate-700',
+        previewShell: 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600',
+        previewBadgeClass: 'bg-white/15 text-white',
+        previewBadge: method.label,
+        previewTitle: 'Mode personnalisé',
+        previewText: 'Complétez les informations demandées puis validez selon votre flux de caisse.',
+        description: method.description || 'Mode personnalisé.',
+    }
+}
+
+function getDraftPayment() {
+    if (!selectedMethod.value) {
+        return null
+    }
+
+    const amount = normalizeAmount(paymentForm.value.amount)
+    if (amount <= 0 || amount > remaining.value + 0.00001) {
+        return null
     }
 
     const requiredFields = [
-        !selectedMethod.value.show_transaction_number || !!paymentForm.value.transaction_number,
-        !selectedMethod.value.show_piece_number || !!paymentForm.value.piece_number,
+        !selectedMethod.value.show_transaction_number || !!String(paymentForm.value.transaction_number || '').trim(),
+        !selectedMethod.value.show_piece_number || !!String(paymentForm.value.piece_number || '').trim(),
         !selectedMethod.value.show_issue_date || !!paymentForm.value.issue_date,
         !selectedMethod.value.show_due_date || !!paymentForm.value.due_date,
-        !selectedMethod.value.show_bank_name || !!paymentForm.value.bank_name,
+        !selectedMethod.value.show_bank_name || !!String(paymentForm.value.bank_name || '').trim(),
     ]
 
-    return requiredFields.every(Boolean)
-})
+    if (!requiredFields.every(Boolean)) {
+        return null
+    }
 
+    const receivedAmount = selectedMethod.value.id === 'cash'
+        ? normalizeAmount(paymentForm.value.received_amount)
+        : null
+
+    if (selectedMethod.value.id === 'cash' && receivedAmount < amount) {
+        return null
+    }
+
+    const apiPaymentType = ['simple_transfer', 'instant_transfer'].includes(selectedMethod.value.id)
+        ? selectedMethod.value.id
+        : selectedMethod.value.paymentType
+    const transferMode = selectedMethod.value.id === 'simple_transfer'
+        ? 'simple'
+        : (selectedMethod.value.id === 'instant_transfer' ? 'instant' : null)
+
+    return {
+        payment_type: apiPaymentType,
+        transfer_mode: transferMode,
+        amount,
+        received_amount: receivedAmount,
+        change_amount: selectedMethod.value.id === 'cash' ? calculateChange.value : 0,
+        transaction_number: String(paymentForm.value.transaction_number || '').trim(),
+        piece_number: String(paymentForm.value.piece_number || '').trim(),
+        issue_date: paymentForm.value.issue_date,
+        bank_name: String(paymentForm.value.bank_name || '').trim(),
+        due_date: paymentForm.value.due_date,
+        reference: selectedMethod.value.id === 'credit'
+            ? String(paymentForm.value.piece_number || '').trim()
+            : String(paymentForm.value.transaction_number || '').trim() || String(paymentForm.value.piece_number || '').trim(),
+        notes: encodePaymentModeLabel(selectedMethod.value.label, selectedMethod.value.paymentTiming, paymentForm.value.notes),
+        display_label: selectedMethod.value.label,
+    }
+}
+
+const draftPayment = computed(() => getDraftPayment())
+const selectedMethodTheme = computed(() => resolveMethodTheme(selectedMethod.value))
+const draftMatchesRemaining = computed(() => {
+    if (!draftPayment.value) {
+        return false
+    }
+
+    return Math.abs(normalizeAmount(draftPayment.value.amount) - remaining.value) <= 0.00001
+})
+const remainingAfterDirectConfirmation = computed(() => {
+    if (!draftPayment.value) {
+        return remaining.value
+    }
+
+    return Math.max(0, remaining.value - normalizeAmount(draftPayment.value.amount))
+})
+const canAddPayment = computed(() => !!draftPayment.value)
 const canConfirmPayments = computed(() => {
-    return payments.value.length > 0 && (props.allowPartialConfirmation || remaining.value <= 0)
+    if (payments.value.length > 0) {
+        return props.allowPartialConfirmation || remaining.value <= 0.00001
+    }
+
+    return draftMatchesRemaining.value && remainingAfterDirectConfirmation.value <= 0.00001
 })
 
-const confirmLabelText = computed(() => props.confirmLabel || 'Finaliser le Paiement')
+const confirmLabelText = computed(() => props.confirmLabel || 'Valider le paiement')
 
 const hasVisibleExtraFields = computed(() => {
     if (!selectedMethod.value) return false
@@ -501,13 +820,14 @@ function selectDefaultMethod() {
         return
     }
 
+    const cashMethod = paymentMethods.value.find((method) => method.paymentType === 'cash')
     const configuredDefault = paymentMethods.value.find((method) => method.isDefault)
-    selectMethod(configuredDefault || paymentMethods.value[0])
+    selectMethod(cashMethod || configuredDefault || paymentMethods.value[0])
 }
 
 function selectMethod(method) {
     selectedMethod.value = method
-    const suggestedAmount = Number(remaining.value || 0)
+    const suggestedAmount = normalizeAmount(remaining.value)
     paymentForm.value = {
         ...getEmptyForm(),
         payment_type: method.paymentType,
@@ -517,38 +837,21 @@ function selectMethod(method) {
 }
 
 function addPayment() {
-    if (!canAddPayment.value) return
+    if (!draftPayment.value) return
 
-    const apiPaymentType = ['simple_transfer', 'instant_transfer'].includes(selectedMethod.value.id)
-        ? selectedMethod.value.id
-        : selectedMethod.value.paymentType
-    const transferMode = selectedMethod.value.id === 'simple_transfer'
-        ? 'simple'
-        : (selectedMethod.value.id === 'instant_transfer' ? 'instant' : null)
-
-    payments.value.push({
-        payment_type: apiPaymentType,
-        transfer_mode: transferMode,
-        amount: paymentForm.value.amount,
-        received_amount: paymentForm.value.received_amount,
-        change_amount: selectedMethod.value.id === 'cash' ? calculateChange.value : 0,
-        transaction_number: paymentForm.value.transaction_number,
-        piece_number: paymentForm.value.piece_number,
-        issue_date: paymentForm.value.issue_date,
-        bank_name: paymentForm.value.bank_name,
-        due_date: paymentForm.value.due_date,
-        reference: selectedMethod.value.id === 'credit'
-            ? paymentForm.value.piece_number
-            : paymentForm.value.transaction_number || paymentForm.value.piece_number,
-        notes: encodePaymentModeLabel(selectedMethod.value.label, selectedMethod.value.paymentTiming, paymentForm.value.notes),
-        display_label: selectedMethod.value.label,
-    })
+    payments.value.push(draftPayment.value)
 
     selectDefaultMethod()
 }
 
 function removePayment(index) {
     payments.value.splice(index, 1)
+
+    if (selectedMethod.value) {
+        selectMethod(selectedMethod.value)
+    } else {
+        selectDefaultMethod()
+    }
 }
 
 function getMethodLabel(type, transferMode = null) {
@@ -569,7 +872,13 @@ function getMethodLabel(type, transferMode = null) {
 
 function confirmPayments() {
     if (!canConfirmPayments.value) return
-    emit('complete', payments.value)
+
+    if (payments.value.length > 0) {
+        emit('complete', payments.value)
+        return
+    }
+
+    emit('complete', [draftPayment.value])
 }
 
 watch(paymentMethods, () => {

@@ -12,6 +12,9 @@ class CustomListService
     public const PREDEFINED_TICKET_LIST = 'tickets_predefinis';
     public const SERVICE_MODE_LIST = 'mode_de_service';
     public const PAYMENT_MODE_LIST = 'mode_de_paiement';
+    public const TAX_LIST = 'taxes';
+    public const DISCOUNT_LIST = 'remises';
+    public const EXPENSE_LIST = 'depenses';
 
     private const DEFAULT_LISTS = [
         self::PREDEFINED_TICKET_LIST => [
@@ -186,6 +189,18 @@ class CustomListService
                     ],
                 ],
             ],
+        ],
+        self::TAX_LIST => [
+            'is_active' => true,
+            'items' => [],
+        ],
+        self::DISCOUNT_LIST => [
+            'is_active' => true,
+            'items' => [],
+        ],
+        self::EXPENSE_LIST => [
+            'is_active' => true,
+            'items' => [],
         ],
     ];
 
@@ -472,6 +487,16 @@ class CustomListService
             'show_due_date' => $metadata['show_due_date'],
             'show_bank_name' => $metadata['show_bank_name'],
             'show_notes' => $metadata['show_notes'],
+            'tax_type' => $metadata['tax_type'],
+            'tax_rate' => $metadata['tax_rate'],
+            'tax_is_default' => $metadata['tax_is_default'],
+            'discount_type' => $metadata['discount_type'],
+            'discount_value' => $metadata['discount_value'],
+            'discount_limit' => $metadata['discount_limit'],
+            'expense_category' => $metadata['expense_category'],
+            'expense_type' => $metadata['expense_type'],
+            'expense_is_recurring' => $metadata['expense_is_recurring'],
+            'expense_frequency' => $metadata['expense_frequency'],
             'is_system' => $metadata['is_system'],
             'system_key' => $metadata['system_key'],
             'source' => $metadata['source'],
@@ -508,60 +533,63 @@ class CustomListService
             ]);
         }
 
+        if ($listName === self::TAX_LIST) {
+            return $this->mergeMetadata($existingMetadata, [
+                'tax_type' => ($item['tax_type'] ?? 'percentage') === 'fixed' ? 'fixed' : 'percentage',
+                'tax_rate' => round((float) ($item['tax_rate'] ?? 0), 2),
+                'tax_is_default' => (bool) ($item['tax_is_default'] ?? false),
+            ]);
+        }
+
+        if ($listName === self::DISCOUNT_LIST) {
+            return $this->mergeMetadata($existingMetadata, [
+                'discount_type' => ($item['discount_type'] ?? 'percentage') === 'fixed' ? 'fixed' : 'percentage',
+                'discount_value' => round((float) ($item['discount_value'] ?? 0), 2),
+                'discount_limit' => round((float) ($item['discount_limit'] ?? 0), 2),
+            ]);
+        }
+
+        if ($listName === self::EXPENSE_LIST) {
+            $isRecurring = (bool) ($item['expense_is_recurring'] ?? false);
+            $frequency = $item['expense_frequency'] ?? null;
+
+            return $this->mergeMetadata($existingMetadata, [
+                'expense_category' => trim((string) ($item['expense_category'] ?? '')),
+                'expense_type' => ($item['expense_type'] ?? 'fixed') === 'variable' ? 'variable' : 'fixed',
+                'expense_is_recurring' => $isRecurring,
+                'expense_frequency' => $isRecurring ? $frequency : null,
+            ]);
+        }
+
         return null;
     }
 
     private function normalizeSerializedMetadata(string $listName, CustomListItem $item): array
     {
+        $defaults = $this->baseSerializedMetadata();
+
         if ($listName === self::PREDEFINED_TICKET_LIST) {
             $metadata = is_array($item->metadata) ? $item->metadata : [];
             $tickets = $this->normalizeTicketCollection($metadata['tickets'] ?? []);
             $kind = $metadata['kind'] ?? ($tickets !== [] ? 'group' : 'ticket');
 
-            return [
+            return array_merge($defaults, [
                 'kind' => $kind === 'group' ? 'group' : 'ticket',
                 'tickets' => $tickets,
-                'operational_mode' => 'pickup',
-                'requires_delivery_agent' => false,
-                'payment_type' => 'other',
-                'transfer_mode' => null,
-                'is_default' => false,
-                'payment_timing' => 'immediate',
-                'show_transaction_number' => false,
-                'show_piece_number' => false,
-                'show_issue_date' => false,
-                'show_due_date' => false,
-                'show_bank_name' => false,
-                'show_notes' => false,
-                'is_system' => false,
-                'system_key' => null,
-                'source' => null,
-            ];
+            ]);
         }
 
         if ($listName === self::SERVICE_MODE_LIST) {
             $metadata = is_array($item->metadata) ? $item->metadata : [];
             $fallback = $this->resolveFallbackServiceModeMetadata($item->label);
 
-            return [
-                'kind' => 'ticket',
-                'tickets' => [],
+            return array_merge($defaults, [
                 'operational_mode' => $metadata['operational_mode'] ?? $fallback['operational_mode'],
                 'requires_delivery_agent' => (bool) ($metadata['requires_delivery_agent'] ?? $fallback['requires_delivery_agent']),
-                'payment_type' => 'other',
-                'transfer_mode' => null,
-                'is_default' => false,
-                'payment_timing' => 'immediate',
-                'show_transaction_number' => false,
-                'show_piece_number' => false,
-                'show_issue_date' => false,
-                'show_due_date' => false,
-                'show_bank_name' => false,
-                'show_notes' => false,
                 'is_system' => (bool) ($metadata['is_system'] ?? false),
                 'system_key' => $metadata['system_key'] ?? null,
                 'source' => $metadata['source'] ?? null,
-            ];
+            ]);
         }
 
         if ($listName === self::PAYMENT_MODE_LIST) {
@@ -569,11 +597,7 @@ class CustomListService
             $fallback = $this->resolveFallbackPaymentModeMetadata($item->label);
             $fieldConfig = $this->normalizePaymentFieldConfig($metadata);
 
-            return [
-                'kind' => 'ticket',
-                'tickets' => [],
-                'operational_mode' => 'pickup',
-                'requires_delivery_agent' => false,
+            return array_merge($defaults, [
                 'payment_type' => $metadata['payment_type'] ?? $fallback['payment_type'],
                 'transfer_mode' => $metadata['transfer_mode'] ?? $fallback['transfer_mode'],
                 'is_default' => (bool) ($metadata['is_default'] ?? $fallback['is_default']),
@@ -587,9 +611,46 @@ class CustomListService
                 'is_system' => (bool) ($metadata['is_system'] ?? false),
                 'system_key' => $metadata['system_key'] ?? null,
                 'source' => $metadata['source'] ?? null,
-            ];
+            ]);
         }
 
+        if ($listName === self::TAX_LIST) {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+
+            return array_merge($defaults, [
+                'tax_type' => ($metadata['tax_type'] ?? 'percentage') === 'fixed' ? 'fixed' : 'percentage',
+                'tax_rate' => round((float) ($metadata['tax_rate'] ?? 0), 2),
+                'tax_is_default' => (bool) ($metadata['tax_is_default'] ?? false),
+            ]);
+        }
+
+        if ($listName === self::DISCOUNT_LIST) {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+
+            return array_merge($defaults, [
+                'discount_type' => ($metadata['discount_type'] ?? 'percentage') === 'fixed' ? 'fixed' : 'percentage',
+                'discount_value' => round((float) ($metadata['discount_value'] ?? 0), 2),
+                'discount_limit' => round((float) ($metadata['discount_limit'] ?? 0), 2),
+            ]);
+        }
+
+        if ($listName === self::EXPENSE_LIST) {
+            $metadata = is_array($item->metadata) ? $item->metadata : [];
+            $isRecurring = (bool) ($metadata['expense_is_recurring'] ?? false);
+
+            return array_merge($defaults, [
+                'expense_category' => trim((string) ($metadata['expense_category'] ?? '')),
+                'expense_type' => ($metadata['expense_type'] ?? 'fixed') === 'variable' ? 'variable' : 'fixed',
+                'expense_is_recurring' => $isRecurring,
+                'expense_frequency' => $isRecurring ? ($metadata['expense_frequency'] ?? null) : null,
+            ]);
+        }
+
+        return $defaults;
+    }
+
+    private function baseSerializedMetadata(): array
+    {
         return [
             'kind' => 'ticket',
             'tickets' => [],
@@ -605,6 +666,16 @@ class CustomListService
             'show_due_date' => false,
             'show_bank_name' => false,
             'show_notes' => false,
+            'tax_type' => 'percentage',
+            'tax_rate' => 0,
+            'tax_is_default' => false,
+            'discount_type' => 'percentage',
+            'discount_value' => 0,
+            'discount_limit' => 0,
+            'expense_category' => '',
+            'expense_type' => 'fixed',
+            'expense_is_recurring' => false,
+            'expense_frequency' => null,
             'is_system' => false,
             'system_key' => null,
             'source' => null,

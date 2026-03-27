@@ -292,8 +292,11 @@
                             <div v-if="serviceModesEnabled" class="shrink-0 border-b border-gray-200 bg-gray-50" :class="desktopPanelPaddingClass">
                                 <div :class="desktopServiceModesWrapClass">
                                     <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button" class="flex items-center gap-2 rounded-lg border font-semibold transition-colors shrink-0" :class="[desktopServiceModeButtonClass, serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300']">
-                                        <span class="text-base">{{ mode.icon }}</span>
-                                        <span>{{ mode.label }}</span>
+                                        <PlatformBadge v-if="mode.source === 'platform'" :platform="mode.label" size="sm" :official="false" />
+                                        <template v-else>
+                                            <span class="text-base">{{ mode.icon }}</span>
+                                            <span>{{ mode.label }}</span>
+                                        </template>
                                     </button>
                                 </div>
                                 <div v-if="shouldShowDeliveryAgentSelect" class="mt-3">
@@ -305,29 +308,6 @@
                                         </option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="shrink-0 border-b border-gray-200 bg-white" :class="desktopPanelPaddingClass">
-                                <button
-                                    type="button"
-                                    class="w-full rounded-2xl border border-gray-200 bg-gray-50 p-3 text-left transition hover:border-gray-300 hover:bg-white"
-                                    @click="openTicketsModal"
-                                >
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">Tickets</p>
-                                            <p class="mt-1 truncate text-sm font-semibold text-gray-900">{{ ticketLauncherTitle }}</p>
-                                            <p class="mt-1 text-[11px] text-gray-500">{{ ticketLauncherSubtitle }}</p>
-                                        </div>
-                                        <div class="flex flex-col items-end gap-2">
-                                            <span class="inline-flex min-w-[24px] justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700">
-                                                {{ savedTickets.length }}
-                                            </span>
-                                            <span class="rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                                                {{ ticketLauncherActionLabel }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </button>
                             </div>
                             <!-- Articles header -->
                             <div class="shrink-0 border-b border-gray-200 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500" :class="desktopHeaderRowClass">
@@ -376,7 +356,15 @@
                             <!-- Buttons -->
                             <div class="shrink-0 border-t border-gray-200 space-y-2 bg-white" :class="desktopPanelPaddingClass">
                                 <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">PASSER AU PAIEMENT</button>
-                                <button @click="openSaveTicketModal" :disabled="!canSaveCurrentTicket" class="w-full py-3 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">Sauvegarder</button>
+                                <button
+                                    @click="handleTicketButtonClick"
+                                    :disabled="ticketButtonDisabled"
+                                    :title="ticketButtonHint"
+                                    class="w-full py-3 px-4 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                    type="button"
+                                >
+                                    {{ ticketButtonLabel }}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -407,7 +395,11 @@
                                 <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button"
                                     class="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors shrink-0"
                                     :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600'">
-                                    <span>{{ mode.icon }}</span><span>{{ mode.label }}</span>
+                                    <PlatformBadge v-if="mode.source === 'platform'" :platform="mode.label" size="sm" :official="false" />
+                                    <template v-else>
+                                        <span>{{ mode.icon }}</span>
+                                        <span>{{ mode.label }}</span>
+                                    </template>
                                 </button>
                             </div>
                             <div v-if="shouldShowDeliveryAgentSelect" class="mt-2">
@@ -419,30 +411,6 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="px-3 py-2 border-b border-gray-100 bg-white">
-                            <button
-                                type="button"
-                                class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-left transition hover:border-gray-300 hover:bg-white"
-                                @click="openTicketsModal"
-                            >
-                                <div class="flex items-start justify-between gap-2">
-                                    <div class="min-w-0">
-                                        <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">Tickets</p>
-                                        <p class="mt-1 truncate text-xs font-semibold text-gray-900">{{ ticketLauncherTitle }}</p>
-                                        <p class="mt-1 text-[10px] text-gray-500">{{ ticketLauncherSubtitle }}</p>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1.5">
-                                        <span class="inline-flex min-w-[22px] justify-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                                            {{ savedTickets.length }}
-                                        </span>
-                                        <span class="rounded-md bg-blue-600 px-2.5 py-1 text-[10px] font-semibold text-white">
-                                            {{ ticketLauncherActionLabel }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </button>
-                        </div>
-
                         <!-- Articles header -->
                         <div class="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between text-[10px] uppercase tracking-widest text-gray-400 font-semibold bg-gray-50">
                             <span>Articles</span>
@@ -505,10 +473,12 @@
                             </div>
                             <!-- Action buttons side by side -->
                             <div class="px-3 py-2 flex gap-2">
-                                <button @click="openSaveTicketModal" :disabled="!canSaveCurrentTicket"
-                                    class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                                <button @click="handleTicketButtonClick"
+                                    :disabled="ticketButtonDisabled"
+                                    :title="ticketButtonHint"
+                                    class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                                     type="button">
-                                    Sauvegarder
+                                    {{ ticketButtonLabel }}
                                 </button>
                                 <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0"
                                     class="flex-[1.4] py-2.5 text-xs font-bold rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
@@ -880,6 +850,7 @@ import OpenTicketsModal from '../components/pos/OpenTicketsModal.vue'
 import SelectOptionsModal from '../components/pos/SelectOptionsModal.vue'
 import SelectVariantsModal from '../components/pos/SelectVariantsModal.vue'
 import OptionFormContent from '../components/forms/OptionFormContent.vue'
+import PlatformBadge from '../components/common/PlatformBadge.vue'
 import {
     Bars3Icon,
     MagnifyingGlassIcon,
@@ -1417,31 +1388,29 @@ const canSaveCurrentTicket = computed(() => {
     return hasActiveSavedTicketChanges.value
 })
 
-const ticketLauncherTitle = computed(() => {
-    return 'Tickets enregistrés'
+const ticketButtonDisabled = computed(() => {
+    if (cartStore.items.length === 0) {
+        return false
+    }
+
+    return !canSaveCurrentTicket.value
 })
 
-const ticketLauncherSubtitle = computed(() => {
-    if (activeSavedTicket.value) {
-        return `${getSavedTicketTitle(activeSavedTicket.value)} · ${formatSavedTicketType(activeSavedTicket.value)}`
+const ticketButtonHint = computed(() => {
+    if (cartStore.items.length === 0) {
+        return 'Afficher les tickets enregistrés'
     }
 
-    if (savedTicketsLoading.value) {
-        return 'Chargement des tickets sauvegardés...'
+    if (canSaveCurrentTicket.value) {
+        return 'Sauvegarder le ticket en cours'
     }
 
-    if (savedTickets.value.length) {
-        return `${savedTickets.value.length} ticket(s) enregistré(s)`
-    }
-
-    if (isPreparingNewPosOrder.value) {
-        return 'Aucun ticket enregistré pour le moment'
-    }
-
-    return 'Ouvrir un ticket déjà enregistré'
+    return 'Modifiez le ticket avant de le sauvegarder à nouveau'
 })
 
-const ticketLauncherActionLabel = computed(() => 'Ouvrir')
+const ticketButtonLabel = computed(() => {
+    return cartStore.items.length > 0 ? 'Sauvegarder' : 'Tickets enregistrés'
+})
 
 async function fetchSavedTickets() {
     if (savedTicketsLoading.value) return
@@ -2026,6 +1995,15 @@ function openSaveTicketModal() {
 function openTicketsModal() {
     showOpenTicketsModal.value = true
     fetchSavedTickets()
+}
+
+function handleTicketButtonClick() {
+    if (cartStore.items.length > 0) {
+        openSaveTicketModal()
+        return
+    }
+
+    openTicketsModal()
 }
 
 async function handleOpenTicketModalLoad(ticketId) {

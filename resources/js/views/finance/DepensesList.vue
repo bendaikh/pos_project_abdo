@@ -187,6 +187,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useSettingsStore } from '../../stores/settings'
+import { useCustomListsStore } from '../../stores/customLists'
 import { 
     PlusIcon, 
     PencilIcon, 
@@ -196,6 +197,7 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const settingsStore = useSettingsStore()
+const customListsStore = useCustomListsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
 const depensesList = ref([])
@@ -208,7 +210,7 @@ const editingDepense = ref(null)
 const depenseToDelete = ref(null)
 const saving = ref(false)
 
-const categories = [
+const fallbackCategories = [
     'Fournitures',
     'Loyer',
     'Électricité',
@@ -220,6 +222,15 @@ const categories = [
     'Maintenance',
     'Autres'
 ]
+
+const categories = computed(() => {
+    const configuredCategories = (customListsStore.expenseList?.items || [])
+        .filter((item) => item.is_active !== false)
+        .map((item) => String(item.expense_category || '').trim())
+        .filter((value, index, array) => value !== '' && array.indexOf(value) === index)
+
+    return configuredCategories.length ? configuredCategories : fallbackCategories
+})
 
 const form = reactive({
     description: '',
@@ -356,6 +367,10 @@ function deleteDepense() {
 }
 
 onMounted(() => {
+    customListsStore.fetchList('depenses').catch((error) => {
+        console.error('Failed to load expense custom list:', error)
+    })
+
     // Demo data
     depensesList.value = [
         { id: 1, description: 'Loyer mensuel', montant: 15000, date: '2026-02-01', categorie: 'Loyer', fournisseur: 'Propriétaire', reference: 'LOY-202602', statut: 'payee' },

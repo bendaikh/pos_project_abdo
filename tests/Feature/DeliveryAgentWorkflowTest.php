@@ -151,6 +151,60 @@ class DeliveryAgentWorkflowTest extends TestCase
             ->assertJsonPath('rows.0.orders_count', 2);
     }
 
+    public function test_deactivate_endpoint_marks_delivery_agent_inactive_without_deleting_it(): void
+    {
+        $user = User::factory()->create();
+        $deliveryAgent = DeliveryAgent::create([
+            'name' => 'Uber Eats',
+            'type' => 'platform',
+            'phone' => '0600000004',
+            'platform_name' => 'Uber Eats',
+            'commission_type' => 'fixed',
+            'commission_value' => 12,
+            'status' => 'active',
+            'active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->postJson("/api/delivery-agents/{$deliveryAgent->id}/deactivate");
+
+        $response->assertOk()
+            ->assertJsonPath('message', 'Livreur désactivé avec succès.')
+            ->assertJsonPath('delivery_agent.id', $deliveryAgent->id)
+            ->assertJsonPath('delivery_agent.status', 'inactive')
+            ->assertJsonPath('delivery_agent.active', false);
+
+        $this->assertDatabaseHas('delivery_agents', [
+            'id' => $deliveryAgent->id,
+            'status' => 'inactive',
+            'active' => false,
+        ]);
+    }
+
+    public function test_destroy_endpoint_deletes_delivery_agent_record(): void
+    {
+        $user = User::factory()->create();
+        $deliveryAgent = DeliveryAgent::create([
+            'name' => 'Glovo',
+            'type' => 'platform',
+            'phone' => '0600000005',
+            'platform_name' => 'Glovo',
+            'commission_type' => 'fixed',
+            'commission_value' => 15,
+            'status' => 'active',
+            'active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->deleteJson("/api/delivery-agents/{$deliveryAgent->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('message', 'Livreur supprimé avec succès.')
+            ->assertJsonPath('delivery_agent.id', $deliveryAgent->id);
+
+        $this->assertDatabaseMissing('delivery_agents', [
+            'id' => $deliveryAgent->id,
+        ]);
+    }
+
     private function createSale(array $overrides = []): Sale
     {
         $total = $overrides['total'] ?? 200;

@@ -156,7 +156,8 @@ export const deliveryAgentsApi = {
     get: (id) => api.get(`/delivery-agents/${id}`),
     create: (data) => api.post('/delivery-agents', data),
     update: (id, data) => api.put(`/delivery-agents/${id}`, data),
-    deactivate: (id) => api.delete(`/delivery-agents/${id}`),
+    deactivate: (id) => api.post(`/delivery-agents/${id}/deactivate`),
+    delete: (id) => api.delete(`/delivery-agents/${id}`),
     report: (params = {}) => api.get('/delivery-agents/report', { params }),
 }
 

@@ -155,6 +155,7 @@ class PaymentController extends Controller
             $changeAmount = max(0, $validated['received_amount'] - $paymentAmount);
         }
 
+        $notes = $validated['notes'] ?? null;
         $requiresConfirmation = $this->paymentWorkflow->requiresConfirmation(
             $validated['payment_type'],
             $validated['transfer_mode'] ?? null,
@@ -162,7 +163,6 @@ class PaymentController extends Controller
         );
         $collectionStatus = $requiresConfirmation ? 'pending' : 'collected';
 
-        $notes = $validated['notes'] ?? null;
         if ($validated['payment_type'] === 'virement' && isset($validated['transfer_mode'])) {
             $modeTag = $validated['transfer_mode'] === 'instant' ? '[VIREMENT_INSTANT]' : '[VIREMENT_SIMPLE]';
             $notes = trim($modeTag . ' ' . ($notes ?? ''));

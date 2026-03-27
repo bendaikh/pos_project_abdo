@@ -93,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Delivery Agents
     Route::get('/delivery-agents/report', [DeliveryAgentController::class, 'report']);
+    Route::post('/delivery-agents/{deliveryAgent}/deactivate', [DeliveryAgentController::class, 'deactivate']);
     Route::apiResource('delivery-agents', DeliveryAgentController::class);
 
     // Payroll

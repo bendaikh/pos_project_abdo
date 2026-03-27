@@ -5,6 +5,9 @@ import { customListsApi } from '../api'
 export const PREDEFINED_TICKET_LIST_NAME = 'tickets_predefinis'
 export const SERVICE_MODE_LIST_NAME = 'mode_de_service'
 export const PAYMENT_MODE_LIST_NAME = 'mode_de_paiement'
+export const TAX_LIST_NAME = 'taxes'
+export const DISCOUNT_LIST_NAME = 'remises'
+export const EXPENSE_LIST_NAME = 'depenses'
 
 const STORAGE_PREFIX = 'custom_list_cache_'
 
@@ -176,6 +179,27 @@ const FALLBACK_PAYMENT_MODE_LIST = {
             system_key: 'credit',
         },
     ],
+}
+
+const FALLBACK_TAX_LIST = {
+    id: null,
+    name: TAX_LIST_NAME,
+    is_active: true,
+    items: [],
+}
+
+const FALLBACK_DISCOUNT_LIST = {
+    id: null,
+    name: DISCOUNT_LIST_NAME,
+    is_active: true,
+    items: [],
+}
+
+const FALLBACK_EXPENSE_LIST = {
+    id: null,
+    name: EXPENSE_LIST_NAME,
+    is_active: true,
+    items: [],
 }
 
 const LEGACY_SERVICE_MODE_LABELS = {
@@ -385,6 +409,48 @@ function normalizePaymentModeItem(item, index) {
     }
 }
 
+function normalizeTaxItem(item, index) {
+    return {
+        id: item?.id ?? `generated-tax-${index}`,
+        label: String(item?.label || item?.value || '').trim(),
+        value: String(item?.value || item?.label || '').trim(),
+        is_active: item?.is_active !== false,
+        sort_order: Number(item?.sort_order ?? index + 1),
+        tax_type: item?.tax_type === 'fixed' ? 'fixed' : 'percentage',
+        tax_rate: Number(item?.tax_rate ?? 0),
+        tax_is_default: item?.tax_is_default === true,
+    }
+}
+
+function normalizeDiscountItem(item, index) {
+    return {
+        id: item?.id ?? `generated-discount-${index}`,
+        label: String(item?.label || item?.value || '').trim(),
+        value: String(item?.value || item?.label || '').trim(),
+        is_active: item?.is_active !== false,
+        sort_order: Number(item?.sort_order ?? index + 1),
+        discount_type: item?.discount_type === 'fixed' ? 'fixed' : 'percentage',
+        discount_value: Number(item?.discount_value ?? 0),
+        discount_limit: Number(item?.discount_limit ?? 0),
+    }
+}
+
+function normalizeExpenseItem(item, index) {
+    const isRecurring = item?.expense_is_recurring === true
+
+    return {
+        id: item?.id ?? `generated-expense-${index}`,
+        label: String(item?.label || item?.value || '').trim(),
+        value: String(item?.value || item?.label || '').trim(),
+        is_active: item?.is_active !== false,
+        sort_order: Number(item?.sort_order ?? index + 1),
+        expense_category: String(item?.expense_category || '').trim(),
+        expense_type: item?.expense_type === 'variable' ? 'variable' : 'fixed',
+        expense_is_recurring: isRecurring,
+        expense_frequency: isRecurring ? (item?.expense_frequency || 'monthly') : null,
+    }
+}
+
 function inferServiceModeMeta(item) {
     const normalized = normalizeKey(item?.label || item?.value || '')
 
@@ -445,6 +511,48 @@ function normalizeListPayload(list, name = list?.name) {
         }
     }
 
+    if (name === TAX_LIST_NAME) {
+        const base = list && list.name === name ? list : FALLBACK_TAX_LIST
+
+        return {
+            id: base.id ?? null,
+            name,
+            is_active: base.is_active !== false,
+            items: [...(base.items || [])]
+                .map((item, index) => normalizeTaxItem(item, index))
+                .filter((item) => item.label)
+                .sort((a, b) => a.sort_order - b.sort_order),
+        }
+    }
+
+    if (name === DISCOUNT_LIST_NAME) {
+        const base = list && list.name === name ? list : FALLBACK_DISCOUNT_LIST
+
+        return {
+            id: base.id ?? null,
+            name,
+            is_active: base.is_active !== false,
+            items: [...(base.items || [])]
+                .map((item, index) => normalizeDiscountItem(item, index))
+                .filter((item) => item.label)
+                .sort((a, b) => a.sort_order - b.sort_order),
+        }
+    }
+
+    if (name === EXPENSE_LIST_NAME) {
+        const base = list && list.name === name ? list : FALLBACK_EXPENSE_LIST
+
+        return {
+            id: base.id ?? null,
+            name,
+            is_active: base.is_active !== false,
+            items: [...(base.items || [])]
+                .map((item, index) => normalizeExpenseItem(item, index))
+                .filter((item) => item.label)
+                .sort((a, b) => a.sort_order - b.sort_order),
+        }
+    }
+
     const base = list && list.name === SERVICE_MODE_LIST_NAME
         ? list
         : FALLBACK_SERVICE_MODE_LIST
@@ -465,6 +573,9 @@ export const useCustomListsStore = defineStore('customLists', () => {
         [PREDEFINED_TICKET_LIST_NAME]: clone(FALLBACK_PREDEFINED_TICKETS_LIST),
         [SERVICE_MODE_LIST_NAME]: clone(FALLBACK_SERVICE_MODE_LIST),
         [PAYMENT_MODE_LIST_NAME]: clone(FALLBACK_PAYMENT_MODE_LIST),
+        [TAX_LIST_NAME]: clone(FALLBACK_TAX_LIST),
+        [DISCOUNT_LIST_NAME]: clone(FALLBACK_DISCOUNT_LIST),
+        [EXPENSE_LIST_NAME]: clone(FALLBACK_EXPENSE_LIST),
     })
     const loadedLists = ref({})
     const loadingLists = ref({})
@@ -480,6 +591,18 @@ export const useCustomListsStore = defineStore('customLists', () => {
 
         if (name === PAYMENT_MODE_LIST_NAME) {
             return clone(FALLBACK_PAYMENT_MODE_LIST)
+        }
+
+        if (name === TAX_LIST_NAME) {
+            return clone(FALLBACK_TAX_LIST)
+        }
+
+        if (name === DISCOUNT_LIST_NAME) {
+            return clone(FALLBACK_DISCOUNT_LIST)
+        }
+
+        if (name === EXPENSE_LIST_NAME) {
+            return clone(FALLBACK_EXPENSE_LIST)
         }
 
         return clone(FALLBACK_SERVICE_MODE_LIST)
@@ -577,6 +700,13 @@ export const useCustomListsStore = defineStore('customLists', () => {
         return normalizeListPayload(
             lists.value[PAYMENT_MODE_LIST_NAME] || FALLBACK_PAYMENT_MODE_LIST,
             PAYMENT_MODE_LIST_NAME
+        )
+    })
+
+    const expenseList = computed(() => {
+        return normalizeListPayload(
+            lists.value[EXPENSE_LIST_NAME] || FALLBACK_EXPENSE_LIST,
+            EXPENSE_LIST_NAME
         )
     })
 
@@ -683,6 +813,7 @@ export const useCustomListsStore = defineStore('customLists', () => {
         predefinedTicketsList,
         serviceModeList,
         paymentModeList,
+        expenseList,
         serviceModeEnabled,
         activeServiceModes,
         activePaymentModes,
