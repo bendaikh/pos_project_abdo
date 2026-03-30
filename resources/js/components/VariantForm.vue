@@ -12,9 +12,9 @@
             <p class="text-xs text-gray-500 mt-1">Nom visible aux clients</p>
         </div>
 
-        <!-- Price Impact -->
+        <!-- Variant Price -->
         <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Impact sur le prix ({{ currencyCode }})</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Prix de la variante ({{ currencyCode }})</label>
             <input
                 v-model.number="formData.price_impact"
                 type="number"
@@ -23,7 +23,7 @@
                 placeholder="0.00"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-            <p class="text-xs text-gray-500 mt-1">Prix supplémentaire pour cette variante (optionnel)</p>
+            <p class="text-xs text-gray-500 mt-1">Prix final de cette variante. Elle remplace le prix de base du produit.</p>
         </div>
 
         <!-- Active Status -->

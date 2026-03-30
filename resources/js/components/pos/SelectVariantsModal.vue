@@ -52,8 +52,8 @@
                                     {{ variant.template_name ? `${variant.template_name} · ${variant.template_value}` : variant.name }}
                                 </p>
                                 <div class="flex flex-wrap gap-2 items-center mt-1 text-sm text-gray-600">
-                                    <span v-if="Number(variant.price_impact) > 0" class="text-green-600 font-semibold">
-                                        +{{ formatCurrency(variant.price_impact) }}
+                                    <span class="text-green-600 font-semibold">
+                                        {{ formatCurrency(getVariantUnitPrice(variant)) }}
                                     </span>
                                     <span v-if="variant.cost_price > 0" class="text-orange-600 font-semibold">
                                         Coût: {{ formatCurrency(variant.cost_price) }}
@@ -72,9 +72,9 @@
 
                     <div class="bg-gradient-to-r from-primary-50 to-blue-50 rounded-2xl p-4 border border-primary-100 mt-6">
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-700 font-semibold">💰 Impact sur le prix</span>
+                            <span class="text-gray-700 font-semibold">💰 Prix de la variante</span>
                             <span class="text-2xl font-bold text-primary-600">
-                                {{ variantPriceImpact > 0 ? '+' : '' }}{{ formatCurrency(variantPriceImpact) }}
+                                {{ formatCurrency(selectedVariantUnitPrice) }}
                             </span>
                         </div>
                     </div>
@@ -124,10 +124,7 @@
 
                                     <div class="flex-1 min-w-0">
                                         <p class="font-semibold text-gray-900 text-base">{{ variant.name }}</p>
-                                        <p class="text-xs text-gray-500 mt-1">Prix: {{ formatVariantPrice(variant) }}</p>
-                                        <p v-if="Number(variant.price_impact) !== 0" class="text-sm font-bold text-primary-600 mt-1">
-                                            {{ formatPriceImpact(variant.price_impact) }}
-                                        </p>
+                                        <p class="text-xs text-gray-500 mt-1">Supplément: {{ formatOptionPrice(variant.price_impact) }}</p>
                                     </div>
                                 </label>
                             </div>
@@ -210,8 +207,10 @@ const selectedVariant = computed(() => {
     return props.article?.variants?.find(v => v.id === selectedVariantId.value) || null
 })
 
-const variantPriceImpact = computed(() => {
-    return selectedVariant.value ? Number(selectedVariant.value.price_impact) || 0 : 0
+const selectedVariantUnitPrice = computed(() => {
+    return selectedVariant.value
+        ? getVariantUnitPrice(selectedVariant.value)
+        : Number(props.article?.sell_price) || 0
 })
 
 const selectableOptions = computed(() => {
@@ -254,10 +253,14 @@ const formatPriceImpact = (price) => {
     return amount > 0 ? `+ ${currencyFormatter.format(amount)}` : `- ${currencyFormatter.format(Math.abs(amount))}`
 }
 
-const formatVariantPrice = (variant) => {
-    const base = Number(props.article?.sell_price) || 0
-    const impact = Number(variant.price_impact) || 0
-    return currencyFormatter.format(base + impact)
+const formatOptionPrice = (price) => {
+    const amount = Number(price) || 0
+    if (amount === 0) return 'Gratuit'
+    return `+ ${currencyFormatter.format(amount)}`
+}
+
+function getVariantUnitPrice(variant) {
+    return Number(variant?.price_impact) || 0
 }
 
 function activeOptionVariants(option) {

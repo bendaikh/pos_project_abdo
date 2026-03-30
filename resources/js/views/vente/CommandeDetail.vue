@@ -139,7 +139,7 @@
                             <tr v-for="item in commande.items" :key="item.id">
                                 <td class="px-4 py-2 text-sm text-gray-900">{{ item.article_name }}</td>
                                 <td class="px-4 py-2 text-sm text-right">{{ item.quantity }}</td>
-                                <td class="px-4 py-2 text-sm text-right">{{ formatCurrency(item.unit_price) }}</td>
+                                <td class="px-4 py-2 text-sm text-right">{{ formatCurrency(itemUnitPrice(item)) }}</td>
                                 <td class="px-4 py-2 text-sm text-right font-semibold">{{ formatCurrency(item.total) }}</td>
                             </tr>
                             <tr class="bg-gray-50 font-semibold">
@@ -356,6 +356,10 @@ const router = useRouter()
 const customListsStore = useCustomListsStore()
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
+
+function itemUnitPrice(item) {
+    return Number(item?.unit_price || 0) + Number(item?.options_price || 0)
+}
 
 const loading = ref(false)
 const statusSaving = ref(false)

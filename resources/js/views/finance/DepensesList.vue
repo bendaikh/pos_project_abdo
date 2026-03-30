@@ -224,9 +224,9 @@ const fallbackCategories = [
 ]
 
 const categories = computed(() => {
-    const configuredCategories = (customListsStore.expenseList?.items || [])
+    const configuredCategories = (customListsStore.expenseCategoryList?.items || [])
         .filter((item) => item.is_active !== false)
-        .map((item) => String(item.expense_category || '').trim())
+        .map((item) => String(item.label || item.value || '').trim())
         .filter((value, index, array) => value !== '' && array.indexOf(value) === index)
 
     return configuredCategories.length ? configuredCategories : fallbackCategories
@@ -367,8 +367,11 @@ function deleteDepense() {
 }
 
 onMounted(() => {
-    customListsStore.fetchList('depenses').catch((error) => {
-        console.error('Failed to load expense custom list:', error)
+    Promise.all([
+        customListsStore.fetchList('depenses'),
+        customListsStore.fetchList('categories_depenses'),
+    ]).catch((error) => {
+        console.error('Failed to load expense custom lists:', error)
     })
 
     // Demo data

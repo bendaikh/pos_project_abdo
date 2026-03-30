@@ -56,7 +56,7 @@
                                 <div class="flex-1 min-w-0">
                                     <p class="font-semibold text-gray-900 text-base">{{ variant.name }}</p>
                                     <p class="text-xs text-gray-500 mt-1">
-                                        Prix: {{ formatVariantPrice(variant) }}
+                                        Supplément: {{ formatOptionPrice(variant.price_impact) }}
                                     </p>
                                     <p v-if="Number(variant.price_impact) !== 0" class="text-sm font-bold text-primary-600 mt-1">
                                         {{ formatPriceImpact(variant.price_impact) }}
@@ -168,10 +168,10 @@ function formatPriceImpact(price) {
     return amount > 0 ? `+ ${currencyFormatter.format(amount)}` : `- ${currencyFormatter.format(Math.abs(amount))}`
 }
 
-function formatVariantPrice(variant) {
-    const base = Number(props.article?.sell_price) || 0
-    const impact = Number(variant.price_impact) || 0
-    return currencyFormatter.format(base + impact)
+function formatOptionPrice(price) {
+    const amount = Number(price) || 0
+    if (amount === 0) return 'Gratuit'
+    return `+ ${currencyFormatter.format(amount)}`
 }
 
 function isVariantSelected(option, variant) {

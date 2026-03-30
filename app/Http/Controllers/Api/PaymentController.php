@@ -133,7 +133,7 @@ class PaymentController extends Controller
 
         $sale->loadMissing(['payments', 'customer']);
         $saleSummary = $this->paymentWorkflow->computeSaleSummary($sale);
-        $remainingAmount = (float) $saleSummary['remaining_amount'];
+        $remainingAmount = round((float) $saleSummary['remaining_amount'], 2);
 
         if ($remainingAmount <= 0) {
             $message = (float) ($saleSummary['pending_collection_amount'] ?? 0) > 0
@@ -144,15 +144,15 @@ class PaymentController extends Controller
         }
 
         $paymentAmount = round((float) $validated['amount'], 2);
-        if ($paymentAmount > $remainingAmount + 0.00001) {
+        if ($this->toMoneyCents($paymentAmount) > $this->toMoneyCents($remainingAmount)) {
             return response()->json([
                 'message' => 'Le montant dépasse le reste à couvrir pour cette commande.',
             ], 422);
         }
 
-        $changeAmount = 0;
+        $changeAmount = 0.0;
         if ($validated['payment_type'] === 'cash' && isset($validated['received_amount'])) {
-            $changeAmount = max(0, $validated['received_amount'] - $paymentAmount);
+            $changeAmount = round(max(0, (float) $validated['received_amount'] - $paymentAmount), 2);
         }
 
         $notes = $validated['notes'] ?? null;
@@ -245,5 +245,10 @@ class PaymentController extends Controller
             'remaining' => $sale->payment_summary['remaining_amount'],
             'change' => $changeAmount,
         ], 201);
+    }
+
+    private function toMoneyCents(float $amount): int
+    {
+        return (int) round($amount * 100);
     }
 }

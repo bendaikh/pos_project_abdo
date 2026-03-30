@@ -149,6 +149,92 @@
                             </select>
                         </div>
                     </div>
+
+                    <div class="border border-gray-200 rounded-xl p-4 md:p-5 space-y-4">
+                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <h3 class="text-base font-semibold text-gray-900">Montants rapides POS</h3>
+                                <p class="text-sm text-gray-500">
+                                    Choisissez les billets et monnaies affiches dans la zone "montant rapide" du paiement POS.
+                                </p>
+                            </div>
+                            <div class="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
+                                Devise active : {{ settings.currency_code || 'MAD' }}
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-amber-900">Billets disponibles</p>
+                                        <p class="text-xs text-amber-700">Cochez les billets visibles dans le POS.</p>
+                                    </div>
+                                    <label class="inline-flex items-center gap-2 text-xs font-medium text-amber-800">
+                                        <input
+                                            :checked="selectedBillDenominations.length === currencyDenominationCatalog.bills.length && currencyDenominationCatalog.bills.length > 0"
+                                            type="checkbox"
+                                            class="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                                            @change="toggleAllCurrencyDenominations('bills', $event.target.checked)"
+                                        >
+                                        Tout afficher
+                                    </label>
+                                </div>
+
+                                <div v-if="currencyDenominationCatalog.bills.length" class="grid grid-cols-2 gap-2">
+                                    <label
+                                        v-for="amount in currencyDenominationCatalog.bills"
+                                        :key="`bill-${amount}`"
+                                        class="flex items-center gap-3 rounded-lg border border-amber-200 bg-white px-3 py-2.5 text-sm text-gray-800"
+                                    >
+                                        <input
+                                            v-model="settings.currency_visible_bill_denominations"
+                                            :value="amount"
+                                            type="checkbox"
+                                            class="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                                        >
+                                        <span class="font-semibold">{{ formatCurrencyDenomination(amount) }}</span>
+                                    </label>
+                                </div>
+                                <p v-else class="text-sm text-gray-500">Aucun billet configure pour cette devise.</p>
+                            </div>
+
+                            <div class="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-blue-900">Monnaie disponible</p>
+                                        <p class="text-xs text-blue-700">Cochez les pieces visibles dans le POS.</p>
+                                    </div>
+                                    <label class="inline-flex items-center gap-2 text-xs font-medium text-blue-800">
+                                        <input
+                                            :checked="selectedCoinDenominations.length === currencyDenominationCatalog.coins.length && currencyDenominationCatalog.coins.length > 0"
+                                            type="checkbox"
+                                            class="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                                            @change="toggleAllCurrencyDenominations('coins', $event.target.checked)"
+                                        >
+                                        Tout afficher
+                                    </label>
+                                </div>
+
+                                <div v-if="currencyDenominationCatalog.coins.length" class="grid grid-cols-2 gap-2">
+                                    <label
+                                        v-for="amount in currencyDenominationCatalog.coins"
+                                        :key="`coin-${amount}`"
+                                        class="flex items-center gap-3 rounded-lg border border-blue-200 bg-white px-3 py-2.5 text-sm text-gray-800"
+                                    >
+                                        <input
+                                            v-model="settings.currency_visible_coin_denominations"
+                                            :value="amount"
+                                            type="checkbox"
+                                            class="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                                        >
+                                        <span class="font-semibold">{{ formatCurrencyDenomination(amount) }}</span>
+                                    </label>
+                                </div>
+                                <p v-else class="text-sm text-gray-500">Aucune monnaie configuree pour cette devise.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Format du Reçu -->
@@ -465,7 +551,10 @@
                                         >
                                             <div class="flex-1 space-y-2">
                                                 <PlatformBadge v-if="item.source === 'platform'" :platform="item.label" size="sm" />
-                                                <input v-model.trim="item.label" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom du mode (ex: Sur place)">
+                                                <input v-model.trim="item.label" :disabled="item.source === 'platform'" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-slate-100 disabled:text-slate-500" placeholder="Nom du mode (ex: Sur place)">
+                                                <p v-if="item.source === 'platform'" class="text-xs text-slate-500">
+                                                    Plateforme synchronisée depuis la page livreurs. La suppression se fait uniquement depuis ce module.
+                                                </p>
                                             </div>
                                             <label class="flex items-center gap-2 text-sm font-medium text-slate-700 shrink-0">
                                                 <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
@@ -474,9 +563,12 @@
                                             <span v-if="item.is_system" class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 shrink-0">
                                                 Officiel
                                             </span>
+                                            <span v-else-if="item.source === 'platform'" class="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 shrink-0">
+                                                Depuis livreurs
+                                            </span>
                                             <div class="flex items-center gap-2 shrink-0">
-                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveServiceMode(item.id, -1)">↑ Monter</button>
-                                                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveServiceMode(item.id, 1)">↓ Descendre</button>
+                                                <button v-if="item.source !== 'platform'" type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveServiceMode(item.id, -1)">↑ Monter</button>
+                                                <button v-if="item.source !== 'platform'" type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveServiceMode(item.id, 1)">↓ Descendre</button>
                                                 <button v-if="canDeleteServiceMode(item)" type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeServiceMode(item.id)">✕ Supprimer</button>
                                             </div>
                                         </div>
@@ -864,6 +956,60 @@
                             </label>
                         </div>
 
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                            <div class="flex items-center justify-between gap-4">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-900">Catégories de dépenses</p>
+                                    <p class="text-xs text-slate-500">Gérez les catégories séparément puis sélectionnez-les dans les modèles de dépenses et dans l’écran Dépenses.</p>
+                                </div>
+                                <label class="flex items-center gap-2 text-sm text-slate-700">
+                                    <input v-model="expenseCategorySettings.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                    Catégories actives
+                                </label>
+                            </div>
+
+                            <div v-if="expenseCategorySettings.items.length" class="space-y-2">
+                                <div
+                                    v-for="category in expenseCategorySettings.items"
+                                    :key="category.id"
+                                    class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 md:flex-row md:items-center"
+                                >
+                                    <input v-model.trim="category.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Charges fixes">
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input v-model="category.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                        Active
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors" @click="moveExpenseCategory(category.id, -1)">↑ Monter</button>
+                                        <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors" @click="moveExpenseCategory(category.id, 1)">↓ Descendre</button>
+                                        <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeExpenseCategory(category.id)">✕ Supprimer</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucune catégorie configurée.</p>
+
+                            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                                <input
+                                    v-model.trim="newExpenseCategoryLabel"
+                                    type="text"
+                                    placeholder="Ajouter une catégorie de dépense"
+                                    class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    @keydown.enter.prevent="addExpenseCategory"
+                                >
+                                <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors" @click="addExpenseCategory">
+                                    <PlusIcon class="w-4 h-4" />
+                                    Ajouter
+                                </button>
+                            </div>
+
+                            <div class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+                                <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetExpenseCategoryForm">Annuler</button>
+                                <button type="button" class="px-6 py-2.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('expense_categories')" @click="saveExpenseCategoryList">
+                                    {{ isSavingCustomList('expense_categories') ? '⏳ Enregistrement...' : '✓ Enregistrer les catégories' }}
+                                </button>
+                            </div>
+                        </div>
+
                         <div v-if="expenseSettings.items.length" class="space-y-3">
                             <div
                                 v-for="expense in expenseSettings.items"
@@ -877,7 +1023,10 @@
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Catégorie dépense</label>
-                                        <input v-model.trim="expense.expense_category" type="text" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Ex: Charges fixes">
+                                        <select v-model="expense.expense_category" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                            <option value="">Sélectionner une catégorie</option>
+                                            <option v-for="category in availableExpenseCategories" :key="category.id" :value="category.label">{{ category.label }}</option>
+                                        </select>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
@@ -926,13 +1075,10 @@
                                     class="lg:col-span-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                                     @keydown.enter.prevent="addExpense"
                                 >
-                                <input
-                                    v-model.trim="newExpense.expense_category"
-                                    type="text"
-                                    placeholder="Catégorie dépense"
-                                    class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    @keydown.enter.prevent="addExpense"
-                                >
+                                <select v-model="newExpense.expense_category" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <option value="">Sélectionner une catégorie</option>
+                                    <option v-for="category in availableExpenseCategories" :key="category.id" :value="category.label">{{ category.label }}</option>
+                                </select>
                                 <select v-model="newExpense.expense_type" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                                     <option value="fixed">Fixe</option>
                                     <option value="variable">Variable</option>
@@ -962,6 +1108,9 @@
                                     Ajouter
                                 </button>
                             </div>
+                            <p v-if="availableExpenseCategories.length === 0" class="mt-3 text-xs text-amber-600">
+                                Ajoutez d’abord au moins une catégorie de dépense pour pouvoir l’assigner ici.
+                            </p>
                         </div>
 
                         <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
@@ -1082,10 +1231,11 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { customListsApi, settingsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 import { useCustomListsStore } from '../../stores/customLists'
+import { getCurrencyDenominationCatalog, normalizeDenominationSelection } from '../../utils/currencyDenominations'
 import AutomationRules from './AutomationRules.vue'
 import PlatformBadge from '../../components/common/PlatformBadge.vue'
 import {
@@ -1111,6 +1261,7 @@ const activeCustomListTab = ref('tickets')
 const newServiceModeLabel = ref('')
 const newPredefinedTicketLabel = ref('')
 const newPredefinedGroupLabel = ref('')
+const newExpenseCategoryLabel = ref('')
 const newPaymentMode = reactive(createPaymentModeDraft())
 const newTax = reactive(createTaxDraft())
 const newDiscount = reactive(createDiscountDraft())
@@ -1167,6 +1318,8 @@ const settings = reactive({
     currency_code: 'MAD',
     currency_symbol: 'DH',
     currency_position: 'after',
+    currency_visible_bill_denominations: null,
+    currency_visible_coin_denominations: null,
     
     // Format du Reçu
     receipt_logo: '',
@@ -1222,6 +1375,10 @@ const expenseSettings = reactive({
     is_active: true,
     items: [],
 })
+const expenseCategorySettings = reactive({
+    is_active: true,
+    items: [],
+})
 
 const subscriptionStatusClass = computed(() => {
     if (settings.subscription_type === 'free') return 'bg-gray-100 text-gray-800'
@@ -1241,6 +1398,66 @@ const subscriptionStatusText = computed(() => {
     }
     return 'Abonnement actif'
 })
+
+const currencyDenominationCatalog = computed(() => getCurrencyDenominationCatalog(
+    settings.currency_country,
+    settings.currency_code
+))
+
+const selectedBillDenominations = computed(() => Array.isArray(settings.currency_visible_bill_denominations)
+    ? settings.currency_visible_bill_denominations
+    : [])
+
+const selectedCoinDenominations = computed(() => Array.isArray(settings.currency_visible_coin_denominations)
+    ? settings.currency_visible_coin_denominations
+    : [])
+
+function syncCurrencyDenominationSelections() {
+    const availableBills = currencyDenominationCatalog.value.bills
+    const availableCoins = currencyDenominationCatalog.value.coins
+
+    const currentBills = Array.isArray(settings.currency_visible_bill_denominations)
+        ? normalizeDenominationSelection(settings.currency_visible_bill_denominations, availableBills)
+        : null
+    const currentCoins = Array.isArray(settings.currency_visible_coin_denominations)
+        ? normalizeDenominationSelection(settings.currency_visible_coin_denominations, availableCoins)
+        : null
+
+    settings.currency_visible_bill_denominations = currentBills === null
+        ? [...availableBills]
+        : (currentBills.length === 0 && settings.currency_visible_bill_denominations.length > 0 && availableBills.length > 0
+            ? [...availableBills]
+            : currentBills)
+
+    settings.currency_visible_coin_denominations = currentCoins === null
+        ? [...availableCoins]
+        : (currentCoins.length === 0 && settings.currency_visible_coin_denominations.length > 0 && availableCoins.length > 0
+            ? [...availableCoins]
+            : currentCoins)
+}
+
+function formatCurrencyDenomination(value) {
+    const formatted = Number(value || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+
+    if (settings.currency_position === 'before') {
+        return `${settings.currency_symbol || settings.currency_code || ''} ${formatted}`.trim()
+    }
+
+    return `${formatted} ${settings.currency_symbol || settings.currency_code || ''}`.trim()
+}
+
+function toggleAllCurrencyDenominations(kind, checked) {
+    const source = kind === 'bills'
+        ? currencyDenominationCatalog.value.bills
+        : currencyDenominationCatalog.value.coins
+
+    if (kind === 'bills') {
+        settings.currency_visible_bill_denominations = checked ? [...source] : []
+        return
+    }
+
+    settings.currency_visible_coin_denominations = checked ? [...source] : []
+}
 
 function handleLogoUpload(event) {
     const file = event.target.files[0]
@@ -1266,8 +1483,10 @@ async function loadSettings() {
                 }
             })
         })
+        syncCurrencyDenominationSelections()
     } catch (error) {
         console.error('Failed to load settings:', error)
+        syncCurrencyDenominationSelections()
     }
 }
 
@@ -1387,6 +1606,18 @@ function normalizeDiscountItems(items) {
         .sort((a, b) => a.sort_order - b.sort_order)
 }
 
+function normalizeSimpleItems(items, prefix = 'item') {
+    return [...items]
+        .map((item, index) => ({
+            id: item.id ?? createDraftId(prefix),
+            label: item.label || item.value || '',
+            value: item.value || item.label || '',
+            is_active: item.is_active !== false,
+            sort_order: Number(item.sort_order ?? index + 1),
+        }))
+        .sort((a, b) => a.sort_order - b.sort_order)
+}
+
 function normalizeExpenseItems(items) {
     return [...items]
         .map((item, index) => {
@@ -1440,18 +1671,30 @@ function hydrateDiscountForm(list) {
     discountSettings.items = normalizeDiscountItems(list?.items || [])
 }
 
+function hydrateExpenseCategoryForm(list) {
+    expenseCategorySettings.is_active = list?.is_active !== false
+    expenseCategorySettings.items = normalizeSimpleItems(list?.items || [], 'expense-category')
+}
+
 function hydrateExpenseForm(list) {
     expenseSettings.is_active = list?.is_active !== false
     expenseSettings.items = normalizeExpenseItems(list?.items || [])
 }
 
+const availableExpenseCategories = computed(() => {
+    return expenseCategorySettings.items
+        .filter((item) => item.is_active !== false && item.label.trim() !== '')
+        .sort((a, b) => a.sort_order - b.sort_order)
+})
+
 async function loadCustomLists() {
-    const [ticketsList, serviceModesList, paymentModesList, taxesList, discountsList, expensesList] = await Promise.all([
+    const [ticketsList, serviceModesList, paymentModesList, taxesList, discountsList, expenseCategoriesList, expensesList] = await Promise.all([
         customListsStore.fetchList('tickets_predefinis', { force: true }),
         customListsStore.fetchList('mode_de_service', { force: true }),
         customListsStore.fetchList('mode_de_paiement', { force: true }),
         customListsStore.fetchList('taxes', { force: true }),
         customListsStore.fetchList('remises', { force: true }),
+        customListsStore.fetchList('categories_depenses', { force: true }),
         customListsStore.fetchList('depenses', { force: true }),
     ])
 
@@ -1460,6 +1703,7 @@ async function loadCustomLists() {
     hydratePaymentModeForm(paymentModesList)
     hydrateTaxForm(taxesList)
     hydrateDiscountForm(discountsList)
+    hydrateExpenseCategoryForm(expenseCategoriesList)
     hydrateExpenseForm(expensesList)
 }
 
@@ -1875,9 +2119,49 @@ function moveDiscount(discountId, direction) {
     )
 }
 
+function addExpenseCategory() {
+    const label = newExpenseCategoryLabel.value.trim()
+    if (!label) return
+
+    const exists = expenseCategorySettings.items.some((item) => item.label.trim().toLowerCase() === label.toLowerCase())
+    if (exists) {
+        alert('Cette catégorie existe déjà.')
+        return
+    }
+
+    expenseCategorySettings.items = reindexEntries([
+        ...expenseCategorySettings.items,
+        {
+            id: createDraftId('expense-category'),
+            label,
+            value: label,
+            is_active: true,
+            sort_order: 0,
+        },
+    ])
+    newExpenseCategoryLabel.value = ''
+}
+
+function removeExpenseCategory(categoryId) {
+    expenseCategorySettings.items = reindexEntries(
+        expenseCategorySettings.items.filter((item) => String(item.id) !== String(categoryId))
+    )
+}
+
+function moveExpenseCategory(categoryId, direction) {
+    const sourceIndex = expenseCategorySettings.items.findIndex((item) => String(item.id) === String(categoryId))
+    expenseCategorySettings.items = reindexEntries(
+        moveInArray(expenseCategorySettings.items, sourceIndex, sourceIndex + direction)
+    )
+}
+
 function addExpense() {
     const label = newExpense.label.trim()
     if (!label) return
+    if (!newExpense.expense_category.trim()) {
+        alert('Sélectionnez une catégorie de dépense.')
+        return
+    }
 
     const exists = expenseSettings.items.some((item) => item.label.trim().toLowerCase() === label.toLowerCase())
     if (exists) {
@@ -1918,7 +2202,7 @@ function moveExpense(expenseId, direction) {
 }
 
 function canDeleteServiceMode(item) {
-    return item?.is_system !== true
+    return item?.is_system !== true && item?.source !== 'platform'
 }
 
 function canDeletePaymentMode(item) {
@@ -1956,6 +2240,11 @@ function resetExpenseForm() {
     customListsStore.fetchList('depenses', { force: true }).then(hydrateExpenseForm)
 }
 
+function resetExpenseCategoryForm() {
+    newExpenseCategoryLabel.value = ''
+    customListsStore.fetchList('categories_depenses', { force: true }).then(hydrateExpenseCategoryForm)
+}
+
 function resetSettings() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser les paramètres ?')) {
         loadSettings()
@@ -1969,7 +2258,8 @@ async function saveSettings() {
             let type = 'string'
             let group = 'general'
 
-            if (typeof value === 'boolean') type = 'boolean'
+            if (Array.isArray(value) || (value !== null && typeof value === 'object')) type = 'json'
+            else if (typeof value === 'boolean') type = 'boolean'
             else if (typeof value === 'number') type = 'number'
 
             if (key.startsWith('currency_')) group = 'currency'
@@ -1995,6 +2285,13 @@ async function saveSettings() {
         saving.value = false
     }
 }
+
+watch(
+    () => [settings.currency_country, settings.currency_code],
+    () => {
+        syncCurrencyDenominationSelections()
+    }
+)
 
 async function saveCustomList(tabId, listName, payload, hydrateForm, successMessage) {
     savingCustomListTab.value = tabId
@@ -2230,10 +2527,38 @@ async function saveExpenseList() {
     )
 }
 
+async function saveExpenseCategoryList() {
+    const payload = {
+        is_active: expenseCategorySettings.is_active !== false,
+        items: expenseCategorySettings.items
+            .filter((item) => item.label.trim() !== '')
+            .map((item, index) => {
+                const itemId = Number(item.id)
+
+                return {
+                    id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
+                    label: item.label.trim(),
+                    value: item.label.trim(),
+                    is_active: item.is_active !== false,
+                    sort_order: index + 1,
+                }
+            }),
+    }
+
+    await saveCustomList(
+        'expense_categories',
+        'categories_depenses',
+        payload,
+        hydrateExpenseCategoryForm,
+        'Catégories de dépenses enregistrées avec succès!'
+    )
+}
+
 onMounted(async () => {
     await Promise.all([
         loadSettings(),
         loadCustomLists(),
     ])
+    syncCurrencyDenominationSelections()
 })
 </script>

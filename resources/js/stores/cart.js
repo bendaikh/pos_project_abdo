@@ -20,14 +20,21 @@ export const useCartStore = defineStore('cart', () => {
 
     // Computed
     const itemCount = computed(() => items.value.length)
+
+    function resolveBaseUnitPrice(item) {
+        if (item?.selected_variant) {
+            return Number(item.selected_variant.price_impact ?? item.variant_price ?? item.unit_price) || 0
+        }
+
+        return Number(item?.unit_price) || 0
+    }
     
     function calculateItemTotal(item) {
-        const unitPrice = Number(item.unit_price) || 0
-        const variantPrice = Number(item.variant_price) || 0
+        const unitPrice = resolveBaseUnitPrice(item)
         const optionsPrice = Number(item.options_price) || 0
         const quantity = Number(item.quantity) || 0
         const discount = Number(item.discount_amount) || 0
-        return (unitPrice + variantPrice + optionsPrice) * quantity - discount
+        return (unitPrice + optionsPrice) * quantity - discount
     }
 
     const subtotal = computed(() => {
@@ -58,23 +65,26 @@ export const useCartStore = defineStore('cart', () => {
     // Actions
     function addItem(article, quantity = 1, selectedOptions = null, optionsPrice = 0, selectedVariant = null) {
         const variantPrice = selectedVariant ? Number(selectedVariant.price_impact) || 0 : 0
+        const resolvedUnitPrice = selectedVariant ? variantPrice : (Number(article.sell_price) || 0)
         const finalOptionsPrice = Number(optionsPrice) || 0
-        const itemTotal = (article.sell_price + variantPrice + finalOptionsPrice) * quantity
+        const itemTotal = (resolvedUnitPrice + finalOptionsPrice) * quantity
+        const selectedVariantId = selectedVariant?.id || null
         
         console.log('🛒 addItem details:', {
             article: article.name,
             sell_price: article.sell_price,
             variantPrice,
+            resolvedUnitPrice,
             optionsPrice: finalOptionsPrice,
             quantity,
             itemTotal,
-            calculated: `${article.sell_price} + ${variantPrice} + ${finalOptionsPrice} = ${article.sell_price + variantPrice + finalOptionsPrice}`
+            calculated: `${resolvedUnitPrice} + ${finalOptionsPrice} = ${resolvedUnitPrice + finalOptionsPrice}`
         })
         
         const existingIndex = items.value.findIndex(
             item => item.article_id === article.id && 
                     JSON.stringify(item.selected_options || []) === JSON.stringify(selectedOptions || []) &&
-                    (item.variant_price || 0) === variantPrice
+                    ((item.selected_variant?.id || null) === selectedVariantId)
         )
 
         if (existingIndex > -1) {
@@ -84,12 +94,13 @@ export const useCartStore = defineStore('cart', () => {
             items.value.push({
                 article_id: article.id,
                 article_name: article.name,
-                unit_price: article.sell_price,
+                unit_price: resolvedUnitPrice,
                 quantity: quantity,
                 selected_options: selectedOptions,
                 options_price: finalOptionsPrice,
                 variant_price: variantPrice,
                 selected_variant: selectedVariant,
+                comment: '',
                 discount_amount: 0,
                 total: itemTotal,
                 article: article
@@ -168,6 +179,7 @@ export const useCartStore = defineStore('cart', () => {
             options_price: Number(item.options_price) || 0,
             variant_price: 0,
             selected_variant: null,
+            comment: item.comment || '',
             discount_amount: Number(item.discount_amount) || 0,
             total: Number(item.total) || 0,
             article: item.article || null,
@@ -205,11 +217,12 @@ export const useCartStore = defineStore('cart', () => {
             items: items.value.map(item => ({
                 article_id: item.article_id,
                 quantity: item.quantity,
-                unit_price: item.unit_price,
+                unit_price: resolveBaseUnitPrice(item),
                 variant_price: item.variant_price || 0,
                 selected_options: item.selected_options,
                 options_price: item.options_price,
-                discount_amount: item.discount_amount
+                discount_amount: item.discount_amount,
+                comment: item.comment || '',
             })),
             discount_amount: discountAmount.value,
             discount_percent: discountPercent.value,

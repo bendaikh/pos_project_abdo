@@ -64,7 +64,7 @@
                                 </div>
                                 <button 
                                     @click="createOption"
-                                    :disabled="isCreating || !form.optionName.trim() || !form.variantName.trim() || form.variantPrice === null"
+                                    :disabled="isCreating || !form.optionName.trim() || !form.variantName.trim()"
                                     class="w-full py-2 rounded-xl bg-primary-500 text-gray-900 font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {{ isCreating ? 'Création...' : '+ Créer l’option' }}
@@ -151,7 +151,7 @@
                                                 </div>
                                                 <button 
                                                     @click="addVariant(option.id)"
-                                                    :disabled="!variantForms[option.id].name.trim() || variantForms[option.id].price === null"
+                                                    :disabled="!variantForms[option.id].name.trim()"
                                                     class="flex items-center justify-center gap-2 rounded-2xl bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-4 py-3"
                                                 >
                                                     <span class="text-lg">+</span>
@@ -360,7 +360,7 @@ const articleVariantsSummary = computed(() => {
 const form = reactive({
     optionName: '',
     variantName: '',
-    variantPrice: null,
+    variantPrice: 0,
 })
 
 const variantTemplateForm = reactive({
@@ -385,10 +385,10 @@ const formatPrice = (price) => {
 async function createOption() {
     const optionName = form.optionName.trim()
     const variantName = form.variantName.trim()
-    const variantPrice = form.variantPrice
+    const variantPrice = Number(form.variantPrice) || 0
 
-    if (!optionName || !variantName || variantPrice === null) {
-        alert('Remplissez tous les champs')
+    if (!optionName || !variantName) {
+        alert('Remplissez le nom et la valeur')
         return
     }
 
@@ -410,12 +410,12 @@ async function createOption() {
             price_impact: variantPrice
         }]
         options.value.push(newOption)
-        variantForms[newOption.id] = { name: '', price: null }
+        variantForms[newOption.id] = { name: '', price: 0 }
 
         // Reset
         form.optionName = ''
         form.variantName = ''
-        form.variantPrice = null
+        form.variantPrice = 0
     } catch (error) {
         console.error('Error creating option:', error)
         alert('Erreur lors de la création')
@@ -426,8 +426,9 @@ async function createOption() {
 
 async function addVariant(optionId) {
     const form = variantForms[optionId]
-    if (!form.name.trim() || form.price === null) {
-        alert('Remplissez nom et prix')
+    const variantPrice = Number(form.price) || 0
+    if (!form.name.trim()) {
+        alert('Remplissez le nom')
         return
     }
 
@@ -439,7 +440,7 @@ async function addVariant(optionId) {
         option.variants.push({
             id: Date.now(),
             name: form.name.trim(),
-            price_impact: form.price
+            price_impact: variantPrice
         })
 
         // Update backend
@@ -448,14 +449,14 @@ async function addVariant(optionId) {
             name: option.name,
             type: 'fixed',
             values,
-            extra_price: form.price,
+            extra_price: variantPrice,
             is_active: true,
             is_required: false
         })
 
         // Reset
         variantForms[optionId].name = ''
-        variantForms[optionId].price = null
+        variantForms[optionId].price = 0
     } catch (error) {
         console.error('Error adding variant:', error)
         alert('Erreur')
@@ -526,7 +527,7 @@ async function fetchOptions() {
 
         options.value.forEach(opt => {
             if (!variantForms[opt.id]) {
-                variantForms[opt.id] = { name: '', price: null }
+                variantForms[opt.id] = { name: '', price: 0 }
             }
         })
     } catch (error) {

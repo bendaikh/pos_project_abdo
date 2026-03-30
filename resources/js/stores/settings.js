@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { settingsApi } from '../api'
 import { useOfflineStore } from './offline'
+import { getVisibleCurrencyDenominations } from '../utils/currencyDenominations'
 
 export const useSettingsStore = defineStore('settings', () => {
     const settings = ref({
@@ -12,9 +13,12 @@ export const useSettingsStore = defineStore('settings', () => {
             store_country: 'Morocco'
         },
         currency: {
+            currency_country: 'MA',
             currency_code: 'DHS',
             currency_symbol: 'DHS',
-            currency_position: 'after'
+            currency_position: 'after',
+            currency_visible_bill_denominations: null,
+            currency_visible_coin_denominations: null,
         },
         tax: {
             tax_enabled: true,
@@ -39,6 +43,16 @@ export const useSettingsStore = defineStore('settings', () => {
     const currencyCode = computed(() => settings.value.currency?.currency_code || 'DHS')
     const currencySymbol = computed(() => settings.value.currency?.currency_symbol || 'DHS')
     const currencyPosition = computed(() => settings.value.currency?.currency_position || 'after')
+    const currencyCountry = computed(() => settings.value.currency?.currency_country || 'MA')
+    const quickCashConfig = computed(() => getVisibleCurrencyDenominations({
+        currencyCountry: currencyCountry.value,
+        currencyCode: currencyCode.value,
+        visibleBills: settings.value.currency?.currency_visible_bill_denominations,
+        visibleCoins: settings.value.currency?.currency_visible_coin_denominations,
+    }))
+    const quickCashBillDenominations = computed(() => quickCashConfig.value.visibleBills)
+    const quickCashCoinDenominations = computed(() => quickCashConfig.value.visibleCoins)
+    const quickCashDenominations = computed(() => quickCashConfig.value.visible)
     const taxEnabled = computed(() => settings.value.tax?.tax_enabled ?? true)
     const taxRate = computed(() => settings.value.tax?.tax_rate || 0)
     const taxName = computed(() => settings.value.tax?.tax_name || 'TVA')
@@ -138,6 +152,10 @@ export const useSettingsStore = defineStore('settings', () => {
         currencyCode,
         currencySymbol,
         currencyPosition,
+        currencyCountry,
+        quickCashBillDenominations,
+        quickCashCoinDenominations,
+        quickCashDenominations,
         taxEnabled,
         taxRate,
         taxName,

@@ -321,27 +321,29 @@
                                     <p class="text-sm">Ticket vide</p>
                                 </div>
                                 <div v-else class="divide-y divide-dashed divide-gray-200">
-                                    <div v-for="(item, index) in cartStore.items" :key="index" class="px-4 py-2">
-                                        <div class="cursor-pointer" @click="openItemEditModal(index, item)">
-                                            <p class="text-sm font-semibold text-gray-900 leading-tight break-words">{{ item.article_name }}</p>
-                                        </div>
-                                        <div class="mt-1 flex items-center justify-between gap-2">
-                                            <div class="flex items-center gap-2">
-                                                <div class="flex items-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1">
-                                                    <button @click.stop="updateQuantity(index, item.quantity - 1)" class="p-1 rounded-md text-gray-600 hover:text-gray-800" type="button"><MinusIcon class="w-4 h-4" /></button>
-                                                    <span class="text-xs font-semibold text-gray-700">x{{ item.quantity }}</span>
-                                                    <button @click.stop="updateQuantity(index, item.quantity + 1)" class="p-1 rounded-md text-gray-600 hover:text-gray-800" type="button"><PlusIcon class="w-4 h-4" /></button>
-                                                </div>
-                                                <span class="text-xs text-gray-500">{{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/pcs</span>
+                                    <div v-for="(item, index) in cartStore.items" :key="index" class="px-4 py-2.5">
+                                        <div class="flex items-center gap-2 text-sm text-gray-700">
+                                            <button type="button" class="min-w-0 flex flex-1 items-center text-left" :title="item.article_name" @click="openItemEditModal(index, item)">
+                                                <span class="min-w-0 truncate font-semibold text-gray-900">{{ item.article_name }}</span>
+                                            </button>
+                                            <div class="flex shrink-0 items-center gap-0.5 rounded-full border border-gray-200 bg-gray-50 px-1 py-0.5">
+                                                <button @click.stop="updateQuantity(index, item.quantity - 1)" class="rounded-full p-1 text-gray-500 transition hover:bg-white hover:text-gray-800" type="button"><MinusIcon class="h-3.5 w-3.5" /></button>
+                                                <span class="min-w-[34px] text-center text-xs font-semibold text-gray-700">× {{ item.quantity }}</span>
+                                                <button @click.stop="updateQuantity(index, item.quantity + 1)" class="rounded-full p-1 text-gray-500 transition hover:bg-white hover:text-gray-800" type="button"><PlusIcon class="h-3.5 w-3.5" /></button>
                                             </div>
-                                            <div class="flex items-center gap-2 shrink-0">
-                                                <span class="text-sm font-semibold text-gray-900">{{ formatCurrency(getItemLineTotal(item)) }}</span>
-                                                <button @click.stop="removeItem(index)" class="text-red-500 hover:text-red-700" title="Supprimer" type="button"><TrashIcon class="w-4 h-4" /></button>
-                                            </div>
+                                            <span class="hidden min-w-[24px] flex-1 border-b border-dotted border-gray-300 md:block"></span>
+                                            <span class="shrink-0 text-sm font-semibold text-gray-900">{{ formatCurrency(getItemLineTotal(item)) }}</span>
+                                            <button @click.stop="removeItem(index)" class="shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-600" title="Supprimer" type="button"><TrashIcon class="h-4 w-4" /></button>
                                         </div>
-                                        <div class="mt-1 flex flex-wrap items-center gap-1.5">
-                                            <span v-if="getVariantDisplay(item)" class="text-[11px] font-semibold text-gray-700 bg-orange-50 border border-orange-200 rounded-full px-2 py-0.5">{{ getVariantDisplay(item).label }} <span class="ml-1 text-orange-600">+{{ formatCurrency(getVariantDisplay(item).price) }}</span></span>
-                                            <span v-for="option in getOptionDisplays(item)" :key="option.key" class="text-[11px] font-semibold text-gray-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">{{ option.label }} <span class="ml-1 text-blue-600">+{{ formatCurrency(option.price) }}</span></span>
+                                        <div v-if="item.comment || getVariantDisplay(item) || getOptionDisplays(item).length > 0" class="mt-1 space-y-0.5 pl-2 text-[11px] text-gray-500">
+                                            <p v-if="item.comment">- Note: {{ item.comment }}</p>
+                                            <p v-if="getVariantDisplay(item)">
+                                                - {{ getVariantDisplay(item).label }}
+                                            </p>
+                                            <p v-for="option in getOptionDisplays(item)" :key="option.key">
+                                                - {{ option.label }}
+                                                <span v-if="option.price > 0">({{ formatOptionsPrice(option.price) }})</span>
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -355,7 +357,7 @@
                             </div>
                             <!-- Buttons -->
                             <div class="shrink-0 border-t border-gray-200 space-y-2 bg-white" :class="desktopPanelPaddingClass">
-                                <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0" class="w-full py-3 px-4 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">PASSER AU PAIEMENT</button>
+                                <button @click="openPaymentModal" :disabled="cartStore.items.length === 0 || paymentModalLoading" class="w-full py-3 px-4 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" type="button">PASSER AU PAIEMENT</button>
                                 <button
                                     @click="handleTicketButtonClick"
                                     :disabled="ticketButtonDisabled"
@@ -423,40 +425,36 @@
                                 <ShoppingCartIcon class="w-10 h-10 mb-2" />
                                 <p class="text-xs font-medium">Ticket vide</p>
                             </div>
-                            <div v-else class="divide-y divide-gray-100">
+                            <div v-else class="divide-y divide-dashed divide-gray-200">
                                 <div v-for="(item, index) in cartStore.items" :key="index" class="px-3 py-2.5 active:bg-gray-50">
-                                    <!-- Article name (tappable to edit) -->
-                                    <div class="flex items-start justify-between gap-2 cursor-pointer" @click="openItemEditModal(index, item)">
-                                        <p class="text-sm font-semibold text-gray-900 leading-tight flex-1">{{ item.article_name }}</p>
-                                        <span class="text-sm font-bold text-gray-900 shrink-0">{{ formatCurrency(getItemLineTotal(item)) }}</span>
-                                    </div>
-                                    <!-- Qty controls + unit price + trash -->
-                                    <div class="mt-1.5 flex items-center justify-between gap-2">
-                                        <div class="flex items-center gap-2">
-                                            <!-- Qty stepper -->
-                                            <div class="flex items-center rounded-lg bg-gray-100 overflow-hidden">
-                                                <button @click.stop="updateQuantity(index, item.quantity - 1)" class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300" type="button">
-                                                    <MinusIcon class="w-3.5 h-3.5" />
-                                                </button>
-                                                <span class="px-2 text-xs font-bold text-gray-800 min-w-[24px] text-center">{{ item.quantity }}</span>
-                                                <button @click.stop="updateQuantity(index, item.quantity + 1)" class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:bg-gray-300" type="button">
-                                                    <PlusIcon class="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                            <span class="text-[11px] text-gray-400">{{ formatCurrency(item.unit_price + (item.variant_price || 0) + (item.options_price || 0)) }}/u</span>
+                                    <div class="flex items-center gap-1.5 text-sm text-gray-700">
+                                        <button type="button" class="min-w-0 flex flex-1 items-center text-left" :title="item.article_name" @click="openItemEditModal(index, item)">
+                                            <span class="min-w-0 truncate font-semibold text-gray-900">{{ item.article_name }}</span>
+                                        </button>
+                                        <div class="flex shrink-0 items-center gap-0.5 rounded-full border border-gray-200 bg-gray-50 px-1 py-0.5">
+                                            <button @click.stop="updateQuantity(index, item.quantity - 1)" class="rounded-full p-1 text-gray-500 transition hover:bg-white hover:text-gray-800 active:bg-white" type="button">
+                                                <MinusIcon class="h-3 w-3" />
+                                            </button>
+                                            <span class="min-w-[30px] text-center text-[11px] font-semibold text-gray-700">× {{ item.quantity }}</span>
+                                            <button @click.stop="updateQuantity(index, item.quantity + 1)" class="rounded-full p-1 text-gray-500 transition hover:bg-white hover:text-gray-800 active:bg-white" type="button">
+                                                <PlusIcon class="h-3 w-3" />
+                                            </button>
                                         </div>
-                                        <button @click.stop="removeItem(index)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 active:bg-red-200" type="button">
-                                            <TrashIcon class="w-4 h-4" />
+                                        <span class="hidden min-w-[18px] flex-1 border-b border-dotted border-gray-300 sm:block"></span>
+                                        <span class="shrink-0 text-sm font-bold text-gray-900">{{ formatCurrency(getItemLineTotal(item)) }}</span>
+                                        <button @click.stop="removeItem(index)" class="shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-600 active:bg-red-50" type="button">
+                                            <TrashIcon class="h-4 w-4" />
                                         </button>
                                     </div>
-                                    <!-- Variant / options tags -->
-                                    <div v-if="getVariantDisplay(item) || getOptionDisplays(item).length > 0" class="mt-1.5 flex flex-wrap gap-1">
-                                        <span v-if="getVariantDisplay(item)" class="text-[10px] font-semibold text-orange-700 bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5">
-                                            {{ getVariantDisplay(item).label }} <span class="text-orange-500">+{{ formatCurrency(getVariantDisplay(item).price) }}</span>
-                                        </span>
-                                        <span v-for="option in getOptionDisplays(item)" :key="option.key" class="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">
-                                            {{ option.label }} <span class="text-blue-500">+{{ formatCurrency(option.price) }}</span>
-                                        </span>
+                                    <div v-if="item.comment || getVariantDisplay(item) || getOptionDisplays(item).length > 0" class="mt-1 space-y-0.5 pl-1.5 text-[10px] text-gray-500">
+                                        <p v-if="item.comment">- Note: {{ item.comment }}</p>
+                                        <p v-if="getVariantDisplay(item)">
+                                            - {{ getVariantDisplay(item).label }}
+                                        </p>
+                                        <p v-for="option in getOptionDisplays(item)" :key="option.key">
+                                            - {{ option.label }}
+                                            <span v-if="option.price > 0">({{ formatOptionsPrice(option.price) }})</span>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -480,7 +478,7 @@
                                     type="button">
                                     {{ ticketButtonLabel }}
                                 </button>
-                                <button @click="showPaymentModal = true" :disabled="cartStore.items.length === 0"
+                                <button @click="openPaymentModal" :disabled="cartStore.items.length === 0 || paymentModalLoading"
                                     class="flex-[1.4] py-2.5 text-xs font-bold rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 transition-colors"
                                     type="button">
                                     💳 Paiement
@@ -497,7 +495,9 @@
     <PaymentMultiModal 
             v-if="showPaymentModal"
             :total="cartStore.total"
-            @close="showPaymentModal = false"
+            :sale="paymentModalSale"
+            total-mode="gross"
+            @close="closePaymentModal"
             @complete="completeSale"
         />
 
@@ -622,36 +622,65 @@
 
         <!-- Edit Item Modal -->
         <div v-if="showItemEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-2xl shadow-xl p-6 max-w-2xl w-full mx-4 space-y-4 max-h-[85vh] overflow-y-auto">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Modifier l'article</h3>
-                    <p class="text-sm text-gray-600 mt-1">{{ editingItem?.article_name }}</p>
+            <div class="bg-white rounded-2xl shadow-xl p-6 max-w-2xl w-full mx-4 space-y-5 max-h-[85vh] overflow-y-auto">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Modifier l'article</h3>
+                        <p class="mt-1 text-base font-semibold text-slate-800">{{ editingItem?.article_name }}</p>
+                        <p class="mt-1 text-sm text-gray-500">{{ getItemUnitPriceLabel(editingItem) }}/u</p>
+                    </div>
+                    <button
+                        type="button"
+                        @click="closeItemEditModal"
+                        class="rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                    >
+                        ✕
+                    </button>
                 </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-700">Quantité</span>
-                    <div class="flex items-center gap-2">
-                        <button
-                            type="button"
-                            @click="adjustEditQuantity(-1)"
-                            class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
-                        >
-                            −
-                        </button>
-                        <input
-                            v-model.number="editQuantity"
-                            type="number"
-                            min="1"
-                            class="w-20 text-center px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        >
-                        <button
-                            type="button"
-                            @click="adjustEditQuantity(1)"
-                            class="w-8 h-8 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
-                        >
-                            +
-                        </button>
+
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <span class="text-sm font-medium text-gray-700">Quantité</span>
+                        <div class="flex items-center gap-3">
+                            <button
+                                type="button"
+                                @click="adjustEditQuantity(-1)"
+                                class="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-100"
+                            >
+                                <MinusIcon class="h-4 w-4" />
+                            </button>
+                            <input
+                                ref="editQuantityInput"
+                                v-model.number="editQuantity"
+                                type="number"
+                                min="1"
+                                inputmode="numeric"
+                                class="w-24 rounded-xl border border-gray-300 bg-white px-3 py-2 text-center text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                @focus="selectEditQuantity"
+                                @click="selectEditQuantity"
+                            >
+                            <button
+                                type="button"
+                                @click="adjustEditQuantity(1)"
+                                class="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-100"
+                            >
+                                <PlusIcon class="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Commentaire</label>
+                    <textarea
+                        v-model.trim="editItemComment"
+                        rows="3"
+                        placeholder="Ajouter un commentaire pour cet article..."
+                        class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    ></textarea>
+                    <p class="text-xs text-gray-500">Le commentaire est enregistré dans le panier et prêt pour un futur support complet côté ticket.</p>
+                </div>
+
                 <div v-if="editingActiveVariants.length" class="space-y-2">
                     <p class="text-sm font-semibold text-gray-700">Variante</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -668,16 +697,14 @@
                                 :value="variant.id"
                                 v-model="editSelectedVariantId"
                             >
-                            <div class="text-sm">
-                                <span class="font-medium text-gray-900">
-                                    {{ variant.template_name ? `${variant.template_name} · ${variant.template_value}` : variant.name }}
-                                </span>
-                                <span v-if="Number(variant.price_impact) !== 0" class="ml-2 text-orange-600 font-semibold">
-                                    +{{ formatCurrency(variant.price_impact) }}
-                                </span>
-                            </div>
-                        </label>
-                    </div>
+                                <div class="text-sm">
+                                    <span class="font-medium text-gray-900">
+                                        {{ variant.template_name ? `${variant.template_name} · ${variant.template_value}` : variant.name }}
+                                    </span>
+                                    <span class="ml-2 text-orange-600 font-semibold">{{ formatCurrency(variant.price_impact) }}</span>
+                                </div>
+                            </label>
+                        </div>
                 </div>
                 <div v-if="editingSelectableOptions.length" class="space-y-3">
                     <div class="flex items-center justify-between">
@@ -719,7 +746,7 @@
                         </p>
                     </div>
                 </div>
-                <div class="flex gap-2 justify-end">
+                <div class="flex gap-2 justify-end border-t border-slate-200 pt-4">
                     <button
                         type="button"
                         @click="closeItemEditModal"
@@ -833,7 +860,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCartStore } from '../stores/cart'
 import { useArticlesStore } from '../stores/articles'
@@ -871,6 +898,8 @@ const { appSidebarOpen } = storeToRefs(uiStore)
 const { posCategoryDisplayMode } = storeToRefs(settingsStore)
 const categoriesDisplayMode = posCategoryDisplayMode
 const showPaymentModal = ref(false)
+const paymentModalLoading = ref(false)
+const paymentModalSale = ref(null)
 const showCalculator = ref(false)
 const showOptionsModal = ref(false)
 const showSaveTicketModal = ref(false)
@@ -892,10 +921,12 @@ const variantSelectionMode = ref('add')
 const editingCartIndex = ref(null)
 const editingItem = ref(null)
 const editQuantity = ref(1)
+const editItemComment = ref('')
 const editingArticle = ref(null)
 const editSelectedVariantId = ref(null)
 const editSelectedOptions = ref([])
 const editOptionsPrice = ref(0)
+const editQuantityInput = ref(null)
 const searchQuery = ref('')
 const selectedCategoryId = ref('all')
 const customerSearch = ref('')
@@ -911,6 +942,7 @@ const ticketNotes = ref('')
 const discountAmount = ref(0)
 const discountPercent = ref(0)
 const loadedTicketSnapshot = ref(null)
+const loadedTicketDetails = ref(null)
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
 const creatingOption = ref(false)
@@ -1180,7 +1212,7 @@ const desktopHeaderRowClass = computed(() => {
 })
 const desktopServiceModesWrapClass = computed(() => {
     return isTabletPortrait.value || isPhoneLandscape.value
-        ? 'flex flex-wrap items-center gap-2'
+        ? 'flex items-center gap-2 overflow-x-auto whitespace-nowrap no-scrollbar'
         : 'flex items-center gap-2 overflow-x-auto whitespace-nowrap'
 })
 const desktopServiceModeButtonClass = computed(() => {
@@ -1297,6 +1329,19 @@ const filteredCustomers = computed(() => {
         .slice(0, 20)
 })
 
+function clearActiveTicketSelection() {
+    showSaveTicketModal.value = false
+    showOpenTicketsModal.value = false
+    showCustomerSelector.value = false
+    showPaymentModal.value = false
+    ticketNotes.value = ''
+    discountAmount.value = 0
+    discountPercent.value = 0
+    loadedTicketSnapshot.value = null
+    loadedTicketDetails.value = null
+    cartStore.clearCart()
+}
+
 function normalizePosCustomer(customer) {
     if (!customer) return null
     const fullName = `${customer.nom || ''} ${customer.prenom || ''}`.trim()
@@ -1377,19 +1422,15 @@ const hasActiveSavedTicketChanges = computed(() => {
 })
 
 const canSaveCurrentTicket = computed(() => {
-    if (cartStore.items.length === 0) {
-        return false
-    }
-
-    if (!cartStore.currentSaleId) {
+    if (cartStore.currentSaleId) {
         return true
     }
 
-    return hasActiveSavedTicketChanges.value
+    return cartStore.items.length > 0
 })
 
 const ticketButtonDisabled = computed(() => {
-    if (cartStore.items.length === 0) {
+    if (!cartStore.currentSaleId && cartStore.items.length === 0) {
         return false
     }
 
@@ -1397,19 +1438,23 @@ const ticketButtonDisabled = computed(() => {
 })
 
 const ticketButtonHint = computed(() => {
+    if (cartStore.currentSaleId) {
+        if (hasActiveSavedTicketChanges.value && cartStore.items.length > 0) {
+            return 'Enregistrer les modifications sur le ticket actuel'
+        }
+
+        return 'Fermer le ticket déjà sauvegardé'
+    }
+
     if (cartStore.items.length === 0) {
         return 'Afficher les tickets enregistrés'
     }
 
-    if (canSaveCurrentTicket.value) {
-        return 'Sauvegarder le ticket en cours'
-    }
-
-    return 'Modifiez le ticket avant de le sauvegarder à nouveau'
+    return 'Sauvegarder le ticket en cours'
 })
 
 const ticketButtonLabel = computed(() => {
-    return cartStore.items.length > 0 ? 'Sauvegarder' : 'Tickets enregistrés'
+    return cartStore.currentSaleId || cartStore.items.length > 0 ? 'Sauvegarder' : 'Tickets enregistrés'
 })
 
 async function fetchSavedTickets() {
@@ -1450,8 +1495,17 @@ async function loadSavedTicket(ticketId) {
         discountAmount.value = Number(data?.discount_amount) || 0
         discountPercent.value = Number(data?.discount_percent) || 0
         loadedTicketSnapshot.value = buildSaleSnapshot(data)
+        loadedTicketDetails.value = {
+            id: data?.id || null,
+            origin: data?.origin || 'pos',
+            ticket_type: data?.ticket_type || null,
+            ticket_name: data?.ticket_name || null,
+            ticket_group: data?.ticket_group || null,
+            order_status: data?.order_status || 'confirmee',
+        }
         showCustomerSelector.value = false
         showPaymentModal.value = false
+        paymentModalSale.value = null
 
         if (isMobile.value) {
             isCartExpanded.value = true
@@ -1480,13 +1534,7 @@ async function deleteSavedTicket(ticketId) {
         savedTickets.value = savedTickets.value.filter((ticket) => Number(ticket.id) !== Number(ticketId))
 
         if (Number(cartStore.currentSaleId || 0) === Number(ticketId)) {
-            cartStore.clearCart()
-            ticketNotes.value = ''
-            discountAmount.value = 0
-            discountPercent.value = 0
-            loadedTicketSnapshot.value = null
-            showCustomerSelector.value = false
-            showPaymentModal.value = false
+            clearActiveTicketSelection()
         }
     } catch (error) {
         console.error('Failed to delete saved ticket:', error)
@@ -1753,13 +1801,30 @@ function formatCurrency(amount) {
     return settingsStore.formatCurrency(amount)
 }
 
+function getItemBaseUnitPrice(item) {
+    if (item?.selected_variant) {
+        return Number(item.selected_variant.price_impact ?? item.variant_price ?? item.unit_price) || 0
+    }
+
+    return Number(item?.unit_price) || 0
+}
+
+function getItemUnitPrice(item) {
+    const unitPrice = getItemBaseUnitPrice(item)
+    const optionsPrice = Number(item?.options_price) || 0
+    return unitPrice + optionsPrice
+}
+
+function getItemUnitPriceLabel(item) {
+    return formatCurrency(getItemUnitPrice(item))
+}
+
 function getItemLineTotal(item) {
-    const unitPrice = Number(item.unit_price) || 0
-    const variantPrice = Number(item.variant_price) || 0
+    const unitPrice = getItemBaseUnitPrice(item)
     const optionsPrice = Number(item.options_price) || 0
     const quantity = Number(item.quantity) || 0
     const discount = Number(item.discount_amount) || 0
-    return (unitPrice + variantPrice + optionsPrice) * quantity - discount
+    return (unitPrice + optionsPrice) * quantity - discount
 }
 
 function formatOptionsPrice(amount) {
@@ -1777,8 +1842,7 @@ function getVariantDisplay(item) {
         ? `${variant.template_name} · ${variant.template_value}`
         : (variant.name || variant.template_value || null)
     if (!name) return null
-    const price = Number(variant.price_impact ?? item.variant_price ?? 0) || 0
-    return { label: name, price }
+    return { label: name }
 }
 
 function getOptionDisplays(item) {
@@ -1827,23 +1891,40 @@ async function openItemEditModal(index, item) {
     editingCartIndex.value = index
     editingItem.value = item
     editQuantity.value = Number(item.quantity) || 1
+    editItemComment.value = String(item.comment || '').trim()
     editingArticle.value = await resolveEditableArticle(item)
     editSelectedVariantId.value = item.selected_variant?.id || null
+    if (!editSelectedVariantId.value && Array.isArray(editingArticle.value?.variants)) {
+        const matchedVariant = editingArticle.value.variants.find((variant) => (
+            Number(variant.price_impact) === Number(item.unit_price || 0)
+        ))
+        editSelectedVariantId.value = matchedVariant?.id || null
+    }
     editSelectedOptions.value = Array.isArray(item.selected_options)
         ? JSON.parse(JSON.stringify(item.selected_options))
         : []
     updateEditOptionsPrice()
     showItemEditModal.value = true
+    await nextTick()
+    selectEditQuantity()
 }
 
 function closeItemEditModal() {
     showItemEditModal.value = false
     editingItem.value = null
+    editItemComment.value = ''
     editingArticle.value = null
     editSelectedVariantId.value = null
     editSelectedOptions.value = []
     editOptionsPrice.value = 0
     editingCartIndex.value = null
+}
+
+function selectEditQuantity(event = null) {
+    const target = event?.target || editQuantityInput.value
+    requestAnimationFrame(() => {
+        target?.select?.()
+    })
 }
 
 function adjustEditQuantity(delta) {
@@ -1866,10 +1947,15 @@ function applyItemEdit() {
     const item = cartStore.items[editingCartIndex.value]
     if (item && editingArticle.value) {
         const selectedVariant = editingArticle.value.variants?.find(v => v.id === editSelectedVariantId.value) || null
+        const resolvedUnitPrice = selectedVariant
+            ? Number(selectedVariant.price_impact) || 0
+            : Number(editingArticle.value.sell_price) || 0
         item.selected_variant = selectedVariant
+        item.unit_price = resolvedUnitPrice
         item.variant_price = selectedVariant ? Number(selectedVariant.price_impact) || 0 : 0
         item.selected_options = normalizeSelectedOptions(editSelectedOptions.value)
         item.options_price = Number(editOptionsPrice.value) || 0
+        item.comment = editItemComment.value || ''
         item.total = getItemLineTotal(item)
     }
     closeItemEditModal()
@@ -1998,6 +2084,11 @@ function openTicketsModal() {
 }
 
 function handleTicketButtonClick() {
+    if (cartStore.currentSaleId) {
+        handleCurrentSavedTicketAction()
+        return
+    }
+
     if (cartStore.items.length > 0) {
         openSaveTicketModal()
         return
@@ -2014,14 +2105,67 @@ async function handleOpenTicketModalLoad(ticketId) {
 }
 
 function handleTicketSaved() {
-    showSaveTicketModal.value = false
-    showCustomerSelector.value = false
-    ticketNotes.value = ''
-    discountAmount.value = 0
-    discountPercent.value = 0
-    loadedTicketSnapshot.value = null
-    cartStore.clearCart()
+    clearActiveTicketSelection()
     fetchSavedTickets()
+}
+
+async function handleCurrentSavedTicketAction() {
+    if (!cartStore.currentSaleId) {
+        return
+    }
+
+    if (!hasActiveSavedTicketChanges.value || cartStore.items.length === 0) {
+        clearActiveTicketSelection()
+        await fetchSavedTickets()
+        return
+    }
+
+    const payload = {
+        ...cartStore.getCartData(),
+        origin: loadedTicketDetails.value?.origin || activeSavedTicket.value?.origin || 'pos',
+        ticket_type: loadedTicketDetails.value?.ticket_type || activeSavedTicket.value?.ticket_type || null,
+        ticket_name: loadedTicketDetails.value?.ticket_name || activeSavedTicket.value?.ticket_name || null,
+        ticket_group: loadedTicketDetails.value?.ticket_group || activeSavedTicket.value?.ticket_group || null,
+        order_status: loadedTicketDetails.value?.order_status || activeSavedTicket.value?.order_status || 'confirmee',
+        notes: ticketNotes.value || cartStore.notes || '',
+    }
+
+    try {
+        await salesApi.update(cartStore.currentSaleId, payload)
+        clearActiveTicketSelection()
+        await fetchSavedTickets()
+    } catch (error) {
+        console.error('Failed to update current ticket:', error)
+        alert(error.response?.data?.message || "Impossible d'enregistrer ce ticket.")
+    }
+}
+
+async function openPaymentModal() {
+    if (cartStore.items.length === 0 || paymentModalLoading.value) {
+        return
+    }
+
+    paymentModalLoading.value = true
+    try {
+        if (offlineStore.isOnline && cartStore.currentSaleId) {
+            const { data } = await salesApi.get(cartStore.currentSaleId)
+            paymentModalSale.value = data
+        } else {
+            paymentModalSale.value = null
+        }
+
+        showPaymentModal.value = true
+    } catch (error) {
+        console.error('Failed to prepare payment modal:', error)
+        alert(error.response?.data?.message || "Impossible d'ouvrir le paiement.")
+    } finally {
+        paymentModalLoading.value = false
+    }
+}
+
+function closePaymentModal() {
+    showPaymentModal.value = false
+    paymentModalSale.value = null
 }
 
 async function completeSale(payments) {
@@ -2072,7 +2216,9 @@ async function completeSale(payments) {
             
             cartStore.clearCart()
             loadedTicketSnapshot.value = null
+            loadedTicketDetails.value = null
             showPaymentModal.value = false
+            paymentModalSale.value = null
             await fetchSavedTickets()
             
             if (!offlineStore.isOnline) {
@@ -2115,12 +2261,15 @@ async function completeSale(payments) {
         // Clear cart
         cartStore.clearCart()
         loadedTicketSnapshot.value = null
+        loadedTicketDetails.value = null
         showPaymentModal.value = false
+        paymentModalSale.value = null
         await fetchSavedTickets()
 
         alert('Vente complétée avec succès!')
     } catch (error) {
         console.error('Failed to complete sale:', error)
+        paymentModalSale.value = null
         if (cartStore.currentSaleId) {
             try {
                 const { data } = await salesApi.get(cartStore.currentSaleId)
@@ -2165,6 +2314,7 @@ function handleSelectVariantsConfirm({ variantId, selectedOptions = [], optionsP
     if (variantSelectionMode.value === 'edit' && editingCartIndex.value !== null) {
         const item = cartStore.items[editingCartIndex.value]
         if (item) {
+            item.unit_price = Number(selectedVariant.price_impact) || 0
             item.selected_variant = selectedVariant
             item.variant_price = Number(selectedVariant.price_impact) || 0
             item.selected_options = normalizedOptions
@@ -2297,11 +2447,7 @@ function applyDiscount() {
 
 function resetCart() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser le ticket?')) {
-        cartStore.clearCart()
-        ticketNotes.value = ''
-        discountAmount.value = 0
-        discountPercent.value = 0
-        loadedTicketSnapshot.value = null
+        clearActiveTicketSelection()
     }
 }
 
@@ -2313,6 +2459,7 @@ function normalizeSnapshotItems(items = []) {
         variant_price: Number(item?.variant_price || 0),
         options_price: Number(item?.options_price || 0),
         discount_amount: Number(item?.discount_amount || 0),
+        comment: String(item?.comment || '').trim(),
         selected_options: Array.isArray(item?.selected_options)
             ? JSON.parse(JSON.stringify(item.selected_options))
             : [],

@@ -141,6 +141,44 @@ class CustomFinanceListsTest extends TestCase
         $this->assertSame('monthly', $expense->metadata['expense_frequency']);
     }
 
+    public function test_expense_category_custom_list_can_store_separate_categories(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->putJson('/api/custom-lists/categories_depenses', [
+            'is_active' => true,
+            'items' => [
+                [
+                    'label' => 'Charges fixes',
+                    'value' => 'Charges fixes',
+                    'is_active' => true,
+                    'sort_order' => 1,
+                ],
+                [
+                    'label' => 'Logistique',
+                    'value' => 'Logistique',
+                    'is_active' => false,
+                    'sort_order' => 2,
+                ],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('name', 'categories_depenses')
+            ->assertJsonPath('items.0.label', 'Charges fixes')
+            ->assertJsonPath('items.1.is_active', false);
+
+        $this->assertDatabaseHas('custom_lists', [
+            'name' => 'categories_depenses',
+            'is_active' => true,
+        ]);
+
+        $this->assertDatabaseHas('custom_list_items', [
+            'label' => 'Charges fixes',
+            'is_active' => true,
+        ]);
+    }
+
     public function test_recurring_expense_requires_frequency(): void
     {
         $user = User::factory()->create();

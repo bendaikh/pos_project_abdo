@@ -8,6 +8,7 @@ export const PAYMENT_MODE_LIST_NAME = 'mode_de_paiement'
 export const TAX_LIST_NAME = 'taxes'
 export const DISCOUNT_LIST_NAME = 'remises'
 export const EXPENSE_LIST_NAME = 'depenses'
+export const EXPENSE_CATEGORY_LIST_NAME = 'categories_depenses'
 
 const STORAGE_PREFIX = 'custom_list_cache_'
 
@@ -198,6 +199,13 @@ const FALLBACK_DISCOUNT_LIST = {
 const FALLBACK_EXPENSE_LIST = {
     id: null,
     name: EXPENSE_LIST_NAME,
+    is_active: true,
+    items: [],
+}
+
+const FALLBACK_EXPENSE_CATEGORY_LIST = {
+    id: null,
+    name: EXPENSE_CATEGORY_LIST_NAME,
     is_active: true,
     items: [],
 }
@@ -435,6 +443,16 @@ function normalizeDiscountItem(item, index) {
     }
 }
 
+function normalizeSimpleItem(item, index, prefix = 'item') {
+    return {
+        id: item?.id ?? `generated-${prefix}-${index}`,
+        label: String(item?.label || item?.value || '').trim(),
+        value: String(item?.value || item?.label || '').trim(),
+        is_active: item?.is_active !== false,
+        sort_order: Number(item?.sort_order ?? index + 1),
+    }
+}
+
 function normalizeExpenseItem(item, index) {
     const isRecurring = item?.expense_is_recurring === true
 
@@ -533,7 +551,7 @@ function normalizeListPayload(list, name = list?.name) {
             name,
             is_active: base.is_active !== false,
             items: [...(base.items || [])]
-                .map((item, index) => normalizeDiscountItem(item, index))
+                .map((item, index) => normalizeSimpleItem(item, index, 'expense-category'))
                 .filter((item) => item.label)
                 .sort((a, b) => a.sort_order - b.sort_order),
         }
@@ -548,6 +566,20 @@ function normalizeListPayload(list, name = list?.name) {
             is_active: base.is_active !== false,
             items: [...(base.items || [])]
                 .map((item, index) => normalizeExpenseItem(item, index))
+                .filter((item) => item.label)
+                .sort((a, b) => a.sort_order - b.sort_order),
+        }
+    }
+
+    if (name === EXPENSE_CATEGORY_LIST_NAME) {
+        const base = list && list.name === name ? list : FALLBACK_EXPENSE_CATEGORY_LIST
+
+        return {
+            id: base.id ?? null,
+            name,
+            is_active: base.is_active !== false,
+            items: [...(base.items || [])]
+                .map((item, index) => normalizeDiscountItem(item, index))
                 .filter((item) => item.label)
                 .sort((a, b) => a.sort_order - b.sort_order),
         }
@@ -576,6 +608,7 @@ export const useCustomListsStore = defineStore('customLists', () => {
         [TAX_LIST_NAME]: clone(FALLBACK_TAX_LIST),
         [DISCOUNT_LIST_NAME]: clone(FALLBACK_DISCOUNT_LIST),
         [EXPENSE_LIST_NAME]: clone(FALLBACK_EXPENSE_LIST),
+        [EXPENSE_CATEGORY_LIST_NAME]: clone(FALLBACK_EXPENSE_CATEGORY_LIST),
     })
     const loadedLists = ref({})
     const loadingLists = ref({})
@@ -603,6 +636,10 @@ export const useCustomListsStore = defineStore('customLists', () => {
 
         if (name === EXPENSE_LIST_NAME) {
             return clone(FALLBACK_EXPENSE_LIST)
+        }
+
+        if (name === EXPENSE_CATEGORY_LIST_NAME) {
+            return clone(FALLBACK_EXPENSE_CATEGORY_LIST)
         }
 
         return clone(FALLBACK_SERVICE_MODE_LIST)
@@ -710,6 +747,13 @@ export const useCustomListsStore = defineStore('customLists', () => {
         )
     })
 
+    const expenseCategoryList = computed(() => {
+        return normalizeListPayload(
+            lists.value[EXPENSE_CATEGORY_LIST_NAME] || FALLBACK_EXPENSE_CATEGORY_LIST,
+            EXPENSE_CATEGORY_LIST_NAME
+        )
+    })
+
     const serviceModeEnabled = computed(() => serviceModeList.value.is_active !== false)
     const activeServiceModes = computed(() => {
         if (!serviceModeEnabled.value) {
@@ -814,6 +858,7 @@ export const useCustomListsStore = defineStore('customLists', () => {
         serviceModeList,
         paymentModeList,
         expenseList,
+        expenseCategoryList,
         serviceModeEnabled,
         activeServiceModes,
         activePaymentModes,

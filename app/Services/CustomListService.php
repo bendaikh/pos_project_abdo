@@ -15,6 +15,7 @@ class CustomListService
     public const TAX_LIST = 'taxes';
     public const DISCOUNT_LIST = 'remises';
     public const EXPENSE_LIST = 'depenses';
+    public const EXPENSE_CATEGORY_LIST = 'categories_depenses';
 
     private const DEFAULT_LISTS = [
         self::PREDEFINED_TICKET_LIST => [
@@ -199,6 +200,10 @@ class CustomListService
             'items' => [],
         ],
         self::EXPENSE_LIST => [
+            'is_active' => true,
+            'items' => [],
+        ],
+        self::EXPENSE_CATEGORY_LIST => [
             'is_active' => true,
             'items' => [],
         ],

@@ -660,7 +660,7 @@
                                             </div>
                                             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                                 <label class="text-sm text-gray-700 space-y-1">
-                                                    <span class="text-xs uppercase tracking-wide text-gray-500">Impact sur le prix ({{ settingsStore.currencyCode }})</span>
+                                                    <span class="text-xs uppercase tracking-wide text-gray-500">Prix de la variante ({{ settingsStore.currencyCode }})</span>
                                                     <input
                                                         v-model.number="getVariantValue(template.id, value).price"
                                                         type="number"
@@ -906,14 +906,15 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Prix ({{ settingsStore.currencyCode }}) *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Prix ({{ settingsStore.currencyCode }})</label>
                             <input
                                 v-model.number="newOption.variantPrice"
                                 type="number"
                                 step="0.01"
-                                placeholder="30.00"
+                                placeholder="0.00"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-bold text-lg"
                             >
+                            <p class="text-xs text-gray-500 mt-1">Laissez vide pour une option gratuite.</p>
                         </div>
                     </div>
 
@@ -929,7 +930,7 @@
                         <button 
                             type="button"
                             @click="createNewOption"
-                            :disabled="creatingOption || !newOption.optionName.trim() || !newOption.variantName.trim() || newOption.variantPrice === null"
+                            :disabled="creatingOption || !newOption.optionName.trim() || !newOption.variantName.trim()"
                             class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {{ creatingOption ? 'Création...' : 'Créer l\'option' }}
@@ -1507,10 +1508,12 @@ async function handleSubmit() {
 }
 
 async function createNewOption() {
-    if (!newOption.optionName.trim() || !newOption.variantName.trim() || newOption.variantPrice === null) {
-        alert('Veuillez remplir le nom, la première valeur et le prix')
+    if (!newOption.optionName.trim() || !newOption.variantName.trim()) {
+        alert('Veuillez remplir le nom et la première valeur')
         return
     }
+
+    const variantPrice = Number(newOption.variantPrice) || 0
 
     creatingOption.value = true
     try {
@@ -1518,7 +1521,7 @@ async function createNewOption() {
             name: newOption.optionName.trim(),
             type: 'fixed',
             values: [newOption.variantName.trim()],
-            extra_price: Number(newOption.variantPrice) || 0,
+            extra_price: variantPrice,
             is_active: true,
             is_required: false,
         })
@@ -1528,7 +1531,7 @@ async function createNewOption() {
             {
                 id: Date.now(),
                 name: newOption.variantName.trim(),
-                price_impact: Number(newOption.variantPrice) || 0,
+                price_impact: variantPrice,
             },
         ]
 

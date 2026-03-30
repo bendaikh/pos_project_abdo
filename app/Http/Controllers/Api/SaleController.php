@@ -214,7 +214,7 @@ class SaleController extends Controller
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
                     'selected_options' => $item['selected_options'] ?? null,
-                    'options_price' => ($item['options_price'] ?? 0) + ($item['variant_price'] ?? 0),
+                    'options_price' => $item['options_price'] ?? 0,
                     'discount_amount' => $item['discount_amount'] ?? 0,
                     'total' => 0,
                 ]);
@@ -343,7 +343,7 @@ class SaleController extends Controller
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['unit_price'],
                         'selected_options' => $item['selected_options'] ?? null,
-                        'options_price' => ($item['options_price'] ?? 0) + ($item['variant_price'] ?? 0),
+                        'options_price' => $item['options_price'] ?? 0,
                         'discount_amount' => $item['discount_amount'] ?? 0,
                         'total' => 0,
                     ]);

@@ -271,44 +271,52 @@
                                 </div>
 
                                 <div v-if="customerMode === 'existing'" class="space-y-4">
-                                    <label class="block">
-                                        <span class="mb-2 block text-sm font-medium text-slate-700">Recherche client</span>
-                                        <input
-                                            v-model.trim="customerSearch"
-                                            type="text"
-                                            placeholder="Nom ou téléphone"
-                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
-                                        >
-                                    </label>
-
-                                    <div class="grid gap-2 md:grid-cols-2">
+                                    <div
+                                        v-if="selectedCustomer && !showExistingCustomerPicker"
+                                        class="flex flex-col gap-3 rounded-[20px] border border-blue-100 bg-blue-50/70 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+                                    >
+                                        <div class="min-w-0">
+                                            <p class="text-xs uppercase tracking-[0.2em] text-blue-700">Client sélectionné</p>
+                                            <p class="mt-1 truncate text-base font-semibold text-slate-900">{{ selectedCustomer.name }}</p>
+                                            <p class="mt-1 truncate text-sm text-slate-500">{{ commandForm.customer_phone || 'Sans téléphone' }}</p>
+                                        </div>
                                         <button
-                                            v-for="customer in filteredCustomers"
-                                            :key="customer.id"
                                             type="button"
-                                            class="rounded-[18px] border px-4 py-3 text-left transition"
-                                            :class="selectedCustomer?.id === customer.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'"
-                                            @click="selectCustomer(customer)"
+                                            class="shrink-0 rounded-[16px] border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100/60"
+                                            @click="openExistingCustomerPicker"
                                         >
-                                            <p class="font-semibold text-slate-900">{{ customer.name }}</p>
-                                            <p class="mt-1 text-sm text-slate-500">{{ customer.phone || 'Sans téléphone' }}</p>
+                                            Changer le client
                                         </button>
                                     </div>
-                                    <p v-if="loadingCustomers" class="text-sm text-slate-500">Chargement des clients...</p>
 
-                                    <div v-if="selectedCustomer" class="grid gap-4 rounded-[22px] bg-slate-50 p-4 md:grid-cols-3">
-                                        <div>
-                                            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Client</p>
-                                            <p class="mt-1 font-semibold text-slate-900">{{ selectedCustomer.name }}</p>
+                                    <div v-if="showExistingCustomerPicker" class="space-y-3">
+                                        <label class="block">
+                                            <span class="mb-2 block text-sm font-medium text-slate-700">Recherche client</span>
+                                            <input
+                                                v-model.trim="customerSearch"
+                                                type="text"
+                                                placeholder="Nom ou téléphone"
+                                                class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                            >
+                                        </label>
+
+                                        <div class="max-h-[280px] overflow-y-auto pr-1 sm:max-h-[340px]">
+                                            <div class="grid gap-2 sm:grid-cols-2">
+                                                <button
+                                                    v-for="customer in filteredCustomers"
+                                                    :key="customer.id"
+                                                    type="button"
+                                                    class="rounded-[18px] border px-3 py-3 text-left transition sm:px-4"
+                                                    :class="selectedCustomer?.id === customer.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'"
+                                                    @click="selectCustomer(customer)"
+                                                >
+                                                    <p class="truncate font-semibold text-slate-900">{{ customer.name }}</p>
+                                                    <p class="mt-1 truncate text-sm text-slate-500">{{ customer.phone || 'Sans téléphone' }}</p>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Téléphone</p>
-                                            <p class="mt-1 font-semibold text-slate-900">{{ commandForm.customer_phone || '-' }}</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Activité</p>
-                                            <p class="mt-1 font-semibold text-slate-900">{{ commandForm.customer_activity || '-' }}</p>
-                                        </div>
+                                        <p v-if="loadingCustomers" class="text-sm text-slate-500">Chargement des clients...</p>
+                                        <p v-else-if="!filteredCustomers.length" class="text-sm text-slate-500">Aucun client trouvé.</p>
                                     </div>
                                 </div>
 
@@ -460,6 +468,7 @@ const loadingCustomers = ref(false)
 const customerSearch = ref('')
 const customerMode = ref('existing')
 const selectedCustomer = ref(null)
+const showExistingCustomerPicker = ref(true)
 
 const personalizedForm = ref({
     ticket_name: '',
@@ -739,7 +748,11 @@ function createTicketBoardKey(group, name) {
 }
 
 function hydrateDefaultCustomer() {
-    if (!props.defaultCustomerId) return
+    if (!props.defaultCustomerId) {
+        selectedCustomer.value = null
+        showExistingCustomerPicker.value = true
+        return
+    }
 
     selectedCustomer.value = {
         id: props.defaultCustomerId,
@@ -748,6 +761,7 @@ function hydrateDefaultCustomer() {
         activity: '',
         address: '',
     }
+    showExistingCustomerPicker.value = false
 }
 
 async function fetchCustomers() {
@@ -777,6 +791,12 @@ function selectCustomer(customer) {
     commandForm.value.customer_phone = customer.phone || ''
     commandForm.value.customer_activity = customer.activity || ''
     commandForm.value.customer_address = customer.address || ''
+    customerSearch.value = ''
+    showExistingCustomerPicker.value = false
+}
+
+function openExistingCustomerPicker() {
+    showExistingCustomerPicker.value = true
 }
 
 function formatCurrency(amount) {
@@ -790,10 +810,9 @@ function formatDeliveryMode(mode) {
 function getItemTotal(item) {
     const quantity = Number(item.quantity || 0)
     const unitPrice = Number(item.unit_price || 0)
-    const variantPrice = Number(item.variant_price || 0)
     const optionsPrice = Number(item.options_price || 0)
     const discount = Number(item.discount_amount || 0)
-    return (unitPrice + variantPrice + optionsPrice) * quantity - discount
+    return (unitPrice + optionsPrice) * quantity - discount
 }
 
 function buildSalePayload(overrides = {}) {

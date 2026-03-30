@@ -53,6 +53,31 @@ class SalePaymentWorkflowTest extends TestCase
             ->assertJsonPath('sale.payment_summary.remaining_amount', 620);
     }
 
+    public function test_decimal_mixed_payments_can_cover_the_exact_remaining_amount_without_false_overpay(): void
+    {
+        $user = User::factory()->create();
+        $sale = $this->createSale(total: 100.00);
+
+        $firstPayment = $this->actingAs($user)->postJson("/api/sales/{$sale->id}/payments", [
+            'payment_type' => 'cash',
+            'amount' => 33.33,
+            'received_amount' => 33.33,
+        ]);
+
+        $firstPayment->assertCreated()
+            ->assertJsonPath('sale.payment_summary.remaining_amount', 66.67);
+
+        $secondPayment = $this->actingAs($user)->postJson("/api/sales/{$sale->id}/payments", [
+            'payment_type' => 'card',
+            'amount' => 66.67,
+            'transaction_number' => 'TX-66-67',
+        ]);
+
+        $secondPayment->assertCreated()
+            ->assertJsonPath('sale.payment_status_code', 'paid')
+            ->assertJsonPath('sale.payment_summary.remaining_amount', 0);
+    }
+
     public function test_deferred_payment_covering_remaining_balance_marks_sale_as_a_encaisser_then_encaisse(): void
     {
         $user = User::factory()->create();
@@ -206,7 +231,7 @@ class SalePaymentWorkflowTest extends TestCase
         $this->assertSame($posSale->reference, $posDeferredItem['sale_reference_display']);
     }
 
-    private function createSale(string $origin = 'menu_commande'): Sale
+    private function createSale(string $origin = 'menu_commande', float $total = 720): Sale
     {
         $customer = Customer::create([
             'name' => 'Client test',
@@ -218,12 +243,12 @@ class SalePaymentWorkflowTest extends TestCase
             'reference' => 'TRX-TST-' . uniqid(),
             'user_id' => User::factory()->create()->id,
             'customer_id' => $customer->id,
-            'subtotal' => 720,
+            'subtotal' => $total,
             'discount_amount' => 0,
             'discount_percent' => 0,
             'tax_rate' => 0,
             'tax_amount' => 0,
-            'total' => 720,
+            'total' => $total,
             'status' => 'pending',
             'order_status' => 'livree',
             'payment_status' => 'unpaid',

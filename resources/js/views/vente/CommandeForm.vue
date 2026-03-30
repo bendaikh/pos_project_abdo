@@ -257,7 +257,7 @@
                                             <button type="button" class="w-7 h-7 border border-gray-300 rounded-lg" @click="line.quantity = Number(line.quantity || 0) + 1">+</button>
                                         </div>
                                     </td>
-                                    <td class="px-3 py-2 text-right text-sm">{{ formatCurrency(line.unit_price || 0) }}</td>
+                                    <td class="px-3 py-2 text-right text-sm">{{ formatCurrency(lineUnitPrice(line)) }}</td>
                                     <td class="px-3 py-2 text-right text-sm font-semibold">{{ formatCurrency(lineTotal(line)) }}</td>
                                     <td class="px-3 py-2 text-right">
                                         <button type="button" class="text-red-600 hover:text-red-700 text-sm" @click="removeLine(index)">Supprimer</button>
@@ -309,7 +309,7 @@
                                 >
                                     <input v-model="configuratorVariantId" type="radio" :value="String(variant.id)" class="text-blue-600">
                                     <span class="flex-1">{{ variantLabel(variant) }}</span>
-                                    <span class="text-gray-700 font-medium">+ {{ formatCurrency(variant.price_impact || 0) }}</span>
+                                    <span class="text-gray-700 font-medium">{{ formatCurrency(variantUnitPrice(variant)) }}</span>
                                 </label>
                             </div>
                         </div>
@@ -529,7 +529,7 @@ const configuratorVariantPrice = computed(() => {
     if (!configuratorArticle.value || !configuratorVariantId.value) return 0
     const targetId = normalizeId(configuratorVariantId.value)
     const variant = configuratorActiveVariants.value.find((v) => normalizeId(v.id) === targetId)
-    return Number(variant?.price_impact || 0)
+    return variantUnitPrice(variant)
 })
 
 const configuratorOptionsPrice = computed(() => {
@@ -546,8 +546,10 @@ const configuratorOptionsPrice = computed(() => {
 })
 
 const configuratorUnitPrice = computed(() => {
-    const base = Number(configuratorArticle.value?.sell_price || 0)
-    return base + Number(configuratorVariantPrice.value || 0) + Number(configuratorOptionsPrice.value || 0)
+    const base = configuratorVariantId.value
+        ? Number(configuratorVariantPrice.value || 0)
+        : Number(configuratorArticle.value?.sell_price || 0)
+    return base + Number(configuratorOptionsPrice.value || 0)
 })
 
 const totalAmount = computed(() => form.items.reduce((sum, line) => sum + lineTotal(line), 0))
@@ -601,7 +603,11 @@ const canSubmit = computed(() => {
 })
 
 function lineTotal(line) {
-    return Number(line.quantity || 0) * Number(line.unit_price || 0)
+    return Number(line.quantity || 0) * lineUnitPrice(line)
+}
+
+function lineUnitPrice(line) {
+    return Number(line.unit_price || 0) + Number(line.options_price || 0)
 }
 
 function formatOrigin(origin) {
@@ -718,6 +724,10 @@ function variantLabel(variant) {
         return `${variant.template_name} · ${variant.template_value}`
     }
     return variant.name || variant.template_value || '-'
+}
+
+function variantUnitPrice(variant) {
+    return Number(variant?.price_impact || 0)
 }
 
 function getActiveVariants(article) {
@@ -876,7 +886,7 @@ function confirmConfigurator() {
 
     const line = {
         ...newLine(article),
-        unit_price: basePrice + variantPrice + optionsPrice,
+        unit_price: selectedVariant ? variantPrice : basePrice,
         selected_variant: selectedVariant,
         variant_price: variantPrice,
         selected_options: selectedOptions,

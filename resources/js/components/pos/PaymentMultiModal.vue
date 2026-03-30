@@ -1,10 +1,10 @@
 <template>
-    <div class="fixed inset-0 z-50 overflow-y-auto">
-        <div class="flex min-h-screen items-end justify-center p-0 sm:items-center sm:p-3 md:p-4">
+    <div class="fixed inset-0 z-50 overflow-hidden">
+        <div class="flex min-h-screen items-end justify-center p-2 sm:items-center sm:p-3 md:p-4">
             <div class="fixed inset-0 bg-slate-900/45 backdrop-blur-[1px]" @click="$emit('close')"></div>
 
-            <div class="relative z-10 mx-auto flex max-h-[100dvh] w-full max-w-7xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-[#f6f8fc] shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:max-h-[94vh] sm:rounded-[28px]">
-                <div class="sticky top-0 z-10 border-b border-slate-200 bg-white px-3 py-2 sm:px-4 sm:py-3">
+            <div class="relative z-10 mx-auto flex max-h-[90vh] w-full max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-[#f6f8fc] shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:max-w-[calc(100vw-1.5rem)] sm:rounded-[28px] lg:max-w-6xl xl:max-w-7xl">
+                <div class="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white px-3 py-2 sm:px-4 sm:py-3">
                     <div class="flex items-center justify-between gap-3">
                         <button
                             type="button"
@@ -21,9 +21,9 @@
                     </div>
                 </div>
 
-                <div class="grid min-h-0 flex-1 xl:grid-cols-[220px_minmax(0,1fr)]">
-                    <aside class="border-b border-slate-200 bg-slate-50/90 xl:border-b-0 xl:border-r">
-                        <div class="flex h-full flex-col p-2.5 sm:p-3 md:p-3.5 lg:p-4">
+                <div class="grid min-h-0 flex-1 overflow-hidden xl:grid-cols-[280px_minmax(0,1fr)]">
+                    <aside class="hidden min-h-0 border-b border-slate-200 bg-slate-50/90 xl:block xl:border-b-0 xl:border-r">
+                        <div class="flex h-full flex-col p-3 sm:p-4 md:p-4 lg:p-5">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Modes</p>
@@ -34,31 +34,62 @@
                                 </div>
                             </div>
 
-                            <div v-if="paymentMethods.length" class="mt-2 grid grid-cols-2 gap-1.5 pr-1 sm:grid-cols-3 sm:gap-2 xl:mt-3 xl:grid-cols-1 xl:overflow-y-auto xl:pb-0">
-                                <button
-                                    v-for="method in paymentMethods"
-                                    :key="method.id"
-                                    type="button"
-                                    @click="selectMethod(method)"
-                                    class="w-full rounded-[10px] border px-2 py-1.5 text-left transition-all duration-150 sm:rounded-[12px] sm:px-2.5 sm:py-2 xl:rounded-[14px] xl:px-3"
-                                    :class="selectedMethod?.id === method.id
-                                        ? 'border-sky-300 bg-white shadow-md ring-2 ring-sky-100'
-                                        : 'border-slate-200 bg-white/80 hover:border-slate-300 hover:bg-white'"
-                                >
-                                    <div class="flex items-start gap-1.5">
-                                        <div
-                                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm sm:h-8 sm:w-8 sm:text-base xl:h-9 xl:w-9"
-                                            :class="selectedMethod?.id === method.id ? 'bg-sky-50' : 'bg-slate-100'"
+                            <div v-if="paymentMethods.length" class="mt-3 min-h-0 flex-1">
+                                <div class="flex gap-2 overflow-x-auto pb-1 pr-1 xl:hidden">
+                                    <button
+                                        v-for="method in paymentMethods"
+                                        :key="`${method.id}-mobile`"
+                                        type="button"
+                                        @click="selectMethod(method)"
+                                        class="w-[calc(50%-0.25rem)] shrink-0 rounded-[16px] border px-3 py-3 text-left transition-all duration-150 sm:w-[calc(50%-0.375rem)]"
+                                        :class="selectedMethod?.id === method.id
+                                            ? 'border-sky-300 bg-white shadow-md ring-2 ring-sky-100'
+                                            : 'border-slate-200 bg-white/80 hover:border-slate-300 hover:bg-white'"
+                                    >
+                                        <div class="flex items-start gap-3">
+                                            <div
+                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
+                                                :class="selectedMethod?.id === method.id ? 'bg-sky-50' : 'bg-slate-100'"
+                                            >
+                                                {{ method.icon }}
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-semibold text-slate-900">{{ method.label }}</p>
+                                                <p class="mt-1 text-[11px] font-medium text-slate-500">{{ paymentTimingLabel(method) }}</p>
+                                                <p class="mt-1.5 text-base font-semibold text-slate-800">{{ formatCurrency(getMethodAssignedAmount(method)) }}</p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <div class="hidden h-full overflow-y-auto pr-1 xl:block">
+                                    <div class="grid grid-cols-1 gap-2.5">
+                                        <button
+                                            v-for="method in paymentMethods"
+                                            :key="`${method.id}-desktop`"
+                                            type="button"
+                                            @click="selectMethod(method)"
+                                            class="w-full rounded-[18px] border px-4 py-4 text-left transition-all duration-150"
+                                            :class="selectedMethod?.id === method.id
+                                                ? 'border-sky-300 bg-white shadow-md ring-2 ring-sky-100'
+                                                : 'border-slate-200 bg-white/80 hover:border-slate-300 hover:bg-white'"
                                         >
-                                            {{ method.icon }}
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="truncate text-[11px] font-semibold text-slate-900 sm:text-xs">{{ method.label }}</p>
-                                            <p class="mt-0.5 text-[8px] font-medium text-slate-500 sm:text-[9px]">{{ paymentTimingLabel(method) }}</p>
-                                            <p class="mt-0.5 text-[9px] font-semibold text-slate-700 sm:text-[10px]">{{ formatCurrency(getMethodAssignedAmount(method)) }}</p>
-                                        </div>
+                                            <div class="flex items-start gap-3">
+                                                <div
+                                                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-xl"
+                                                    :class="selectedMethod?.id === method.id ? 'bg-sky-50' : 'bg-slate-100'"
+                                                >
+                                                    {{ method.icon }}
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="truncate text-base font-semibold text-slate-900">{{ method.label }}</p>
+                                                    <p class="mt-1 text-xs font-medium text-slate-500">{{ paymentTimingLabel(method) }}</p>
+                                                    <p class="mt-1.5 text-lg font-semibold text-slate-800">{{ formatCurrency(getMethodAssignedAmount(method)) }}</p>
+                                                </div>
+                                            </div>
+                                        </button>
                                     </div>
-                                </button>
+                                </div>
                             </div>
 
                             <div v-else class="mt-3 rounded-[16px] border border-dashed border-slate-300 bg-white px-3 py-4 text-center text-xs text-slate-500">
@@ -68,51 +99,106 @@
                     </aside>
 
                     <section class="flex min-h-0 flex-col">
-                        <div class="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4">
-                            <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
-                                <div class="rounded-[12px] border border-slate-200 bg-white p-2 shadow-sm sm:rounded-[16px] sm:p-2.5 lg:rounded-[18px] lg:p-3">
-                                    <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">À payer</p>
-                                    <p class="mt-1 text-sm font-semibold tracking-tight text-sky-700 sm:mt-1.5 sm:text-base lg:mt-2 lg:text-xl">{{ formatCurrency(total) }}</p>
+                        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-5">
+                            <div class="rounded-[18px] border border-slate-200 bg-white p-3 shadow-sm xl:hidden">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">Modes</p>
+                                        <h3 class="mt-0.5 text-xs font-semibold text-slate-900">Paiement</h3>
+                                    </div>
+                                    <div class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                                        {{ paymentMethods.length }}
+                                    </div>
                                 </div>
-                                <div class="rounded-[12px] border sm:rounded-[16px] lg:rounded-[18px]" :class="remaining <= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'">
-                                    <div class="p-2 shadow-sm sm:p-2.5 lg:p-3">
+
+                                <div v-if="paymentMethods.length" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <button
+                                        v-for="method in paymentMethods"
+                                        :key="`${method.id}-compact`"
+                                        type="button"
+                                        @click="selectMethod(method)"
+                                        class="w-full rounded-[16px] border px-3 py-3 text-left transition-all duration-150"
+                                        :class="selectedMethod?.id === method.id
+                                            ? 'border-sky-300 bg-sky-50 shadow-sm ring-2 ring-sky-100'
+                                            : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white'"
+                                    >
+                                        <div class="flex items-start gap-3">
+                                            <div
+                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
+                                                :class="selectedMethod?.id === method.id ? 'bg-white text-sky-700' : 'bg-white text-slate-700'"
+                                            >
+                                                {{ method.icon }}
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-semibold text-slate-900">{{ method.label }}</p>
+                                                <p class="mt-1 text-[11px] font-medium text-slate-500">{{ paymentTimingLabel(method) }}</p>
+                                                <p class="mt-1.5 text-base font-semibold text-slate-800">{{ formatCurrency(getMethodAssignedAmount(method)) }}</p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <div v-else class="mt-3 rounded-[14px] border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-center text-xs text-slate-500">
+                                    Aucun mode
+                                </div>
+                            </div>
+
+                            <div class="mt-3 grid gap-2 sm:gap-3" :class="coveredByExistingPayments > 0 ? 'grid-cols-2 xl:grid-cols-4' : 'grid-cols-2 lg:grid-cols-3'">
+                                <div class="rounded-[16px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[18px] sm:p-4 lg:rounded-[20px]">
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">À payer</p>
+                                    <p class="mt-1.5 text-lg font-semibold tracking-tight text-sky-700 sm:text-xl lg:mt-2 lg:text-2xl">{{ formatCurrency(payableTotal) }}</p>
+                                </div>
+                                <div v-if="coveredByExistingPayments > 0" class="rounded-[16px] border border-violet-200 bg-violet-50 p-3 shadow-sm sm:rounded-[18px] sm:p-4 lg:rounded-[20px]">
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-600">Déjà couvert</p>
+                                    <p class="mt-1.5 text-lg font-semibold text-violet-700 sm:text-xl lg:mt-2 lg:text-2xl">{{ formatCurrency(coveredByExistingPayments) }}</p>
+                                </div>
+                                <div class="rounded-[16px] border sm:rounded-[18px] lg:rounded-[20px]" :class="remaining <= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'">
+                                    <div class="p-3 shadow-sm sm:p-4">
                                         <p class="text-[10px] font-semibold uppercase tracking-[0.16em]" :class="remaining <= 0 ? 'text-emerald-600' : 'text-amber-600'">Reste</p>
-                                        <p class="mt-1 text-sm font-semibold tracking-tight sm:mt-1.5 sm:text-base lg:mt-2 lg:text-xl" :class="remaining <= 0 ? 'text-emerald-700' : 'text-amber-700'">
+                                        <p class="mt-1.5 text-lg font-semibold tracking-tight sm:text-xl lg:mt-2 lg:text-2xl" :class="remaining <= 0 ? 'text-emerald-700' : 'text-amber-700'">
                                             {{ formatCurrency(remaining) }}
                                         </p>
                                     </div>
                                 </div>
-                                <div class="rounded-[12px] border border-emerald-200 bg-emerald-50 p-2 shadow-sm sm:rounded-[16px] sm:p-2.5 lg:rounded-[18px] lg:p-3">
+                                <div class="rounded-[16px] border border-emerald-200 bg-emerald-50 p-3 shadow-sm sm:rounded-[18px] sm:p-4 lg:rounded-[20px]">
                                     <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600">Affecté</p>
-                                    <p class="mt-1 text-sm font-semibold text-emerald-700 sm:mt-1.5 sm:text-base lg:mt-2 lg:text-xl">{{ formatCurrency(totalPaid) }}</p>
+                                    <p class="mt-1.5 text-lg font-semibold text-emerald-700 sm:text-xl lg:mt-2 lg:text-2xl">{{ formatCurrency(totalPaid) }}</p>
                                 </div>
                             </div>
 
-                            <div v-if="selectedMethod" class="mt-2 rounded-[14px] border border-slate-200 bg-white p-2.5 shadow-sm sm:mt-3 sm:rounded-[16px] sm:p-3 lg:rounded-[18px] lg:p-4">
-                                <div class="mb-2 flex flex-col gap-2 border-b border-slate-200/80 pb-2 sm:mb-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2.5 sm:pb-3">
+                            <div v-if="selectedMethod" class="mt-3 rounded-[18px] border border-slate-200 bg-white p-3 shadow-sm sm:mt-4 sm:rounded-[20px] sm:p-4 lg:rounded-[22px] lg:p-5">
+                                <div class="mb-3 flex flex-col gap-3 border-b border-slate-200/80 pb-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pb-4">
                                     <div class="flex min-w-0 items-center gap-2">
-                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/80 text-lg shadow-sm sm:h-9 sm:w-9 sm:text-xl md:h-10 md:w-10">
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-xl shadow-sm sm:h-11 sm:w-11 sm:text-2xl md:h-12 md:w-12">
                                             {{ selectedMethod.icon }}
                                         </div>
                                         <div class="min-w-0">
                                             <div class="flex items-center gap-1.5 flex-wrap">
-                                                <h4 class="text-xs font-semibold text-slate-900 sm:text-sm">{{ selectedMethod.label }}</h4>
-                                                <span class="inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-xs" :class="selectedMethodTheme.chipClass">
+                                                <h4 class="text-base font-semibold text-slate-900 sm:text-lg">{{ selectedMethod.label }}</h4>
+                                                <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold sm:px-2.5 sm:text-xs" :class="selectedMethodTheme.chipClass">
                                                     {{ paymentTimingLabel(selectedMethod) }}
                                                 </span>
                                             </div>
-                                            <p class="mt-0.5 hidden text-[10px] text-slate-500 xl:block">{{ selectedMethod.description }}</p>
+                                            <p class="mt-1 hidden text-sm text-slate-500 xl:block">{{ selectedMethod.description }}</p>
                                         </div>
                                     </div>
-                                    <div class="hidden rounded-lg border border-white/70 bg-white/80 px-2 py-1.5 text-right shadow-sm shrink-0 sm:block sm:px-2.5 sm:py-2">
+                                    <div class="hidden rounded-xl border border-white/70 bg-white/80 px-3 py-2.5 text-right shadow-sm shrink-0 sm:block">
                                         <p class="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montant</p>
-                                        <p class="mt-0.5 text-xs font-semibold text-slate-900 sm:mt-1 sm:text-sm">{{ formatCurrency(paymentForm.amount || 0) }}</p>
+                                        <p class="mt-1 text-base font-semibold text-slate-900 sm:text-lg">{{ formatCurrency(paymentForm.amount || 0) }}</p>
                                     </div>
+                                </div>
+
+                                <div v-if="paymentNotice" class="mb-4 rounded-[16px] border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800">
+                                    {{ paymentNotice }}
+                                </div>
+
+                                <div v-else-if="usesSingleModeDirectFlow" class="mb-4 rounded-[16px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                    Le mode de paiement actif est deja selectionne. Utilisez directement <span class="font-semibold text-slate-900">Valider le paiement</span>.
                                 </div>
 
                                 <div class="grid gap-2 sm:gap-3 xl:grid-cols-[minmax(0,1fr)_200px] 2xl:grid-cols-[minmax(0,1fr)_220px]">
                                     <div class="space-y-2 sm:space-y-2.5">
-                                        <div class="grid gap-1.5 xl:hidden" :class="selectedMethod.id === 'cash' ? 'grid-cols-3' : 'grid-cols-2'">
+                                        <div class="grid gap-1.5 xl:hidden" :class="selectedMethod.id === 'cash' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'">
                                             <div class="rounded-[10px] border border-white/70 bg-white/80 px-2 py-1.5 sm:rounded-[12px] sm:px-2.5 sm:py-2">
                                                 <p class="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">Affecté</p>
                                                 <p class="mt-0.5 text-xs font-semibold text-slate-900 sm:text-sm">{{ formatCurrency(getMethodAssignedAmount(selectedMethod)) }}</p>
@@ -129,9 +215,9 @@
                                             </div>
                                         </div>
 
-                                        <div class="rounded-[12px] border border-slate-200 bg-white p-2.5 shadow-sm sm:rounded-[14px] sm:p-3">
-                                            <label class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montant à encaisser</label>
-                                            <div class="mt-2 flex flex-col gap-1.5 sm:flex-row">
+                                        <div class="rounded-[14px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[16px] sm:p-4">
+                                            <label class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montant à encaisser</label>
+                                            <div class="mt-3 flex flex-col gap-2 sm:flex-row">
                                                 <input
                                                     v-model.number="paymentForm.amount"
                                                     type="number"
@@ -139,31 +225,35 @@
                                                     min="0"
                                                     :max="remaining + 0.01"
                                                     placeholder="0.00"
-                                                    class="h-8 flex-1 rounded-[10px] border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:h-9 sm:rounded-[12px] sm:px-3 sm:text-sm sm:focus:ring-4"
+                                                    class="h-12 flex-1 rounded-[14px] border border-slate-300 bg-slate-50 px-4 text-lg font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:h-14 sm:text-xl sm:focus:ring-4"
+                                                    @click="selectAllInputValue"
+                                                    @focus="selectAllInputValue"
                                                 >
-                                                <div class="flex min-w-[70px] items-center justify-center rounded-[10px] border border-slate-200 bg-slate-50 px-2.5 text-[10px] font-semibold text-slate-700 sm:min-w-[80px] sm:rounded-[12px] sm:px-3 sm:text-xs">
+                                                <div class="flex min-w-[120px] items-center justify-center rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 sm:min-w-[140px] sm:text-base">
                                                     {{ formatCurrency(paymentForm.amount || 0) }}
                                                 </div>
                                             </div>
-                                            <p v-if="paymentForm.amount > remaining" class="mt-1.5 text-[10px] font-medium text-amber-700">
+                                            <p v-if="amountExceedsRemaining" class="mt-2 text-sm font-medium text-amber-700">
                                                 Dépasse le reste ({{ formatCurrency(remaining) }})
                                             </p>
                                         </div>
 
                                         <template v-if="selectedMethod.id === 'cash'">
                                             <div class="space-y-2 sm:space-y-2.5 xl:hidden">
-                                                <div class="rounded-[12px] border border-slate-200 bg-white p-2.5 shadow-sm sm:rounded-[14px] sm:p-3">
-                                                    <label class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montant reçu</label>
-                                                    <div class="mt-2 flex flex-col gap-1.5 sm:flex-row">
+                                                <div class="rounded-[14px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[16px] sm:p-4">
+                                                    <label class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montant reçu</label>
+                                                    <div class="mt-3 flex flex-col gap-2 sm:flex-row">
                                                         <input
                                                             v-model.number="paymentForm.received_amount"
                                                             type="number"
                                                             step="0.01"
                                                             min="0"
                                                             placeholder="0.00"
-                                                            class="h-8 flex-1 rounded-[10px] border border-slate-300 bg-slate-50 px-2.5 text-xs font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:h-9 sm:rounded-[12px] sm:px-3 sm:text-sm sm:focus:ring-4"
+                                                            class="h-12 flex-1 rounded-[14px] border border-slate-300 bg-slate-50 px-4 text-lg font-semibold text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:h-14 sm:text-xl sm:focus:ring-4"
+                                                            @click="selectAllInputValue"
+                                                            @focus="selectAllInputValue"
                                                         >
-                                                        <div class="flex min-w-[70px] items-center justify-center rounded-[10px] border border-slate-200 bg-slate-50 px-2.5 text-[10px] font-semibold text-slate-700 sm:min-w-[80px] sm:rounded-[12px] sm:px-3 sm:text-xs">
+                                                        <div class="flex min-w-[120px] items-center justify-center rounded-[14px] border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 sm:min-w-[140px] sm:text-base">
                                                             {{ settingsStore.currencyCode }}
                                                         </div>
                                                     </div>
@@ -174,19 +264,22 @@
                                                 </div>
                                             </div>
 
-                                            <div class="rounded-[12px] border border-slate-200 bg-white p-2.5 shadow-sm sm:rounded-[14px] sm:p-3">
-                                                <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montants rapides</p>
-                                                <div class="mt-2 grid grid-cols-3 gap-1 sm:gap-1.5 sm:grid-cols-4 xl:grid-cols-3">
+                                            <div class="rounded-[14px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[16px] sm:p-4">
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Montants rapides</p>
+                                                <div v-if="quickCashAmounts.length" class="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4">
                                                     <button
                                                         v-for="amount in quickCashAmounts"
                                                         :key="amount"
                                                         type="button"
                                                         @click="paymentForm.received_amount = amount"
-                                                        class="rounded-[8px] border border-slate-200 bg-slate-50 px-1.5 py-1.5 text-[9px] font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 sm:rounded-[10px] sm:px-2 sm:py-2 sm:text-[10px]"
+                                                        class="rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-3 text-base font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 sm:text-lg"
                                                     >
                                                         {{ formatCurrency(amount) }}
                                                     </button>
                                                 </div>
+                                                <p v-else class="mt-3 text-sm text-slate-500">
+                                                    Aucun montant rapide n'est affiche. Configurez les billets et la monnaie dans Parametres &gt; Devise.
+                                                </p>
                                             </div>
                                         </template>
 
@@ -245,8 +338,8 @@
                                             <textarea
                                                 v-model="paymentForm.notes"
                                                 placeholder="Remarques..."
-                                                rows="2"
-                                                class="mt-1.5 w-full rounded-[10px] border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 resize-none sm:mt-2 sm:rounded-[12px] sm:px-3 sm:py-2 sm:text-sm sm:focus:ring-4"
+                                                rows="3"
+                                                class="mt-1.5 max-h-28 w-full resize-none overflow-y-auto rounded-[10px] border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-900 outline-none transition focus:border-sky-300 focus:bg-white focus:ring-2 focus:ring-sky-100 sm:mt-2 sm:rounded-[12px] sm:px-3 sm:py-2 sm:text-sm sm:focus:ring-4"
                                             ></textarea>
                                         </div>
 
@@ -353,12 +446,12 @@
                             </div>
                         </div>
 
-                        <div class="sticky bottom-0 border-t border-slate-200 bg-white px-2.5 py-2.5 sm:px-4 sm:py-3 md:px-5 lg:px-6">
-                            <div class="flex flex-col gap-2 md:flex-row md:gap-2.5">
+                        <div class="sticky bottom-0 z-20 shrink-0 border-t border-slate-200 bg-white px-2.5 py-2.5 sm:px-4 sm:py-3 md:px-5 lg:px-6">
+                            <div class="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5">
                                 <button
                                     type="button"
                                     @click="$emit('close')"
-                                    class="flex-1 rounded-[12px] border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
+                                    class="min-w-0 rounded-[12px] border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
                                 >
                                     Annuler
                                 </button>
@@ -367,18 +460,18 @@
                                     type="button"
                                     @click="addPayment"
                                     :disabled="!canAddPayment"
-                                    class="flex-1 rounded-[12px] bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
+                                    class="min-w-0 rounded-[12px] bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
                                 >
                                     <span class="inline-flex items-center justify-center gap-1.5">
                                         <PlusIcon class="h-4 w-4 sm:h-5 sm:w-5" />
-                                        Ajouter
+                                        Ajouter ce paiement
                                     </span>
                                 </button>
                                 <button
                                     type="button"
                                     @click="confirmPayments"
                                     :disabled="!canConfirmPayments"
-                                    class="flex-[1.4] rounded-[12px] bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
+                                    class="col-span-2 min-w-0 rounded-[12px] bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-1 sm:rounded-[14px] sm:px-4 sm:py-2.5 sm:text-sm md:rounded-[16px] md:px-5 md:py-3 lg:text-base"
                                 >
                                     <span class="inline-flex items-center justify-center gap-1.5">
                                         <CheckIcon class="h-4 w-4 sm:h-5 sm:w-5" />
@@ -419,6 +512,10 @@ const props = defineProps({
         type: Boolean,
         default: false
     },
+    totalMode: {
+        type: String,
+        default: 'remaining'
+    },
     confirmLabel: {
         type: String,
         default: 'Valider le paiement'
@@ -434,12 +531,18 @@ const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 const saleSummary = computed(() => props.sale?.payment_summary || null)
 const paidConfirmedAmount = computed(() => Number(saleSummary.value?.paid_confirmed_amount || 0))
 const pendingCollectionAmount = computed(() => Number(saleSummary.value?.pending_collection_amount || 0))
-const remainingToPayNow = computed(() => Number(saleSummary.value?.remaining_amount || props.total || 0))
-const orderArticles = computed(() => Array.isArray(props.sale?.items) ? props.sale.items : [])
+const coveredByExistingPayments = computed(() => {
+    if (props.totalMode !== 'gross') {
+        return 0
+    }
+
+    return normalizeAmount(paidConfirmedAmount.value + pendingCollectionAmount.value)
+})
 
 const selectedMethod = ref(null)
 const payments = ref([])
 const paymentForm = ref(getEmptyForm())
+const paymentNotice = ref('')
 
 const paymentMethods = computed(() => {
     return customListsStore.activePaymentModes.map((item, index) => ({
@@ -478,9 +581,22 @@ function normalizeAmount(value) {
     return Math.round(Number(value || 0) * 100) / 100
 }
 
-const totalPaid = computed(() => payments.value.reduce((sum, payment) => sum + normalizeAmount(payment.amount), 0))
+const totalPaid = computed(() => normalizeAmount(
+    payments.value.reduce((sum, payment) => sum + normalizeAmount(payment.amount), 0)
+))
+const payableTotal = computed(() => {
+    const normalizedTotal = normalizeAmount(props.total)
 
-const remaining = computed(() => Math.max(0, normalizeAmount(props.total) - totalPaid.value))
+    if (props.totalMode === 'gross') {
+        return normalizeAmount(Math.max(0, normalizedTotal - coveredByExistingPayments.value))
+    }
+
+    return normalizedTotal
+})
+const remaining = computed(() => normalizeAmount(Math.max(0, payableTotal.value - totalPaid.value)))
+const amountExceedsRemaining = computed(() => {
+    return normalizeAmount(paymentForm.value.amount) > remaining.value + 0.00001
+})
 
 const calculateChange = computed(() => {
     if (!paymentForm.value.received_amount || !paymentForm.value.amount) return 0
@@ -488,12 +604,7 @@ const calculateChange = computed(() => {
 })
 
 const quickCashAmounts = computed(() => {
-    const base = [5, 10, 20, 50, 100, 200, 500, 1000]
-    const roundedRemaining = Math.ceil(Math.max(props.total, remaining.value, paymentForm.value.amount || 0))
-    if (roundedRemaining > 0 && !base.includes(roundedRemaining)) {
-        base.push(roundedRemaining)
-    }
-    return base.sort((a, b) => a - b)
+    return settingsStore.quickCashDenominations
 })
 
 function matchesMethod(payment, method) {
@@ -644,7 +755,7 @@ function getDraftPayment() {
     }
 
     const amount = normalizeAmount(paymentForm.value.amount)
-    if (amount <= 0 || amount > remaining.value + 0.00001) {
+    if (amount <= 0 || amountExceedsRemaining.value) {
         return null
     }
 
@@ -696,6 +807,8 @@ function getDraftPayment() {
 
 const draftPayment = computed(() => getDraftPayment())
 const selectedMethodTheme = computed(() => resolveMethodTheme(selectedMethod.value))
+const hasSingleActivePaymentMode = computed(() => paymentMethods.value.length === 1)
+const usesSingleModeDirectFlow = computed(() => hasSingleActivePaymentMode.value && !props.allowPartialConfirmation)
 const draftMatchesRemaining = computed(() => {
     if (!draftPayment.value) {
         return false
@@ -720,6 +833,13 @@ const canConfirmPayments = computed(() => {
 })
 
 const confirmLabelText = computed(() => props.confirmLabel || 'Valider le paiement')
+const singleModeInfoMessage = computed(() => {
+    if (!usesSingleModeDirectFlow.value || !selectedMethod.value) {
+        return ''
+    }
+
+    return `Le mode de paiement actif est : ${selectedMethod.value.label}. Pour ajouter d'autres modes, accedez a Parametres > Modes de paiement.`
+})
 
 const hasVisibleExtraFields = computed(() => {
     if (!selectedMethod.value) return false
@@ -820,12 +940,13 @@ function selectDefaultMethod() {
         return
     }
 
-    const cashMethod = paymentMethods.value.find((method) => method.paymentType === 'cash')
     const configuredDefault = paymentMethods.value.find((method) => method.isDefault)
-    selectMethod(cashMethod || configuredDefault || paymentMethods.value[0])
+    const cashMethod = paymentMethods.value.find((method) => method.paymentType === 'cash')
+    selectMethod(configuredDefault || cashMethod || paymentMethods.value[0])
 }
 
 function selectMethod(method) {
+    paymentNotice.value = ''
     selectedMethod.value = method
     const suggestedAmount = normalizeAmount(remaining.value)
     paymentForm.value = {
@@ -838,6 +959,10 @@ function selectMethod(method) {
 
 function addPayment() {
     if (!draftPayment.value) return
+    if (usesSingleModeDirectFlow.value) {
+        paymentNotice.value = singleModeInfoMessage.value
+        return
+    }
 
     payments.value.push(draftPayment.value)
 
@@ -873,12 +998,17 @@ function getMethodLabel(type, transferMode = null) {
 function confirmPayments() {
     if (!canConfirmPayments.value) return
 
+    paymentNotice.value = ''
     if (payments.value.length > 0) {
         emit('complete', payments.value)
         return
     }
 
     emit('complete', [draftPayment.value])
+}
+
+function selectAllInputValue(event) {
+    event?.target?.select?.()
 }
 
 watch(paymentMethods, () => {
@@ -895,7 +1025,10 @@ watch(paymentMethods, () => {
 }, { immediate: true })
 
 onMounted(async () => {
-    await customListsStore.fetchList('mode_de_paiement', { force: true })
+    await Promise.all([
+        customListsStore.fetchList('mode_de_paiement', { force: true }),
+        settingsStore.fetchSettings(),
+    ])
     selectDefaultMethod()
 })
 </script>
