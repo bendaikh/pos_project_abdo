@@ -371,6 +371,21 @@
                                         class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
                                     >
                                 </label>
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-medium text-slate-700">Mode de paiement</span>
+                                    <select
+                                        v-model="commandForm.advance_payment_method"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                        :disabled="!commandForm.advance_amount || commandForm.advance_amount <= 0"
+                                    >
+                                        <option value="">Sélectionner</option>
+                                        <option value="espece">Espèce</option>
+                                        <option value="carte">Carte</option>
+                                        <option value="cheque">Chèque</option>
+                                        <option value="virement">Virement</option>
+                                        <option value="autre">Autre</option>
+                                    </select>
+                                </label>
                                 <div class="rounded-[22px] border border-amber-200 bg-amber-50 p-4">
                                     <p class="text-xs uppercase tracking-[0.2em] text-amber-700">Reste à payer</p>
                                     <p class="mt-2 text-lg font-semibold text-amber-900">{{ formatCurrency(commandRemainingAmount) }}</p>
@@ -487,6 +502,7 @@ const commandForm = ref({
     appointment_at: '',
     delivery_mode: normalizeDeliveryMode(props.defaultDeliveryMode),
     advance_amount: 0,
+    advance_payment_method: '',
     notes: '',
     customer_phone: '',
     customer_activity: '',
@@ -676,6 +692,9 @@ const commandRemainingAmount = computed(() => {
 const canSaveCommande = computed(() => {
     if (!commandForm.value.appointment_at) return false
     if (Number(commandForm.value.advance_amount || 0) > Number(props.cartData.total || 0)) return false
+    
+    const advanceAmount = Number(commandForm.value.advance_amount || 0)
+    if (advanceAmount > 0 && !commandForm.value.advance_payment_method) return false
 
     if (customerMode.value === 'existing') {
         return !!selectedCustomer.value
@@ -919,12 +938,22 @@ async function saveCommandeTicket() {
         let finalSale = createdSale
 
         if (advanceAmount > 0) {
+            const paymentTypeMapping = {
+                'espece': 'cash',
+                'carte': 'card',
+                'cheque': 'cheque',
+                'virement': 'virement',
+                'autre': 'other',
+            }
+            
+            const paymentType = paymentTypeMapping[commandForm.value.advance_payment_method] || 'cash'
+            
             try {
                 await salesApi.addPayment(createdSale.id, {
-                    payment_type: 'cash',
+                    payment_type: paymentType,
                     amount: advanceAmount,
                     received_amount: advanceAmount,
-                    notes: 'Avance enregistree depuis le POS',
+                    notes: `Avance enregistree depuis le POS (${commandForm.value.advance_payment_method})`,
                 })
             } catch (paymentError) {
                 console.error('Erreur enregistrement avance:', paymentError)

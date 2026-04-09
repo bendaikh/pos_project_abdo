@@ -124,18 +124,15 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Pays de devise</label>
-                            <select v-model="settings.currency_country" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                <option value="MA">Maroc</option>
-                                <option value="FR">France</option>
-                                <option value="US">États-Unis</option>
-                                <option value="GB">Royaume-Uni</option>
-                                <option value="AE">Émirats Arabes Unis</option>
-                                <option value="SA">Arabie Saoudite</option>
+                            <select v-model="settings.currency_country" @change="onCountryChange" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <option v-for="(info, code) in countryCurrencyMap" :key="code" :value="code">
+                                    {{ info.name }}
+                                </option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Code de devise</label>
-                            <input v-model="settings.currency_code" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="MAD, EUR, USD...">
+                            <input v-model="settings.currency_code" type="text" class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="MAD, EUR, USD..." readonly>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Symbole</label>
@@ -1235,7 +1232,7 @@ import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { customListsApi, settingsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 import { useCustomListsStore } from '../../stores/customLists'
-import { getCurrencyDenominationCatalog, normalizeDenominationSelection } from '../../utils/currencyDenominations'
+import { getCurrencyDenominationCatalog, normalizeDenominationSelection, COUNTRY_CURRENCY_MAP } from '../../utils/currencyDenominations'
 import AutomationRules from './AutomationRules.vue'
 import PlatformBadge from '../../components/common/PlatformBadge.vue'
 import {
@@ -1266,6 +1263,7 @@ const newPaymentMode = reactive(createPaymentModeDraft())
 const newTax = reactive(createTaxDraft())
 const newDiscount = reactive(createDiscountDraft())
 const newExpense = reactive(createExpenseDraft())
+const countryCurrencyMap = COUNTRY_CURRENCY_MAP
 const paymentFieldOptions = [
     { key: 'show_transaction_number', label: 'N° Transaction' },
     { key: 'show_piece_number', label: 'N° pièce' },
@@ -1457,6 +1455,19 @@ function toggleAllCurrencyDenominations(kind, checked) {
     }
 
     settings.currency_visible_coin_denominations = checked ? [...source] : []
+}
+
+function onCountryChange() {
+    const countryCode = settings.currency_country
+    const countryInfo = countryCurrencyMap[countryCode]
+    
+    if (countryInfo) {
+        settings.currency_code = countryInfo.currency
+        settings.currency_symbol = countryInfo.symbol
+        
+        // Auto-select all bills and coins for the new country
+        syncCurrencyDenominationSelections()
+    }
 }
 
 function handleLogoUpload(event) {
