@@ -300,7 +300,11 @@
                                             >
                                         </label>
 
-                                        <div class="max-h-[280px] overflow-y-auto pr-1 sm:max-h-[340px]">
+                                        <div v-if="!customerSearch.trim()" class="rounded-[18px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                                            Commencez à saisir pour rechercher un client
+                                        </div>
+
+                                        <div v-else-if="filteredCustomers.length > 0" class="max-h-[280px] overflow-y-auto pr-1 sm:max-h-[340px]">
                                             <div class="grid gap-2 sm:grid-cols-2">
                                                 <button
                                                     v-for="customer in filteredCustomers"
@@ -315,48 +319,22 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        <p v-if="loadingCustomers" class="text-sm text-slate-500">Chargement des clients...</p>
-                                        <p v-else-if="!filteredCustomers.length" class="text-sm text-slate-500">Aucun client trouvé.</p>
+                                        <p v-else-if="loadingCustomers" class="text-sm text-slate-500">Chargement des clients...</p>
+                                        <p v-else class="text-sm text-slate-500">Aucun client trouvé.</p>
                                     </div>
                                 </div>
 
-                                <div v-else class="grid gap-4 md:grid-cols-2">
-                                    <label class="block">
-                                        <span class="mb-2 block text-sm font-medium text-slate-700">Client</span>
-                                        <input
-                                            v-model.trim="newCustomerForm.name"
-                                            type="text"
-                                            placeholder="Nom du client"
-                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                <div v-else class="space-y-3">
+                                    <div class="rounded-[18px] border border-dashed border-emerald-300 bg-emerald-50 px-4 py-6 text-center">
+                                        <p class="text-sm font-medium text-emerald-700 mb-3">Créer un nouveau client</p>
+                                        <button
+                                            type="button"
+                                            class="rounded-[16px] bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                                            @click="openClientCreationModal"
                                         >
-                                    </label>
-                                    <label class="block">
-                                        <span class="mb-2 block text-sm font-medium text-slate-700">Téléphone</span>
-                                        <input
-                                            v-model.trim="newCustomerForm.phone"
-                                            type="text"
-                                            placeholder="Téléphone"
-                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
-                                        >
-                                    </label>
-                                    <label class="block">
-                                        <span class="mb-2 block text-sm font-medium text-slate-700">Activité</span>
-                                        <input
-                                            v-model.trim="newCustomerForm.activity"
-                                            type="text"
-                                            placeholder="Activité"
-                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
-                                        >
-                                    </label>
-                                    <label class="block">
-                                        <span class="mb-2 block text-sm font-medium text-slate-700">Adresse</span>
-                                        <input
-                                            v-model.trim="newCustomerForm.address"
-                                            type="text"
-                                            placeholder="Adresse"
-                                            class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
-                                        >
-                                    </label>
+                                            + Ajouter un nouveau client
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -379,18 +357,74 @@
                                         :disabled="!commandForm.advance_amount || commandForm.advance_amount <= 0"
                                     >
                                         <option value="">Sélectionner</option>
-                                        <option value="espece">Espèce</option>
-                                        <option value="carte">Carte</option>
-                                        <option value="cheque">Chèque</option>
-                                        <option value="virement">Virement</option>
-                                        <option value="autre">Autre</option>
+                                        <option v-for="mode in activePaymentModes" :key="mode.id" :value="mode.id">
+                                            {{ mode.label }}
+                                        </option>
                                     </select>
                                 </label>
                                 <div class="rounded-[22px] border border-amber-200 bg-amber-50 p-4">
                                     <p class="text-xs uppercase tracking-[0.2em] text-amber-700">Reste à payer</p>
                                     <p class="mt-2 text-lg font-semibold text-amber-900">{{ formatCurrency(commandRemainingAmount) }}</p>
                                 </div>
-                                <label class="block md:col-span-2">
+                            </div>
+
+                            <div v-if="selectedPaymentModeConfig" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 rounded-[22px] border border-blue-200 bg-blue-50 p-4">
+                                <div v-if="selectedPaymentModeConfig.show_transaction_number" class="block">
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Numéro de transaction</label>
+                                    <input
+                                        v-model.trim="commandForm.payment_transaction_number"
+                                        type="text"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                        placeholder="Numéro de transaction"
+                                    >
+                                </div>
+                                <div v-if="selectedPaymentModeConfig.show_piece_number" class="block">
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Numéro de pièce</label>
+                                    <input
+                                        v-model.trim="commandForm.payment_piece_number"
+                                        type="text"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                        placeholder="Numéro de pièce"
+                                    >
+                                </div>
+                                <div v-if="selectedPaymentModeConfig.show_issue_date" class="block">
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Date d'émission</label>
+                                    <input
+                                        v-model="commandForm.payment_issue_date"
+                                        type="date"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                    >
+                                </div>
+                                <div v-if="selectedPaymentModeConfig.show_due_date" class="block">
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Date d'échéance</label>
+                                    <input
+                                        v-model="commandForm.payment_due_date"
+                                        type="date"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                    >
+                                </div>
+                                <div v-if="selectedPaymentModeConfig.show_bank_name" class="block">
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Banque</label>
+                                    <input
+                                        v-model.trim="commandForm.payment_bank_name"
+                                        type="text"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                        placeholder="Nom de la banque"
+                                    >
+                                </div>
+                                <div v-if="selectedPaymentModeConfig.show_notes" class="block md:col-span-2">
+                                    <label class="mb-2 block text-sm font-medium text-slate-700">Notes de paiement</label>
+                                    <input
+                                        v-model.trim="commandForm.payment_notes"
+                                        type="text"
+                                        class="w-full rounded-[18px] border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none"
+                                        placeholder="Notes supplémentaires"
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4">
+                                <label class="block">
                                     <span class="mb-2 block text-sm font-medium text-slate-700">Note</span>
                                     <textarea
                                         v-model.trim="commandForm.notes"
@@ -414,6 +448,194 @@
                         </div>
                     </section>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Creation Modal -->
+    <div v-if="showClientCreationModal" class="fixed inset-0 z-[60] overflow-y-auto">
+        <div class="flex min-h-screen items-center justify-center px-2 py-4 sm:px-3 sm:py-5">
+            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="closeClientCreationModal"></div>
+            
+            <div class="relative z-10 w-full max-w-4xl overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-2xl">
+                <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                    <div class="relative flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-semibold text-slate-900 sm:text-2xl">Nouveau client</h3>
+                            <p class="mt-1 text-sm text-slate-500">Remplissez les informations du client</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-2xl leading-none text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                            @click="closeClientCreationModal"
+                        >
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <form @submit.prevent="saveNewClient" class="px-4 py-5 sm:px-5">
+                    <div class="space-y-5">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="space-y-4">
+                                <div class="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                                    <h4 class="mb-3 text-sm font-semibold text-slate-900">Informations de base</h4>
+                                    <div class="space-y-3">
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-medium text-slate-700">Nom *</span>
+                                                <input
+                                                    v-model.trim="clientCreationForm.nom"
+                                                    type="text"
+                                                    required
+                                                    class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                    placeholder="Nom"
+                                                >
+                                            </label>
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-medium text-slate-700">Prénom</span>
+                                                <input
+                                                    v-model.trim="clientCreationForm.prenom"
+                                                    type="text"
+                                                    class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                    placeholder="Prénom"
+                                                >
+                                            </label>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-medium text-slate-700">Type</span>
+                                                <select
+                                                    v-model="clientCreationForm.type_client"
+                                                    class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                >
+                                                    <option value="particulier">Particulier</option>
+                                                    <option value="entreprise">Entreprise</option>
+                                                </select>
+                                            </label>
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-medium text-slate-700">Activité</span>
+                                                <input
+                                                    v-model.trim="clientCreationForm.activite"
+                                                    type="text"
+                                                    class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                    placeholder="Activité"
+                                                >
+                                            </label>
+                                        </div>
+                                        <label v-if="clientCreationForm.type_client === 'entreprise'" class="block">
+                                            <span class="mb-1 block text-xs font-medium text-slate-700">Raison sociale</span>
+                                            <input
+                                                v-model.trim="clientCreationForm.raison_sociale"
+                                                type="text"
+                                                class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                placeholder="Nom de l'entreprise"
+                                            >
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="rounded-[18px] border border-slate-200 bg-white p-4">
+                                    <h4 class="mb-3 text-sm font-semibold text-slate-900">Coordonnées</h4>
+                                    <div class="space-y-3">
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-medium text-slate-700">Téléphone</span>
+                                                <input
+                                                    v-model.trim="clientCreationForm.phone"
+                                                    type="tel"
+                                                    class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                    placeholder="+212 600 000 000"
+                                                >
+                                            </label>
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-medium text-slate-700">Email</span>
+                                                <input
+                                                    v-model.trim="clientCreationForm.email"
+                                                    type="email"
+                                                    class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                    placeholder="email@client.com"
+                                                >
+                                            </label>
+                                        </div>
+                                        <label class="block">
+                                            <span class="mb-1 block text-xs font-medium text-slate-700">Adresse</span>
+                                            <textarea
+                                                v-model.trim="clientCreationForm.address"
+                                                rows="2"
+                                                class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                placeholder="Adresse complète"
+                                            ></textarea>
+                                        </label>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-medium text-slate-700">Ville</span>
+                                                <input
+                                                    v-model.trim="clientCreationForm.city"
+                                                    type="text"
+                                                    class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                    placeholder="Ville"
+                                                >
+                                            </label>
+                                            <label class="block">
+                                                <span class="mb-1 block text-xs font-medium text-slate-700">Pays</span>
+                                                <input
+                                                    v-model.trim="clientCreationForm.country"
+                                                    type="text"
+                                                    class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                    placeholder="Pays"
+                                                >
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="clientCreationForm.type_client === 'entreprise'" class="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
+                            <h4 class="mb-3 text-sm font-semibold text-slate-900">Informations fiscales</h4>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-medium text-slate-700">ICE</span>
+                                    <input
+                                        v-model.trim="clientCreationForm.ice"
+                                        type="text"
+                                        class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                        placeholder="000000000000000"
+                                    >
+                                </label>
+                                <label class="block">
+                                    <span class="mb-1 block text-xs font-medium text-slate-700">IF</span>
+                                    <input
+                                        v-model.trim="clientCreationForm.if"
+                                        type="text"
+                                        class="w-full rounded-[14px] border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                        placeholder="000000000000000"
+                                    >
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            class="rounded-[16px] border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                            @click="closeClientCreationModal"
+                        >
+                            Annuler
+                        </button>
+                        <button
+                            type="submit"
+                            class="rounded-[16px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="saving || !clientCreationForm.nom"
+                        >
+                            {{ saving ? 'Création...' : 'Créer le client' }}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -491,27 +713,51 @@ const personalizedForm = ref({
     comment: '',
 })
 
-const newCustomerForm = ref({
-    name: '',
-    phone: '',
-    activity: '',
-    address: '',
-})
-
 const commandForm = ref({
     appointment_at: '',
     delivery_mode: normalizeDeliveryMode(props.defaultDeliveryMode),
     advance_amount: 0,
     advance_payment_method: '',
+    payment_transaction_number: '',
+    payment_piece_number: '',
+    payment_issue_date: '',
+    payment_due_date: '',
+    payment_bank_name: '',
+    payment_notes: '',
     notes: '',
     customer_phone: '',
     customer_activity: '',
     customer_address: '',
 })
 
+const showClientCreationModal = ref(false)
+const clientCreationForm = ref({
+    nom: '',
+    prenom: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    country: '',
+    activite: '',
+    type_client: 'particulier',
+    raison_sociale: '',
+    ice: '',
+    if: '',
+})
+
 const commandDeliveryModes = computed(() => customListsStore.activeServiceModes)
 const serviceModeEnabled = computed(() => {
     return customListsStore.serviceModeEnabled && commandDeliveryModes.value.length > 0
+})
+
+const activePaymentModes = computed(() => customListsStore.activePaymentModes)
+
+const selectedPaymentModeConfig = computed(() => {
+    if (!commandForm.value.advance_payment_method) return null
+    return activePaymentModes.value.find(
+        mode => mode.id === commandForm.value.advance_payment_method
+    ) || null
 })
 
 const canSaveCurrentCart = computed(() => props.cartItems.length > 0)
@@ -671,7 +917,7 @@ const selectedGroupedBoardTickets = computed(() => {
 const filteredCustomers = computed(() => {
     const query = customerSearch.value.trim().toLowerCase()
     if (!query) {
-        return customers.value.slice(0, 8)
+        return []
     }
 
     return customers.value
@@ -696,11 +942,7 @@ const canSaveCommande = computed(() => {
     const advanceAmount = Number(commandForm.value.advance_amount || 0)
     if (advanceAmount > 0 && !commandForm.value.advance_payment_method) return false
 
-    if (customerMode.value === 'existing') {
-        return !!selectedCustomer.value
-    }
-
-    return !!newCustomerForm.value.name
+    return !!selectedCustomer.value
 })
 
 watch(activeTab, async (tab) => {
@@ -742,6 +984,7 @@ onMounted(async () => {
     await Promise.all([
         customListsStore.fetchList('mode_de_service', { force: true }),
         customListsStore.fetchList('tickets_predefinis', { force: true }),
+        customListsStore.fetchList('mode_de_paiement', { force: true }),
     ])
     commandForm.value.delivery_mode = normalizeDeliveryMode(commandForm.value.delivery_mode)
     if (activeTab.value === 'commande') {
@@ -816,6 +1059,76 @@ function selectCustomer(customer) {
 
 function openExistingCustomerPicker() {
     showExistingCustomerPicker.value = true
+}
+
+function openClientCreationModal() {
+    showClientCreationModal.value = true
+}
+
+function closeClientCreationModal() {
+    showClientCreationModal.value = false
+    resetClientCreationForm()
+}
+
+function resetClientCreationForm() {
+    clientCreationForm.value = {
+        nom: '',
+        prenom: '',
+        phone: '',
+        email: '',
+        address: '',
+        city: '',
+        country: '',
+        activite: '',
+        type_client: 'particulier',
+        raison_sociale: '',
+        ice: '',
+        if: '',
+    }
+}
+
+async function saveNewClient() {
+    if (!clientCreationForm.value.nom.trim()) {
+        alert('Veuillez saisir au moins le nom du client.')
+        return
+    }
+
+    saving.value = true
+    try {
+        const clientData = {
+            name: `${clientCreationForm.value.nom} ${clientCreationForm.value.prenom}`.trim(),
+            phone: clientCreationForm.value.phone || null,
+            email: clientCreationForm.value.email || null,
+            address: clientCreationForm.value.address || null,
+            city: clientCreationForm.value.city || null,
+            country: clientCreationForm.value.country || null,
+            activity: clientCreationForm.value.activite || null,
+            type_client: clientCreationForm.value.type_client || 'particulier',
+            raison_sociale: clientCreationForm.value.raison_sociale || null,
+            ice: clientCreationForm.value.ice || null,
+            if: clientCreationForm.value.if || null,
+            is_active: true,
+        }
+
+        const { data } = await customersApi.create(clientData)
+        
+        customers.value.unshift(data)
+        
+        selectedCustomer.value = data
+        commandForm.value.customer_phone = data.phone || ''
+        commandForm.value.customer_activity = data.activity || ''
+        commandForm.value.customer_address = data.address || ''
+        
+        showExistingCustomerPicker.value = false
+        closeClientCreationModal()
+        
+        alert('Client créé avec succès!')
+    } catch (error) {
+        console.error('Erreur création client:', error)
+        alert(error.response?.data?.message || 'Impossible de créer le client.')
+    } finally {
+        saving.value = false
+    }
 }
 
 function formatCurrency(amount) {
@@ -922,11 +1235,11 @@ async function saveCommandeTicket() {
             ticket_name: 'Commande client',
             ticket_group: 'Commandes',
             customer_id: customerId,
-            customer_activity: commandForm.value.customer_activity || newCustomerForm.value.activity || null,
+            customer_activity: commandForm.value.customer_activity || null,
             service_mode: commandForm.value.delivery_mode,
             delivery_mode: customListsStore.getServiceModeMeta(commandForm.value.delivery_mode).operational_mode,
             delivery_address: customListsStore.getServiceModeMeta(commandForm.value.delivery_mode).requires_delivery_agent
-                ? (commandForm.value.customer_address || newCustomerForm.value.address || null)
+                ? (commandForm.value.customer_address || null)
                 : null,
             appointment_at: commandForm.value.appointment_at,
             pickup_date: commandForm.value.appointment_at.slice(0, 10),
@@ -938,23 +1251,40 @@ async function saveCommandeTicket() {
         let finalSale = createdSale
 
         if (advanceAmount > 0) {
-            const paymentTypeMapping = {
-                'espece': 'cash',
-                'carte': 'card',
-                'cheque': 'cheque',
-                'virement': 'virement',
-                'autre': 'other',
+            const selectedPaymentMode = activePaymentModes.value.find(
+                mode => mode.id === commandForm.value.advance_payment_method
+            )
+            
+            const paymentType = selectedPaymentMode?.payment_type || 'cash'
+            
+            const paymentData = {
+                payment_type: paymentType,
+                amount: advanceAmount,
+                received_amount: advanceAmount,
+                notes: `Avance enregistree depuis le POS - ${selectedPaymentMode?.label || 'Mode inconnu'}`,
+            }
+
+            if (commandForm.value.payment_transaction_number) {
+                paymentData.transaction_number = commandForm.value.payment_transaction_number
+            }
+            if (commandForm.value.payment_piece_number) {
+                paymentData.piece_number = commandForm.value.payment_piece_number
+            }
+            if (commandForm.value.payment_issue_date) {
+                paymentData.issue_date = commandForm.value.payment_issue_date
+            }
+            if (commandForm.value.payment_due_date) {
+                paymentData.due_date = commandForm.value.payment_due_date
+            }
+            if (commandForm.value.payment_bank_name) {
+                paymentData.bank_name = commandForm.value.payment_bank_name
+            }
+            if (commandForm.value.payment_notes) {
+                paymentData.notes = `${paymentData.notes}\n${commandForm.value.payment_notes}`
             }
             
-            const paymentType = paymentTypeMapping[commandForm.value.advance_payment_method] || 'cash'
-            
             try {
-                await salesApi.addPayment(createdSale.id, {
-                    payment_type: paymentType,
-                    amount: advanceAmount,
-                    received_amount: advanceAmount,
-                    notes: `Avance enregistree depuis le POS (${commandForm.value.advance_payment_method})`,
-                })
+                await salesApi.addPayment(createdSale.id, paymentData)
             } catch (paymentError) {
                 console.error('Erreur enregistrement avance:', paymentError)
                 alert("La commande a été créée, mais l'avance n'a pas pu être enregistrée automatiquement.")
@@ -977,22 +1307,10 @@ async function saveCommandeTicket() {
 }
 
 async function resolveCustomerId() {
-    if (customerMode.value === 'existing') {
-        if (!selectedCustomer.value) {
-            throw new Error('Client manquant')
-        }
-        return selectedCustomer.value.id
+    if (!selectedCustomer.value) {
+        throw new Error('Client manquant')
     }
-
-    const { data } = await customersApi.create({
-        name: newCustomerForm.value.name,
-        phone: newCustomerForm.value.phone || null,
-        activity: newCustomerForm.value.activity || null,
-        address: newCustomerForm.value.address || null,
-        is_active: true,
-    })
-
-    return data.id
+    return selectedCustomer.value.id
 }
 
 async function saveAndPrint({ title, payload, saleId = null }) {
@@ -1139,7 +1457,7 @@ function printSaleToWindow(printTargetWindow, sale, mode, forcedTitle = null) {
     const advanceAmount = Number(sale.paid_confirmed_amount ?? paymentSummary.paid_confirmed_amount ?? 0)
     const remainingAmount = Number(sale.remaining_amount ?? paymentSummary.remaining_amount ?? 0)
     const customerName = sale.customer?.name || props.defaultCustomerName || 'Client anonyme'
-    const customerPhone = sale.customer?.phone || commandForm.value.customer_phone || newCustomerForm.value.phone || ''
+    const customerPhone = sale.customer?.phone || commandForm.value.customer_phone || ''
     const itemsHtml = (sale.items || []).map((item) => `
         <tr>
             <td>${escapeHtml(item.article_name || '')}</td>
