@@ -67,6 +67,7 @@ import ActivitiesList from '../views/activites/ActivitiesList.vue'
 import CalendarView from '../views/agenda/CalendarView.vue'
 import AppointmentsList from '../views/agenda/AppointmentsList.vue'
 import TasksList from '../views/agenda/TasksList.vue'
+import IncidentTicketsList from '../views/agenda/incidents/IncidentTicketsList.vue'
 
 // SUIVI ENCAISSEMENT Views
 import SuiviEncaissement from '../views/SuiviEncaissement.vue'
@@ -346,6 +347,11 @@ const routes = [
                 path: 'agenda/tasks',
                 name: 'agenda-tasks',
                 component: TasksList
+            },
+            {
+                path: 'agenda/incidents',
+                name: 'agenda-incidents',
+                component: IncidentTicketsList
             },
             // SUIVI ENCAISSEMENT Routes
             {

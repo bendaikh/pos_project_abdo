@@ -252,6 +252,10 @@
                         <CalendarDaysIcon class="w-4 h-4 flex-shrink-0" />
                         <span class="ml-3">Tâches</span>
                     </router-link>
+                    <router-link to="/agenda/incidents" class="flex items-center px-3 py-2 ml-4 text-sm font-medium rounded-lg transition-colors" :class="isActive('/agenda/incidents') ? 'bg-blue-500 text-gray-900' : 'text-blue-300 hover:bg-gray-800'">
+                        <TicketIcon class="w-4 h-4 flex-shrink-0" />
+                        <span class="ml-3">Tickets Incidents</span>
+                    </router-link>
                 </div>
             </div>
 
@@ -361,7 +365,8 @@ import {
     WrenchScrewdriverIcon,
     ClockIcon,
     ClipboardDocumentCheckIcon,
-    CalendarDaysIcon
+    CalendarDaysIcon,
+    TicketIcon
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({

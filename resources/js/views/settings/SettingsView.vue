@@ -380,6 +380,7 @@
                                     <span v-else-if="tab.id === 'payment_modes'">💳 {{ tab.label }}</span>
                                     <span v-else-if="tab.id === 'taxes'">🧾 {{ tab.label }}</span>
                                     <span v-else-if="tab.id === 'discounts'">🏷️ {{ tab.label }}</span>
+                                    <span v-else-if="tab.id === 'incidents'">🚨 {{ tab.label }}</span>
                                     <span v-else>💸 {{ tab.label }}</span>
                                 </button>
                             </div>
@@ -1119,6 +1120,162 @@
                     </div>
                 </div>
 
+                <!-- Tickets Incidents -->
+                <div v-show="activeTab === 'custom_lists' && activeCustomListTab === 'incidents'" class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <TicketIcon class="w-5 h-5 mr-2 text-primary-500" />
+                        Tickets Incidents
+                    </h2>
+                    
+                    <div class="rounded-xl border-l-4 border-l-orange-500 border border-slate-200 bg-orange-50 p-4 mb-6">
+                        <p class="text-sm font-bold text-orange-900">Configuration des incidents</p>
+                        <p class="mt-2 text-sm text-orange-700">Gérez les types d'incidents, les priorités et configurez l'assignation automatique des responsables selon le type d'incident.</p>
+                    </div>
+
+                    <!-- Types d'incidents -->
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+                        <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <p class="text-base font-bold text-slate-900">Types d'incidents</p>
+                                <p class="text-sm text-slate-500">Définissez les différents types d'incidents possibles.</p>
+                            </div>
+                        </div>
+
+                        <div v-if="incidentTypeSettings.items.length" class="space-y-2">
+                            <div
+                                v-for="item in incidentTypeSettings.items"
+                                :key="item.id"
+                                class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center"
+                            >
+                                <input v-model.trim="item.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Type d'incident">
+                                <div class="flex items-center gap-2">
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                        Actif
+                                    </label>
+                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveIncidentType(item.id, -1)">↑</button>
+                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveIncidentType(item.id, 1)">↓</button>
+                                    <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeIncidentType(item.id)">✕</button>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucun type d'incident configuré.</p>
+
+                        <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                            <input
+                                v-model.trim="newIncidentTypeLabel"
+                                type="text"
+                                placeholder="Ajouter un type d'incident"
+                                class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                @keydown.enter.prevent="addIncidentType"
+                            >
+                            <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors" @click="addIncidentType">
+                                <PlusIcon class="w-4 h-4" />
+                                Ajouter
+                            </button>
+                        </div>
+
+                        <div class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+                            <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetIncidentTypeForm">Annuler</button>
+                            <button type="button" class="px-6 py-2.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('incident_types')" @click="saveIncidentTypeList">
+                                {{ isSavingCustomList('incident_types') ? '⏳ Enregistrement...' : '✓ Enregistrer les types' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Priorités -->
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-5 mt-6">
+                        <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <p class="text-base font-bold text-slate-900">Priorités</p>
+                                <p class="text-sm text-slate-500">Définissez les niveaux de priorité pour les incidents.</p>
+                            </div>
+                        </div>
+
+                        <div v-if="incidentPrioritySettings.items.length" class="space-y-2">
+                            <div
+                                v-for="item in incidentPrioritySettings.items"
+                                :key="item.id"
+                                class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center"
+                            >
+                                <input v-model.trim="item.label" type="text" class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Nom de la priorité">
+                                <input v-model="item.color" type="color" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer" title="Couleur du texte">
+                                <input v-model="item.bg_color" type="color" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer" title="Couleur de fond">
+                                <div class="flex items-center gap-2">
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input v-model="item.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+                                        Actif
+                                    </label>
+                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveIncidentPriority(item.id, -1)">↑</button>
+                                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white transition-colors" @click="moveIncidentPriority(item.id, 1)">↓</button>
+                                    <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors" @click="removeIncidentPriority(item.id)">✕</button>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Aucune priorité configurée.</p>
+
+                        <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+                            <input
+                                v-model.trim="newIncidentPriorityLabel"
+                                type="text"
+                                placeholder="Nouvelle priorité"
+                                class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                @keydown.enter.prevent="addIncidentPriority"
+                            >
+                            <input v-model="newIncidentPriorityColor" type="color" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer" title="Couleur texte">
+                            <input v-model="newIncidentPriorityBgColor" type="color" class="w-12 h-10 rounded-lg border border-slate-300 cursor-pointer" title="Couleur fond">
+                            <button type="button" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-colors" @click="addIncidentPriority">
+                                <PlusIcon class="w-4 h-4" />
+                                Ajouter
+                            </button>
+                        </div>
+
+                        <div class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+                            <button type="button" class="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors" @click="resetIncidentPriorityForm">Annuler</button>
+                            <button type="button" class="px-6 py-2.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors" :disabled="isSavingCustomList('incident_priorities')" @click="saveIncidentPriorityList">
+                                {{ isSavingCustomList('incident_priorities') ? '⏳ Enregistrement...' : '✓ Enregistrer les priorités' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Assignation automatique -->
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-5 mt-6">
+                        <div class="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <p class="text-base font-bold text-slate-900">Assignation automatique</p>
+                                <p class="text-sm text-slate-500">Configurez le responsable par défaut pour chaque type d'incident.</p>
+                            </div>
+                        </div>
+
+                        <div v-if="incidentTypeSettings.items.length" class="space-y-3">
+                            <div
+                                v-for="item in incidentTypeSettings.items.filter(t => t.is_active)"
+                                :key="item.id"
+                                class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center"
+                            >
+                                <div class="flex items-center gap-3 flex-1">
+                                    <span class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">{{ item.label }}</span>
+                                    <span class="text-slate-400">→</span>
+                                </div>
+                                <select 
+                                    v-model="incidentAssignments[item.id]" 
+                                    class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
+                                    <option value="">Sélectionner un responsable</option>
+                                    <option v-for="emp in activeEmployees" :key="emp.id" :value="emp.id">{{ emp.name }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Ajoutez d'abord des types d'incidents pour configurer les assignations.</p>
+
+                        <div class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+                            <button type="button" class="px-6 py-2.5 rounded-lg bg-primary-500 text-white font-semibold hover:bg-primary-600 disabled:opacity-50 transition-colors" :disabled="savingIncidentAssignments" @click="saveIncidentAssignments">
+                                {{ savingIncidentAssignments ? '⏳ Enregistrement...' : '✓ Enregistrer les assignations' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Commissions -->
                 <div v-show="activeTab === 'commissions'" class="space-y-4">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -1246,7 +1403,8 @@ import {
     ReceiptPercentIcon,
     BanknotesIcon,
     CreditCardIcon,
-    CogIcon
+    CogIcon,
+    TicketIcon
 } from '@heroicons/vue/24/outline'
 
 const settingsStore = useSettingsStore()
@@ -1292,6 +1450,7 @@ const customListTabs = [
     { id: 'taxes', label: 'Taxes' },
     { id: 'discounts', label: 'Remises' },
     { id: 'expenses', label: 'Dépenses' },
+    { id: 'incidents', label: 'Tickets Incidents' },
 ]
 
 const settings = reactive({
@@ -1377,6 +1536,22 @@ const expenseCategorySettings = reactive({
     is_active: true,
     items: [],
 })
+
+const incidentTypeSettings = reactive({
+    is_active: true,
+    items: [],
+})
+const incidentPrioritySettings = reactive({
+    is_active: true,
+    items: [],
+})
+const incidentAssignments = reactive({})
+const activeEmployees = ref([])
+const newIncidentTypeLabel = ref('')
+const newIncidentPriorityLabel = ref('')
+const newIncidentPriorityColor = ref('#EF4444')
+const newIncidentPriorityBgColor = ref('#FEE2E2')
+const savingIncidentAssignments = ref(false)
 
 const subscriptionStatusClass = computed(() => {
     if (settings.subscription_type === 'free') return 'bg-gray-100 text-gray-800'
@@ -2565,10 +2740,210 @@ async function saveExpenseCategoryList() {
     )
 }
 
+function hydrateIncidentTypeForm(data) {
+    incidentTypeSettings.is_active = data?.is_active !== false
+    incidentTypeSettings.items = (data?.items || []).map((item) => ({
+        id: item.id,
+        label: item.label || '',
+        is_active: item.is_active !== false,
+        sort_order: item.sort_order || 0,
+    }))
+}
+
+function hydrateIncidentPriorityForm(data) {
+    incidentPrioritySettings.is_active = data?.is_active !== false
+    incidentPrioritySettings.items = (data?.items || []).map((item) => {
+        const metadata = typeof item.metadata === 'string' ? JSON.parse(item.metadata || '{}') : (item.metadata || {})
+        return {
+            id: item.id,
+            label: item.label || '',
+            value: item.value || item.label || '',
+            is_active: item.is_active !== false,
+            sort_order: item.sort_order || 0,
+            color: metadata.color || '#374151',
+            bg_color: metadata.bg_color || '#F3F4F6',
+        }
+    })
+}
+
+function addIncidentType() {
+    if (!newIncidentTypeLabel.value.trim()) return
+    incidentTypeSettings.items.push({
+        id: `new_${Date.now()}`,
+        label: newIncidentTypeLabel.value.trim(),
+        is_active: true,
+        sort_order: incidentTypeSettings.items.length + 1,
+    })
+    newIncidentTypeLabel.value = ''
+}
+
+function removeIncidentType(id) {
+    incidentTypeSettings.items = incidentTypeSettings.items.filter((item) => item.id !== id)
+}
+
+function moveIncidentType(id, direction) {
+    const index = incidentTypeSettings.items.findIndex((item) => item.id === id)
+    if (index < 0) return
+    const newIndex = index + direction
+    if (newIndex < 0 || newIndex >= incidentTypeSettings.items.length) return
+    const temp = incidentTypeSettings.items[index]
+    incidentTypeSettings.items[index] = incidentTypeSettings.items[newIndex]
+    incidentTypeSettings.items[newIndex] = temp
+}
+
+function resetIncidentTypeForm() {
+    loadIncidentTypes()
+}
+
+async function saveIncidentTypeList() {
+    const payload = {
+        is_active: incidentTypeSettings.is_active !== false,
+        items: incidentTypeSettings.items
+            .filter((item) => item.label.trim() !== '')
+            .map((item, index) => {
+                const itemId = Number(item.id)
+                return {
+                    id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
+                    label: item.label.trim(),
+                    value: item.label.trim(),
+                    is_active: item.is_active !== false,
+                    sort_order: index + 1,
+                }
+            }),
+    }
+
+    await saveCustomList(
+        'incident_types',
+        'incident_types',
+        payload,
+        hydrateIncidentTypeForm,
+        'Types d\'incidents enregistrés avec succès!'
+    )
+}
+
+function addIncidentPriority() {
+    if (!newIncidentPriorityLabel.value.trim()) return
+    incidentPrioritySettings.items.push({
+        id: `new_${Date.now()}`,
+        label: newIncidentPriorityLabel.value.trim(),
+        value: newIncidentPriorityLabel.value.trim().toLowerCase(),
+        is_active: true,
+        sort_order: incidentPrioritySettings.items.length + 1,
+        color: newIncidentPriorityColor.value,
+        bg_color: newIncidentPriorityBgColor.value,
+    })
+    newIncidentPriorityLabel.value = ''
+    newIncidentPriorityColor.value = '#EF4444'
+    newIncidentPriorityBgColor.value = '#FEE2E2'
+}
+
+function removeIncidentPriority(id) {
+    incidentPrioritySettings.items = incidentPrioritySettings.items.filter((item) => item.id !== id)
+}
+
+function moveIncidentPriority(id, direction) {
+    const index = incidentPrioritySettings.items.findIndex((item) => item.id === id)
+    if (index < 0) return
+    const newIndex = index + direction
+    if (newIndex < 0 || newIndex >= incidentPrioritySettings.items.length) return
+    const temp = incidentPrioritySettings.items[index]
+    incidentPrioritySettings.items[index] = incidentPrioritySettings.items[newIndex]
+    incidentPrioritySettings.items[newIndex] = temp
+}
+
+function resetIncidentPriorityForm() {
+    loadIncidentPriorities()
+}
+
+async function saveIncidentPriorityList() {
+    const payload = {
+        is_active: incidentPrioritySettings.is_active !== false,
+        items: incidentPrioritySettings.items
+            .filter((item) => item.label.trim() !== '')
+            .map((item, index) => {
+                const itemId = Number(item.id)
+                return {
+                    id: Number.isInteger(itemId) && itemId > 0 ? itemId : undefined,
+                    label: item.label.trim(),
+                    value: item.value || item.label.trim().toLowerCase(),
+                    is_active: item.is_active !== false,
+                    sort_order: index + 1,
+                    metadata: JSON.stringify({
+                        color: item.color || '#374151',
+                        bg_color: item.bg_color || '#F3F4F6',
+                    }),
+                }
+            }),
+    }
+
+    await saveCustomList(
+        'incident_priorities',
+        'incident_priorities',
+        payload,
+        hydrateIncidentPriorityForm,
+        'Priorités enregistrées avec succès!'
+    )
+}
+
+async function loadIncidentTypes() {
+    try {
+        const response = await api.get('/custom-lists/incident_types')
+        hydrateIncidentTypeForm(response.data)
+    } catch (error) {
+        console.error('Error loading incident types:', error)
+    }
+}
+
+async function loadIncidentPriorities() {
+    try {
+        const response = await api.get('/custom-lists/incident_priorities')
+        hydrateIncidentPriorityForm(response.data)
+    } catch (error) {
+        console.error('Error loading incident priorities:', error)
+    }
+}
+
+async function loadIncidentAssignments() {
+    try {
+        const response = await api.get('/incident-type-assignments/with-types')
+        activeEmployees.value = response.data.employees || []
+        
+        const assignments = response.data.assignments || {}
+        Object.keys(assignments).forEach(key => {
+            incidentAssignments[key] = assignments[key]?.employee_id || ''
+        })
+    } catch (error) {
+        console.error('Error loading incident assignments:', error)
+    }
+}
+
+async function saveIncidentAssignments() {
+    savingIncidentAssignments.value = true
+    try {
+        const assignmentsData = incidentTypeSettings.items
+            .filter(t => t.is_active && incidentAssignments[t.id])
+            .map(t => ({
+                incident_type_id: t.id,
+                employee_id: incidentAssignments[t.id]
+            }))
+
+        await api.post('/incident-type-assignments/bulk', { assignments: assignmentsData })
+        alert('Assignations enregistrées avec succès!')
+    } catch (error) {
+        console.error('Error saving assignments:', error)
+        alert('Erreur lors de l\'enregistrement des assignations')
+    } finally {
+        savingIncidentAssignments.value = false
+    }
+}
+
 onMounted(async () => {
     await Promise.all([
         loadSettings(),
         loadCustomLists(),
+        loadIncidentTypes(),
+        loadIncidentPriorities(),
+        loadIncidentAssignments(),
     ])
     syncCurrencyDenominationSelections()
 })

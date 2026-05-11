@@ -25,6 +25,8 @@ use App\Http\Controllers\Api\LossController;
 use App\Http\Controllers\Api\AutomationRuleController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\IncidentTicketController;
+use App\Http\Controllers\Api\IncidentTypeAssignmentController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -182,4 +184,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/payment-collections/{payment}/schedule', [PaymentCollectionController::class, 'scheduleCollection']);
     Route::post('/payment-collections/{payment}/reschedule', [PaymentCollectionController::class, 'rescheduleCollection']);
     Route::post('/payment-collections/{payment}/status', [PaymentCollectionController::class, 'changeStatus']);
+
+    // Incident Tickets
+    Route::get('/incident-tickets/pending', [IncidentTicketController::class, 'pending']);
+    Route::get('/incident-tickets/statistics', [IncidentTicketController::class, 'statistics']);
+    Route::get('/incident-tickets/types', [IncidentTicketController::class, 'getIncidentTypes']);
+    Route::get('/incident-tickets/priorities', [IncidentTicketController::class, 'getIncidentPriorities']);
+    Route::post('/incident-tickets/{ticket}/status', [IncidentTicketController::class, 'updateStatus']);
+    Route::apiResource('incident-tickets', IncidentTicketController::class);
+
+    // Incident Type Assignments (Auto-assignment rules)
+    Route::get('/incident-type-assignments/with-types', [IncidentTypeAssignmentController::class, 'getWithTypes']);
+    Route::post('/incident-type-assignments/bulk', [IncidentTypeAssignmentController::class, 'bulkUpdate']);
+    Route::apiResource('incident-type-assignments', IncidentTypeAssignmentController::class);
 });
