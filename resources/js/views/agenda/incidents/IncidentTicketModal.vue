@@ -251,9 +251,10 @@ function onTypeChange() {
     autoAssignedResponsible.value = false
     
     if (form.value.incident_type_id && props.assignments) {
-        const assignment = props.assignments[form.value.incident_type_id]
-        if (assignment?.employee) {
-            form.value.responsible_id = assignment.employee.id
+        const assignedEmployees = props.assignments[form.value.incident_type_id]
+        if (assignedEmployees && assignedEmployees.length > 0) {
+            // Auto-select the first assigned employee
+            form.value.responsible_id = assignedEmployees[0].id
             autoAssignedResponsible.value = true
         }
     }

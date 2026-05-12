@@ -30,7 +30,17 @@ class IncidentTypeAssignment extends Model
         return $this->belongsTo(Employee::class);
     }
 
-    public static function getResponsibleForType(int $incidentTypeId): ?Employee
+    public static function getResponsiblesForType(int $incidentTypeId)
+    {
+        return self::where('incident_type_id', $incidentTypeId)
+            ->where('is_active', true)
+            ->with('employee')
+            ->get()
+            ->pluck('employee')
+            ->filter();
+    }
+    
+    public static function getFirstResponsibleForType(int $incidentTypeId): ?Employee
     {
         $assignment = self::where('incident_type_id', $incidentTypeId)
             ->where('is_active', true)

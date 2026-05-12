@@ -79,18 +79,27 @@ class IncidentTypeAssignmentController extends Controller
         $validator = Validator::make($request->all(), [
             'assignments' => 'required|array',
             'assignments.*.incident_type_id' => 'required|exists:custom_list_items,id',
-            'assignments.*.employee_id' => 'required|exists:employees,id',
+            'assignments.*.employee_ids' => 'required|array',
+            'assignments.*.employee_ids.*' => 'required|exists:employees,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Clear existing assignments for the types being updated
+        $typeIds = array_column($request->assignments, 'incident_type_id');
+        IncidentTypeAssignment::whereIn('incident_type_id', $typeIds)->delete();
+
+        // Create new assignments
         foreach ($request->assignments as $assignmentData) {
-            IncidentTypeAssignment::updateOrCreate(
-                ['incident_type_id' => $assignmentData['incident_type_id']],
-                ['employee_id' => $assignmentData['employee_id'], 'is_active' => true]
-            );
+            foreach ($assignmentData['employee_ids'] as $employeeId) {
+                IncidentTypeAssignment::create([
+                    'incident_type_id' => $assignmentData['incident_type_id'],
+                    'employee_id' => $employeeId,
+                    'is_active' => true
+                ]);
+            }
         }
 
         $assignments = IncidentTypeAssignment::with(['incidentType', 'employee'])->get();
@@ -116,10 +125,21 @@ class IncidentTypeAssignmentController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        $assignments = IncidentTypeAssignment::with('employee')
+        // Group assignments by incident_type_id, returning arrays of employees
+        $assignmentsRaw = IncidentTypeAssignment::with('employee')
             ->where('is_active', true)
-            ->get()
-            ->keyBy('incident_type_id');
+            ->get();
+            
+        $assignments = [];
+        foreach ($assignmentsRaw as $assignment) {
+            $typeId = $assignment->incident_type_id;
+            if (!isset($assignments[$typeId])) {
+                $assignments[$typeId] = [];
+            }
+            if ($assignment->employee) {
+                $assignments[$typeId][] = $assignment->employee;
+            }
+        }
 
         $employees = Employee::where('status', 'active')
             ->orderBy('name')

@@ -419,6 +419,7 @@ async function loadPriorities() {
 async function loadAssignments() {
     try {
         const response = await api.get('/incident-type-assignments/with-types')
+        // assignments is now { type_id: [employee1, employee2, ...] }
         assignments.value = response.data.assignments || {}
         employees.value = response.data.employees || []
     } catch (error) {

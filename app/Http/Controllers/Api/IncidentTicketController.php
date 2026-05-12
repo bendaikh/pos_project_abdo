@@ -88,7 +88,7 @@ class IncidentTicketController extends Controller
 
         // If no responsible is provided, try to get from auto-assignment
         if (empty($data['responsible_id'])) {
-            $assignedEmployee = IncidentTypeAssignment::getResponsibleForType($data['incident_type_id']);
+            $assignedEmployee = IncidentTypeAssignment::getFirstResponsibleForType($data['incident_type_id']);
             if ($assignedEmployee) {
                 $data['responsible_id'] = $assignedEmployee->id;
             } else {

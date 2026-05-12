@@ -74,7 +74,8 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->unique(['incident_type_id']);
+            // Allow multiple employees per incident type
+            $table->unique(['incident_type_id', 'employee_id']);
         });
 
         // Create incident tickets table

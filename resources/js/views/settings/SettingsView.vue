@@ -1251,19 +1251,55 @@
                             <div
                                 v-for="item in incidentTypeSettings.items.filter(t => t.is_active)"
                                 :key="item.id"
-                                class="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center"
+                                class="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3"
                             >
-                                <div class="flex items-center gap-3 flex-1">
+                                <div class="flex items-center gap-3">
                                     <span class="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">{{ item.label }}</span>
                                     <span class="text-slate-400">→</span>
                                 </div>
-                                <select 
-                                    v-model="incidentAssignments[item.id]" 
-                                    class="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                >
-                                    <option value="">Sélectionner un responsable</option>
-                                    <option v-for="emp in activeEmployees" :key="emp.id" :value="emp.id">{{ emp.name }}</option>
-                                </select>
+                                
+                                <!-- Selected employees as chips -->
+                                <div v-if="incidentAssignments[item.id] && incidentAssignments[item.id].length > 0" class="flex flex-wrap gap-2">
+                                    <div
+                                        v-for="empId in incidentAssignments[item.id]"
+                                        :key="empId"
+                                        class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-800 rounded-full text-sm font-medium"
+                                    >
+                                        <span>{{ getEmployeeName(empId) }}</span>
+                                        <button 
+                                            type="button"
+                                            @click="removeEmployeeFromType(item.id, empId)"
+                                            class="hover:bg-green-200 rounded-full p-0.5"
+                                        >
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Add employee dropdown -->
+                                <div>
+                                    <select 
+                                        @change="addEmployeeToType(item.id, $event.target.value); $event.target.value = ''"
+                                        class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    >
+                                        <option value="">+ Ajouter un responsable</option>
+                                        <option 
+                                            v-for="emp in getAvailableEmployeesForType(item.id)" 
+                                            :key="emp.id" 
+                                            :value="emp.id"
+                                        >
+                                            {{ emp.name }}
+                                        </option>
+                                    </select>
+                                    <p v-if="activeEmployees.length === 0" class="mt-2 text-xs text-amber-600">
+                                        Aucun employé actif trouvé. Ajoutez des employés d'abord.
+                                    </p>
+                                    <p v-else-if="getAvailableEmployeesForType(item.id).length === 0 && incidentAssignments[item.id]?.length > 0" class="mt-2 text-xs text-slate-500">
+                                        Tous les employés sont déjà assignés à ce type.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                         <p v-else class="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-center text-sm text-slate-500">Ajoutez d'abord des types d'incidents pour configurer les assignations.</p>
@@ -1386,6 +1422,7 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, watch } from 'vue'
+import api from '../../api'
 import { customListsApi, settingsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 import { useCustomListsStore } from '../../stores/customLists'
@@ -2908,23 +2945,50 @@ async function loadIncidentAssignments() {
         const response = await api.get('/incident-type-assignments/with-types')
         activeEmployees.value = response.data.employees || []
         
+        // assignments is now an object with type_id as key and array of employees as value
         const assignments = response.data.assignments || {}
         Object.keys(assignments).forEach(key => {
-            incidentAssignments[key] = assignments[key]?.employee_id || ''
+            // Store array of employee IDs
+            incidentAssignments[key] = assignments[key].map(emp => emp.id)
         })
     } catch (error) {
         console.error('Error loading incident assignments:', error)
     }
 }
 
+function getEmployeeName(employeeId) {
+    const employee = activeEmployees.value.find(emp => emp.id == employeeId)
+    return employee?.name || 'Inconnu'
+}
+
+function getAvailableEmployeesForType(typeId) {
+    const assignedIds = incidentAssignments[typeId] || []
+    return activeEmployees.value.filter(emp => !assignedIds.includes(emp.id))
+}
+
+function addEmployeeToType(typeId, employeeId) {
+    if (!employeeId) return
+    if (!incidentAssignments[typeId]) {
+        incidentAssignments[typeId] = []
+    }
+    if (!incidentAssignments[typeId].includes(parseInt(employeeId))) {
+        incidentAssignments[typeId].push(parseInt(employeeId))
+    }
+}
+
+function removeEmployeeFromType(typeId, employeeId) {
+    if (!incidentAssignments[typeId]) return
+    incidentAssignments[typeId] = incidentAssignments[typeId].filter(id => id != employeeId)
+}
+
 async function saveIncidentAssignments() {
     savingIncidentAssignments.value = true
     try {
         const assignmentsData = incidentTypeSettings.items
-            .filter(t => t.is_active && incidentAssignments[t.id])
+            .filter(t => t.is_active && incidentAssignments[t.id] && incidentAssignments[t.id].length > 0)
             .map(t => ({
                 incident_type_id: t.id,
-                employee_id: incidentAssignments[t.id]
+                employee_ids: incidentAssignments[t.id]
             }))
 
         await api.post('/incident-type-assignments/bulk', { assignments: assignmentsData })
