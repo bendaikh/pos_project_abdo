@@ -819,26 +819,48 @@ function confirmDelete(employee) {
 async function saveEmployee() {
     saving.value = true
     try {
-        const isPhotoUpdated = photoTouched.value
+        // Prepare data for API (matching backend validation)
+        const apiData = {
+            name: `${form.nom} ${form.prenom}`.trim(),
+            email: form.email || null,
+            phone: form.phone || null,
+            role: form.role,
+            status: form.status,
+            hire_date: form.date_entree || null,
+        }
+
+        console.log('Saving employee with data:', apiData)
+
+        // Call the API to save to database
+        let response
+        if (editingEmployee.value) {
+            console.log('Updating employee ID:', editingEmployee.value.id)
+            response = await employeesApi.update(editingEmployee.value.id, apiData)
+        } else {
+            console.log('Creating new employee...')
+            response = await employeesApi.create(apiData)
+        }
+
+        console.log('API response:', response.data)
+
+        // Get the saved employee from API response
+        const savedEmployee = response.data
+
+        // Prepare full employee data for localStorage with additional frontend fields
         const employeeData = {
-            id: editingEmployee.value?.id || Date.now(),
-            employee_id: editingEmployee.value?.employee_id || `EMP-${String(Date.now()).slice(-4)}`,
-            name: `${form.nom} ${form.prenom}`,
+            ...savedEmployee,
             nom: form.nom,
             prenom: form.prenom,
             poste: form.poste,
             tasks: [...form.tasks],
-            email: form.email,
-            phone: form.phone,
             city: form.city,
             pays: form.pays,
             address: form.address,
-            role: form.role,
-            status: form.status,
             date_entree: form.date_entree,
             date_sortie: form.date_sortie,
             observations: form.observations,
             photo_url: profilePhotoPreview.value || null,
+            photo_cache_key: photoTouched.value ? Date.now() : (editingEmployee.value?.photo_cache_key || 0),
             documents: {
                 cin: dossierUploads.cin,
                 diplomes: dossierUploads.diplomes,
@@ -847,13 +869,12 @@ async function saveEmployee() {
             }
         }
 
-        employeeData.photo_cache_key = isPhotoUpdated ? Date.now() : (editingEmployee.value?.photo_cache_key || 0)
-
         // Calculate sales from POS data
         const salesData = calculateEmployeeSalesFromPOS(employeeData.id)
         employeeData.total_sales = salesData.total_sales
         employeeData.sales_count = salesData.sales_count
 
+        // Update local state
         if (editingEmployee.value) {
             const index = employees.value.findIndex(e => e.id === editingEmployee.value.id)
             if (index > -1) employees.value[index] = employeeData
@@ -861,10 +882,27 @@ async function saveEmployee() {
             employees.value.unshift(employeeData)
         }
         
+        // Also save to localStorage for offline access
         saveEmployeesToStorage()
+        
+        console.log('Employee saved successfully!')
         closeEmployeeForm()
     } catch (error) {
-        alert('Erreur: ' + (error.response?.data?.message || error.message))
+        console.error('Error saving employee:', error)
+        console.error('Error response:', error.response?.data)
+        console.error('Error status:', error.response?.status)
+        
+        let errorMessage = 'Impossible de sauvegarder l\'employé'
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message
+        } else if (error.response?.data?.errors) {
+            const errors = Object.values(error.response.data.errors).flat()
+            errorMessage = errors.join(', ')
+        } else if (error.message) {
+            errorMessage = error.message
+        }
+        
+        alert('Erreur: ' + errorMessage)
     } finally {
         saving.value = false
     }
@@ -872,11 +910,16 @@ async function saveEmployee() {
 
 async function deleteEmployee() {
     try {
+        // Delete from database via API
+        await employeesApi.delete(employeeToDelete.value.id)
+        
+        // Remove from local state
         employees.value = employees.value.filter(e => e.id !== employeeToDelete.value.id)
         saveEmployeesToStorage()
         showDeleteModal.value = false
     } catch (error) {
-        alert('Erreur lors de la suppression')
+        console.error('Error deleting employee:', error)
+        alert('Erreur lors de la suppression: ' + (error.response?.data?.message || error.message || 'Impossible de supprimer l\'employé'))
     }
 }
 
