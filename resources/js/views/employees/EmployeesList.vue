@@ -924,31 +924,69 @@ async function deleteEmployee() {
 }
 
 onMounted(async () => {
-    // Load from localStorage first
-    const storedEmployees = readStoredEmployees()
-    if (storedEmployees.length > 0) {
-        employees.value = storedEmployees.map(emp => ({
-            ...emp,
-            ...calculateEmployeeSalesFromPOS(emp.id)
-        }))
-        return
-    }
-    
-    // Fallback to API if localStorage is empty
+    // Always fetch from database first
     try {
         const response = await employeesApi.list()
-        employees.value = Array.isArray(response.data) ? response.data : response.data.data || []
+        const dbEmployees = Array.isArray(response.data) ? response.data : response.data.data || []
+        
+        // Merge with localStorage data to preserve additional fields (photo, documents, etc.)
+        const storedEmployees = readStoredEmployees()
+        
+        employees.value = dbEmployees.map(dbEmp => {
+            // Find matching employee in localStorage
+            const storedEmp = storedEmployees.find(s => s.id === dbEmp.id)
+            
+            // Calculate sales from POS data
+            const salesData = calculateEmployeeSalesFromPOS(dbEmp.id)
+            
+            // Merge: DB data takes priority for core fields, localStorage preserves extra fields
+            return {
+                ...storedEmp, // localStorage data (photos, documents, etc.)
+                ...dbEmp,     // database data (core employee info) - overrides localStorage
+                ...salesData, // sales data from POS
+                // Preserve these fields from localStorage if they exist
+                nom: dbEmp.name?.split(' ')[0] || storedEmp?.nom || '',
+                prenom: dbEmp.name?.split(' ').slice(1).join(' ') || storedEmp?.prenom || '',
+                photo_url: storedEmp?.photo_url || null,
+                photo_cache_key: storedEmp?.photo_cache_key || 0,
+                documents: storedEmp?.documents || {},
+                tasks: storedEmp?.tasks || [],
+                poste: storedEmp?.poste || '',
+                city: dbEmp.city || storedEmp?.city || storedEmp?.ville || '',
+                pays: storedEmp?.pays || '',
+                address: dbEmp.address || storedEmp?.address || storedEmp?.adresse || '',
+                date_entree: dbEmp.hire_date || storedEmp?.date_entree || '',
+                date_sortie: storedEmp?.date_sortie || '',
+                observations: storedEmp?.observations || ''
+            }
+        })
+        
+        // Save merged data to localStorage for offline access
         saveEmployeesToStorage()
+        
+        console.log(`Loaded ${employees.value.length} employees from database`)
     } catch (error) {
-        console.error('Error loading employees:', error)
-        // Demo data
-        employees.value = [
-            { id: 1, employee_id: 'EMP-0001', nom: 'Benali', prenom: 'Ahmed', phone: '0612345678', email: 'ahmed.benali@pos.com', city: 'Casablanca', address: '123 Rue Mohammed V', role: 'admin', status: 'active', total_sales: 125000, sales_count: 85 },
-            { id: 2, employee_id: 'EMP-0002', nom: 'Mansouri', prenom: 'Sara', phone: '0698765432', email: 'sara.mansouri@pos.com', city: 'Rabat', address: '45 Avenue Hassan II', role: 'manager', status: 'active', total_sales: 98000, sales_count: 62 },
-            { id: 3, employee_id: 'EMP-0003', nom: 'Tazi', prenom: 'Mohamed', phone: '0655443322', email: 'mohamed.tazi@pos.com', city: 'Marrakech', address: '78 Boulevard Zerktouni', role: 'cashier', status: 'active', total_sales: 75000, sales_count: 120 },
-            { id: 4, employee_id: 'EMP-0004', nom: 'El Amrani', prenom: 'Fatima', phone: '0677889900', email: 'fatima.elamrani@pos.com', city: 'Fès', address: '22 Rue Allal Ben Abdellah', role: 'vendor', status: 'inactive', total_sales: 45000, sales_count: 38 },
-        ]
-        saveEmployeesToStorage()
+        console.error('Error loading employees from database:', error)
+        
+        // Fallback to localStorage if API fails
+        const storedEmployees = readStoredEmployees()
+        if (storedEmployees.length > 0) {
+            console.log('Falling back to localStorage employees')
+            employees.value = storedEmployees.map(emp => ({
+                ...emp,
+                ...calculateEmployeeSalesFromPOS(emp.id)
+            }))
+        } else {
+            // If both API and localStorage fail, show demo data
+            console.log('Using demo data')
+            employees.value = [
+                { id: 1, employee_id: 'EMP-0001', nom: 'Benali', prenom: 'Ahmed', phone: '0612345678', email: 'ahmed.benali@pos.com', city: 'Casablanca', address: '123 Rue Mohammed V', role: 'admin', status: 'active', total_sales: 125000, sales_count: 85 },
+                { id: 2, employee_id: 'EMP-0002', nom: 'Mansouri', prenom: 'Sara', phone: '0698765432', email: 'sara.mansouri@pos.com', city: 'Rabat', address: '45 Avenue Hassan II', role: 'manager', status: 'active', total_sales: 98000, sales_count: 62 },
+                { id: 3, employee_id: 'EMP-0003', nom: 'Tazi', prenom: 'Mohamed', phone: '0655443322', email: 'mohamed.tazi@pos.com', city: 'Marrakech', address: '78 Boulevard Zerktouni', role: 'cashier', status: 'active', total_sales: 75000, sales_count: 120 },
+                { id: 4, employee_id: 'EMP-0004', nom: 'El Amrani', prenom: 'Fatima', phone: '0677889900', email: 'fatima.elamrani@pos.com', city: 'Fès', address: '22 Rue Allal Ben Abdellah', role: 'vendor', status: 'inactive', total_sales: 45000, sales_count: 38 },
+            ]
+            saveEmployeesToStorage()
+        }
     }
 })
 </script>
