@@ -38,12 +38,15 @@
                             required
                         >
                             <option value="">Sélectionner un responsable</option>
-                            <option v-for="emp in employees" :key="emp.id" :value="emp.id">
+                            <option v-for="emp in availableResponsibles" :key="emp.id" :value="emp.id">
                                 {{ emp.name }}
                             </option>
                         </select>
                         <p v-if="autoAssignedResponsible" class="mt-1 text-xs text-green-600">
                             Assigné automatiquement selon le type d'incident
+                        </p>
+                        <p v-else-if="form.incident_type_id && availableResponsibles.length === 0" class="mt-1 text-xs text-red-600">
+                            Aucun responsable assigné pour ce type d'incident. Veuillez contacter l'administrateur.
                         </p>
                     </div>
 
@@ -87,16 +90,20 @@
 
                     <!-- Reported by (optional) -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Signalé par (optionnel)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Signalé par</label>
                         <select 
                             v-model="form.reported_by_id" 
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
+                            :disabled="!isEditing"
                         >
                             <option value="">Sélectionner un employé</option>
                             <option v-for="emp in employees" :key="emp.id" :value="emp.id">
                                 {{ emp.name }}
                             </option>
                         </select>
+                        <p v-if="!isEditing && form.reported_by_id" class="mt-1 text-xs text-green-600">
+                            Automatiquement rempli avec votre compte
+                        </p>
                     </div>
 
                     <!-- Status (only when editing) -->
@@ -247,6 +254,22 @@ const selectedResponsible = computed(() => {
     return props.employees?.find(e => e.id == form.value.responsible_id)
 })
 
+// Filter responsibles based on selected incident type
+const availableResponsibles = computed(() => {
+    if (!form.value.incident_type_id || !props.assignments) {
+        return props.employees || []
+    }
+    
+    const assignedEmployees = props.assignments[form.value.incident_type_id]
+    if (!assignedEmployees || assignedEmployees.length === 0) {
+        // If no assignments for this type, show all employees
+        return props.employees || []
+    }
+    
+    // Return only employees assigned to this incident type
+    return assignedEmployees
+})
+
 function onTypeChange() {
     autoAssignedResponsible.value = false
     
@@ -335,6 +358,7 @@ async function handleSubmit() {
 
 onMounted(() => {
     if (props.ticket) {
+        // Editing existing ticket
         form.value = {
             incident_type_id: props.ticket.incident_type_id,
             title: props.ticket.title,
@@ -343,6 +367,24 @@ onMounted(() => {
             responsible_id: props.ticket.responsible_id,
             reported_by_id: props.ticket.reported_by_id || '',
             status: props.ticket.status
+        }
+    } else {
+        // Creating new ticket - auto-populate reported_by_id with current user
+        try {
+            const currentUser = JSON.parse(localStorage.getItem('auth_user') || '{}')
+            if (currentUser && currentUser.name && props.employees) {
+                // Find employee by matching user name or email
+                const currentEmployee = props.employees.find(emp => 
+                    emp.name === currentUser.name || 
+                    (emp.email && currentUser.email && emp.email === currentUser.email)
+                )
+                
+                if (currentEmployee) {
+                    form.value.reported_by_id = currentEmployee.id
+                }
+            }
+        } catch (error) {
+            console.error('Error auto-populating reported_by:', error)
         }
     }
 })
