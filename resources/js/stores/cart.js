@@ -1,7 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useSettingsStore } from './settings'
-import { useCustomListsStore } from './customLists'
+import {
+    useCustomListsStore,
+    calculateLineDiscountAmount,
+    calculateTaxAmount,
+} from './customLists'
 
 export const useCartStore = defineStore('cart', () => {
     const items = ref([])
@@ -9,6 +13,8 @@ export const useCartStore = defineStore('cart', () => {
     const customerName = ref('Client Anonyme')
     const discountAmount = ref(0)
     const discountPercent = ref(0)
+    const appliedCartDiscountIds = ref([])
+    const appliedCartTaxIds = ref([])
     const customListsStore = useCustomListsStore()
     const deliveryMode = ref(customListsStore.defaultServiceModeValue())
     const deliveryAgentId = ref(null)
@@ -41,21 +47,90 @@ export const useCartStore = defineStore('cart', () => {
         return items.value.reduce((sum, item) => sum + calculateItemTotal(item), 0)
     })
 
-    const discountTotal = computed(() => {
-        let discount = discountAmount.value
+    const itemDiscountsTotal = computed(() => {
+        return items.value.reduce((sum, item) => sum + (Number(item.discount_amount) || 0), 0)
+    })
+
+    const appliedCartDiscounts = computed(() => {
+        if (!customListsStore.discountEnabled || appliedCartDiscountIds.value.length === 0) {
+            return []
+        }
+
+        return appliedCartDiscountIds.value
+            .map((id) => customListsStore.activeDiscounts.find(
+                (discount) => String(discount.id) === String(id)
+            ))
+            .filter(Boolean)
+    })
+
+    const customListDiscountTotal = computed(() => {
+        let runningSubtotal = subtotal.value
+        let totalDiscount = 0
+
+        for (const discount of appliedCartDiscounts.value) {
+            const amount = calculateLineDiscountAmount(discount, runningSubtotal)
+            totalDiscount += amount
+            runningSubtotal = Math.max(0, runningSubtotal - amount)
+        }
+
+        return Math.round(totalDiscount * 100) / 100
+    })
+
+    const cartLevelDiscountTotal = computed(() => {
+        let discount = customListDiscountTotal.value + discountAmount.value
         if (discountPercent.value > 0) {
             discount += subtotal.value * (discountPercent.value / 100)
         }
-        return discount
+        return Math.round(discount * 100) / 100
+    })
+
+    const discountTotal = computed(() => {
+        return itemDiscountsTotal.value + cartLevelDiscountTotal.value
     })
 
     const afterDiscount = computed(() => {
-        return Math.max(0, subtotal.value - discountTotal.value)
+        return Math.max(0, subtotal.value - cartLevelDiscountTotal.value)
+    })
+
+    const appliedCartTaxes = computed(() => {
+        if (!customListsStore.taxEnabled || appliedCartTaxIds.value.length === 0) {
+            return []
+        }
+
+        return appliedCartTaxIds.value
+            .map((id) => customListsStore.activeTaxes.find(
+                (tax) => String(tax.id) === String(id)
+            ))
+            .filter(Boolean)
+    })
+
+    const customListTaxTotal = computed(() => {
+        const base = afterDiscount.value
+        if (base <= 0 || appliedCartTaxes.value.length === 0) {
+            return 0
+        }
+
+        return appliedCartTaxes.value.reduce(
+            (sum, tax) => sum + calculateTaxAmount(tax, base),
+            0
+        )
+    })
+
+    const effectiveTaxRate = computed(() => {
+        if (afterDiscount.value <= 0) return 0
+        if (appliedCartTaxes.value.length > 0) {
+            return Math.round((customListTaxTotal.value / afterDiscount.value) * 10000) / 100
+        }
+        if (!settingsStore.taxEnabled) return 0
+        return Number(settingsStore.taxRate) || 0
     })
 
     const taxAmount = computed(() => {
+        if (appliedCartTaxes.value.length > 0) {
+            return Math.round(customListTaxTotal.value * 100) / 100
+        }
         if (!settingsStore.taxEnabled) return 0
-        return afterDiscount.value * (settingsStore.taxRate / 100)
+        return Math.round(afterDiscount.value * (settingsStore.taxRate / 100) * 100) / 100
     })
 
     const total = computed(() => {
@@ -102,6 +177,7 @@ export const useCartStore = defineStore('cart', () => {
                 selected_variant: selectedVariant,
                 comment: '',
                 discount_amount: 0,
+                applied_discount: null,
                 total: itemTotal,
                 article: article
             })
@@ -121,8 +197,42 @@ export const useCartStore = defineStore('cart', () => {
         items.value.splice(index, 1)
     }
 
+    function recalculateItemDiscount(item) {
+        if (!item?.applied_discount) {
+            return
+        }
+
+        const unitPrice = resolveBaseUnitPrice(item)
+        const optionsPrice = Number(item.options_price) || 0
+        const quantity = Number(item.quantity) || 0
+        const lineSubtotal = (unitPrice + optionsPrice) * quantity
+        item.discount_amount = calculateLineDiscountAmount(item.applied_discount, lineSubtotal)
+    }
+
     function recalculateItemTotal(index) {
         const item = items.value[index]
+        recalculateItemDiscount(item)
+        item.total = calculateItemTotal(item)
+    }
+
+    function setItemDiscount(index, appliedDiscount = null) {
+        const item = items.value[index]
+        if (!item) return
+
+        if (!appliedDiscount) {
+            item.applied_discount = null
+            item.discount_amount = 0
+        } else {
+            item.applied_discount = {
+                id: appliedDiscount.id,
+                label: appliedDiscount.label,
+                discount_type: appliedDiscount.discount_type === 'fixed' ? 'fixed' : 'percentage',
+                discount_value: Number(appliedDiscount.discount_value) || 0,
+                discount_limit: Number(appliedDiscount.discount_limit) || 0,
+            }
+            recalculateItemDiscount(item)
+        }
+
         item.total = calculateItemTotal(item)
     }
 
@@ -141,6 +251,13 @@ export const useCartStore = defineStore('cart', () => {
     function setDiscount(amount = 0, percent = 0) {
         discountAmount.value = amount
         discountPercent.value = percent
+    }
+
+    function setAppliedCartAdjustments({ discountIds = [], taxIds = [] } = {}) {
+        appliedCartDiscountIds.value = [...discountIds]
+        appliedCartTaxIds.value = [...taxIds]
+        discountAmount.value = 0
+        discountPercent.value = 0
     }
 
     function setDeliveryMode(mode) {
@@ -181,6 +298,9 @@ export const useCartStore = defineStore('cart', () => {
             selected_variant: null,
             comment: item.comment || '',
             discount_amount: Number(item.discount_amount) || 0,
+            applied_discount: item.applied_discount
+                ? JSON.parse(JSON.stringify(item.applied_discount))
+                : null,
             total: Number(item.total) || 0,
             article: item.article || null,
         }))
@@ -204,6 +324,8 @@ export const useCartStore = defineStore('cart', () => {
         customerName.value = 'Client Anonyme'
         discountAmount.value = 0
         discountPercent.value = 0
+        appliedCartDiscountIds.value = []
+        appliedCartTaxIds.value = []
         deliveryMode.value = customListsStore.defaultServiceModeValue()
         deliveryAgentId.value = null
         deliveryAgentLabel.value = ''
@@ -224,8 +346,9 @@ export const useCartStore = defineStore('cart', () => {
                 discount_amount: item.discount_amount,
                 comment: item.comment || '',
             })),
-            discount_amount: discountAmount.value,
+            discount_amount: cartLevelDiscountTotal.value,
             discount_percent: discountPercent.value,
+            tax_rate: effectiveTaxRate.value,
             service_mode: deliveryMode.value || customListsStore.defaultServiceModeValue(),
             delivery_mode: deliveryAgentId.value
                 ? 'delivery'
@@ -247,6 +370,13 @@ export const useCartStore = defineStore('cart', () => {
         customerName,
         discountAmount,
         discountPercent,
+        appliedCartDiscountIds,
+        appliedCartTaxIds,
+        appliedCartDiscounts,
+        appliedCartTaxes,
+        customListDiscountTotal,
+        customListTaxTotal,
+        effectiveTaxRate,
         deliveryMode,
         deliveryAgentId,
         deliveryAgentLabel,
@@ -254,6 +384,8 @@ export const useCartStore = defineStore('cart', () => {
         currentSaleId,
         itemCount,
         subtotal,
+        itemDiscountsTotal,
+        cartLevelDiscountTotal,
         discountTotal,
         afterDiscount,
         taxAmount,
@@ -262,8 +394,10 @@ export const useCartStore = defineStore('cart', () => {
         updateItemQuantity,
         removeItem,
         updateItemOptions,
+        setItemDiscount,
         setCustomer,
         setDiscount,
+        setAppliedCartAdjustments,
         setDeliveryMode,
         setDeliveryAgent,
         setNotes,

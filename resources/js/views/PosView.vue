@@ -291,7 +291,7 @@
                             <!-- Service mode -->
                             <div v-if="serviceModesEnabled" class="shrink-0 border-b border-gray-200 bg-gray-50" :class="desktopPanelPaddingClass">
                                 <div :class="desktopServiceModesWrapClass">
-                                    <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button" class="flex items-center gap-2 rounded-lg border font-semibold transition-colors shrink-0" :class="[desktopServiceModeButtonClass, serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300']">
+                                    <button v-for="mode in serviceModes" :key="mode.value" @click="selectServiceMode(mode.value)" type="button" class="flex items-center gap-2 rounded-lg border font-semibold transition-colors shrink-0" :class="[desktopServiceModeButtonClass, serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300']">
                                         <PlatformBadge v-if="mode.source === 'platform'" :platform="mode.label" size="sm" :official="false" />
                                         <template v-else>
                                             <span class="text-base">{{ mode.icon }}</span>
@@ -299,15 +299,17 @@
                                         </template>
                                     </button>
                                 </div>
-                                <div v-if="shouldShowDeliveryAgentSelect" class="mt-3">
-                                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Livreur</label>
-                                    <select v-model="selectedDeliveryAgentId" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                        <option value="">{{ deliveryAgentPlaceholder }}</option>
-                                        <option v-for="agent in visibleDeliveryAgents" :key="agent.id" :value="String(agent.id)">
-                                            {{ formatDeliveryAgentLabel(agent) }}{{ agent.phone ? ` · ${agent.phone}` : '' }}
-                                        </option>
-                                    </select>
-                                </div>
+                                <button
+                                    v-if="shouldShowDeliveryAgentSelect"
+                                    type="button"
+                                    class="mt-3 flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left text-sm transition hover:border-blue-300 hover:bg-blue-50/40"
+                                    @click="openDeliveryAgentPicker"
+                                >
+                                    <span class="font-medium" :class="cartStore.deliveryAgentLabel ? 'text-gray-900' : 'text-gray-500'">
+                                        {{ cartStore.deliveryAgentLabel || deliveryAgentPlaceholder }}
+                                    </span>
+                                    <span class="text-xs font-semibold text-blue-600">Modifier</span>
+                                </button>
                             </div>
                             <!-- Articles header -->
                             <div class="shrink-0 border-b border-gray-200 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500" :class="desktopHeaderRowClass">
@@ -335,8 +337,12 @@
                                             <span class="shrink-0 text-sm font-semibold text-gray-900">{{ formatCurrency(getItemLineTotal(item)) }}</span>
                                             <button @click.stop="removeItem(index)" class="shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-600" title="Supprimer" type="button"><TrashIcon class="h-4 w-4" /></button>
                                         </div>
-                                        <div v-if="item.comment || getVariantDisplay(item) || getOptionDisplays(item).length > 0" class="mt-1 space-y-0.5 pl-2 text-[11px] text-gray-500">
+                                        <div v-if="item.comment || Number(item.discount_amount) > 0 || getVariantDisplay(item) || getOptionDisplays(item).length > 0" class="mt-1 space-y-0.5 pl-2 text-[11px] text-gray-500">
                                             <p v-if="item.comment">- Note: {{ item.comment }}</p>
+                                            <p v-if="Number(item.discount_amount) > 0" class="text-rose-600">
+                                                - Remise{{ item.applied_discount?.label ? ` : ${item.applied_discount.label}` : '' }}
+                                                (-{{ formatCurrency(item.discount_amount) }})
+                                            </p>
                                             <p v-if="getVariantDisplay(item)">
                                                 - {{ getVariantDisplay(item).label }}
                                             </p>
@@ -353,7 +359,17 @@
                                 <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">Total HT :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.subtotal) }}</span></div>
                                 <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">TVA :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.taxAmount) }}</span></div>
                                 <div class="flex justify-between text-gray-600 border-b border-dashed border-gray-200 pb-2"><span class="font-medium">Remise :</span><span class="font-semibold text-gray-900">{{ formatCurrency(cartStore.discountTotal) }}</span></div>
-                                <div class="flex items-baseline justify-between pt-2"><span class="text-lg font-bold text-gray-900">TOTAL TTC :</span><span class="text-2xl font-bold text-green-600">{{ formatCurrency(cartStore.total) }}</span></div>
+                                <div class="flex items-baseline justify-between pt-2">
+                                    <span class="text-lg font-bold text-gray-900">TOTAL TTC :</span>
+                                    <button
+                                        type="button"
+                                        class="text-2xl font-bold text-green-600 underline decoration-green-600/30 decoration-dotted underline-offset-4 transition hover:text-green-700"
+                                        title="Détails du total — remises et taxes"
+                                        @click="openTotalDetailsModal"
+                                    >
+                                        {{ formatCurrency(cartStore.total) }}
+                                    </button>
+                                </div>
                             </div>
                             <!-- Buttons -->
                             <div class="shrink-0 border-t border-gray-200 space-y-2 bg-white" :class="desktopPanelPaddingClass">
@@ -394,7 +410,7 @@
                         <!-- Service mode (compact scrollable chips) -->
                         <div v-if="serviceModesEnabled" class="px-3 py-1.5 border-b border-gray-100 bg-gray-50">
                             <div class="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap no-scrollbar">
-                                <button v-for="mode in serviceModes" :key="mode.value" @click="serviceMode = mode.value" type="button"
+                                <button v-for="mode in serviceModes" :key="mode.value" @click="selectServiceMode(mode.value)" type="button"
                                     class="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors shrink-0"
                                     :class="serviceMode === mode.value ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-600'">
                                     <PlatformBadge v-if="mode.source === 'platform'" :platform="mode.label" size="sm" :official="false" />
@@ -404,14 +420,15 @@
                                     </template>
                                 </button>
                             </div>
-                            <div v-if="shouldShowDeliveryAgentSelect" class="mt-2">
-                                <select v-model="selectedDeliveryAgentId" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">{{ deliveryAgentPlaceholder }}</option>
-                                    <option v-for="agent in visibleDeliveryAgents" :key="agent.id" :value="String(agent.id)">
-                                        {{ formatDeliveryAgentLabel(agent) }}
-                                    </option>
-                                </select>
-                            </div>
+                            <button
+                                v-if="shouldShowDeliveryAgentSelect && cartStore.deliveryAgentLabel"
+                                type="button"
+                                class="mt-2 flex w-full items-center justify-between rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2 text-left text-[11px] transition active:bg-blue-50"
+                                @click="openDeliveryAgentPicker"
+                            >
+                                <span class="truncate font-semibold text-gray-900">{{ cartStore.deliveryAgentLabel }}</span>
+                                <span class="shrink-0 font-semibold text-blue-600">Changer</span>
+                            </button>
                         </div>
                         <!-- Articles header -->
                         <div class="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between text-[10px] uppercase tracking-widest text-gray-400 font-semibold bg-gray-50">
@@ -446,8 +463,12 @@
                                             <TrashIcon class="h-4 w-4" />
                                         </button>
                                     </div>
-                                    <div v-if="item.comment || getVariantDisplay(item) || getOptionDisplays(item).length > 0" class="mt-1 space-y-0.5 pl-1.5 text-[10px] text-gray-500">
+                                    <div v-if="item.comment || Number(item.discount_amount) > 0 || getVariantDisplay(item) || getOptionDisplays(item).length > 0" class="mt-1 space-y-0.5 pl-1.5 text-[10px] text-gray-500">
                                         <p v-if="item.comment">- Note: {{ item.comment }}</p>
+                                        <p v-if="Number(item.discount_amount) > 0" class="text-rose-600">
+                                            - Remise{{ item.applied_discount?.label ? ` : ${item.applied_discount.label}` : '' }}
+                                            (-{{ formatCurrency(item.discount_amount) }})
+                                        </p>
                                         <p v-if="getVariantDisplay(item)">
                                             - {{ getVariantDisplay(item).label }}
                                         </p>
@@ -467,7 +488,14 @@
                                 <span>HT <span class="font-semibold text-gray-700">{{ formatCurrency(cartStore.subtotal) }}</span></span>
                                 <span>TVA <span class="font-semibold text-gray-700">{{ formatCurrency(cartStore.taxAmount) }}</span></span>
                                 <span>Rem. <span class="font-semibold text-gray-700">{{ formatCurrency(cartStore.discountTotal) }}</span></span>
-                                <span class="text-sm font-bold text-green-600 ml-auto">{{ formatCurrency(cartStore.total) }}</span>
+                                <button
+                                    type="button"
+                                    class="text-sm font-bold text-green-600 ml-auto underline decoration-green-600/30 decoration-dotted underline-offset-2 transition hover:text-green-700"
+                                    title="Détails du total — remises et taxes"
+                                    @click="openTotalDetailsModal"
+                                >
+                                    {{ formatCurrency(cartStore.total) }}
+                                </button>
                             </div>
                             <!-- Action buttons side by side -->
                             <div class="px-3 py-2 flex gap-2">
@@ -681,6 +709,62 @@
                     <p class="text-xs text-gray-500">Le commentaire est enregistré dans le panier et prêt pour un futur support complet côté ticket.</p>
                 </div>
 
+                <div class="space-y-3 border-t border-slate-200 pt-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <label class="block text-sm font-medium text-gray-700">Remise</label>
+                        <span v-if="editDiscountPreview > 0" class="text-sm font-semibold text-rose-600">
+                            -{{ formatCurrency(editDiscountPreview) }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500">Remise appliquée uniquement sur cet article (ligne du ticket).</p>
+
+                    <div
+                        v-if="!customListsStore.discountEnabled"
+                        class="rounded-xl border border-dashed border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800"
+                    >
+                        Les remises sont désactivées. Activez la liste dans
+                        <strong>Paramètres → Listes personnalisées → Remises</strong>, puis enregistrez.
+                    </div>
+                    <div
+                        v-else-if="customListsStore.activeDiscounts.length === 0"
+                        class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-600"
+                    >
+                        Aucune remise active. Créez-en une dans
+                        <strong>Paramètres → Listes personnalisées → Remises</strong>, cochez <strong>Actif</strong>, puis cliquez <strong>Enregistrer</strong>.
+                    </div>
+                    <div v-else class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <label
+                            class="flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition"
+                            :class="!editSelectedDiscountId ? 'border-primary-500 bg-primary-50' : 'border-gray-200 bg-white'"
+                        >
+                            <input
+                                v-model="editSelectedDiscountId"
+                                type="radio"
+                                class="h-4 w-4 border-gray-300 text-primary-600"
+                                value=""
+                            >
+                            <span class="text-sm font-medium text-gray-800">Aucune remise</span>
+                        </label>
+                        <label
+                            v-for="discount in customListsStore.activeDiscounts"
+                            :key="discount.id"
+                            class="flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition"
+                            :class="editSelectedDiscountId === discount.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 bg-white'"
+                        >
+                            <input
+                                v-model="editSelectedDiscountId"
+                                type="radio"
+                                class="h-4 w-4 border-gray-300 text-primary-600"
+                                :value="discount.id"
+                            >
+                            <div class="min-w-0 text-sm">
+                                <p class="font-medium text-gray-900">{{ discount.label }}</p>
+                                <p class="text-xs text-gray-500">{{ formatDiscountSummary(discount) }}</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
                 <div v-if="editingActiveVariants.length" class="space-y-2">
                     <p class="text-sm font-semibold text-gray-700">Variante</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -764,6 +848,35 @@
                 </div>
             </div>
         </div>
+
+        <DeliveryAgentPickerModal
+            v-if="showDeliveryAgentPicker"
+            :agents="visibleDeliveryAgents"
+            :selected-id="cartStore.deliveryAgentId"
+            :loading="deliveryAgentsLoading"
+            :title="deliveryAgentPickerTitle"
+            :empty-message="deliveryAgentEmptyMessage"
+            :format-label="formatDeliveryAgentLabel"
+            @close="showDeliveryAgentPicker = false"
+            @select="selectDeliveryAgentFromPicker"
+            @add="goToAddDeliveryAgent"
+        />
+
+        <TotalDetailsModal
+            v-if="showTotalDetailsModal"
+            :subtotal="cartStore.subtotal"
+            :discounts="customListsStore.activeDiscounts"
+            :taxes="customListsStore.activeTaxes"
+            :settings-tax-enabled="settingsStore.taxEnabled"
+            :settings-tax-rate="settingsStore.taxRate"
+            :settings-tax-name="settingsStore.taxName"
+            :initial-discount-ids="totalDetailsInitialDiscountIds"
+            :initial-tax-ids="totalDetailsInitialTaxIds"
+            :initial-comment="cartStore.notes"
+            :format-currency="formatCurrency"
+            @close="showTotalDetailsModal = false"
+            @apply="applyTotalDetails"
+        />
 
         <!-- Discount Modal -->
         <div v-if="showDiscountModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -861,19 +974,22 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useCartStore } from '../stores/cart'
 import { useArticlesStore } from '../stores/articles'
-import { useCustomListsStore } from '../stores/customLists'
+import { useCustomListsStore, calculateLineDiscountAmount, formatDiscountSummary, SETTINGS_TAX_ID } from '../stores/customLists'
 import { useSettingsStore } from '../stores/settings'
 import { useOfflineStore } from '../stores/offline'
 import { useUiStore } from '../stores/ui'
 import { salesApi, optionsApi, articlesApi, customersApi, deliveryAgentsApi } from '../api'
 import PaymentMultiModal from '../components/pos/PaymentMultiModal.vue'
+import TotalDetailsModal from '../components/pos/TotalDetailsModal.vue'
 import CalculatorModal from '../components/pos/CalculatorModal.vue'
 import OptionsModal from '../components/pos/OptionsModal.vue'
 import SaveTicketModal from '../components/pos/SaveTicketModal.vue'
 import OpenTicketsModal from '../components/pos/OpenTicketsModal.vue'
+import DeliveryAgentPickerModal from '../components/pos/DeliveryAgentPickerModal.vue'
 import SelectOptionsModal from '../components/pos/SelectOptionsModal.vue'
 import SelectVariantsModal from '../components/pos/SelectVariantsModal.vue'
 import OptionFormContent from '../components/forms/OptionFormContent.vue'
@@ -888,6 +1004,7 @@ import {
     UserPlusIcon
 } from '@heroicons/vue/24/outline'
 
+const router = useRouter()
 const cartStore = useCartStore()
 const articlesStore = useArticlesStore()
 const customListsStore = useCustomListsStore()
@@ -905,8 +1022,12 @@ const showOptionsModal = ref(false)
 const showSaveTicketModal = ref(false)
 const showOpenTicketsModal = ref(false)
 const showCustomerSelector = ref(false)
+const showDeliveryAgentPicker = ref(false)
 const showNotesModal = ref(false)
 const showDiscountModal = ref(false)
+const showTotalDetailsModal = ref(false)
+const totalDetailsInitialDiscountIds = ref([])
+const totalDetailsInitialTaxIds = ref([])
 const showItemEditModal = ref(false)
 const showSelectOptionsModal = ref(false)
 const showCreateOptionModal = ref(false)
@@ -922,6 +1043,7 @@ const editingCartIndex = ref(null)
 const editingItem = ref(null)
 const editQuantity = ref(1)
 const editItemComment = ref('')
+const editSelectedDiscountId = ref('')
 const editingArticle = ref(null)
 const editSelectedVariantId = ref(null)
 const editSelectedOptions = ref([])
@@ -1262,6 +1384,23 @@ const serviceMode = computed({
 })
 
 const selectedServiceModeMeta = computed(() => customListsStore.getServiceModeMeta(serviceMode.value))
+
+const editLineSubtotalBeforeDiscount = computed(() => {
+    const unitPrice = editSelectedVariantId.value
+        ? Number(editingArticle.value?.variants?.find((variant) => variant.id === editSelectedVariantId.value)?.price_impact) || 0
+        : Number(editingArticle.value?.sell_price) || Number(editingItem.value?.unit_price) || 0
+    const optionsPrice = Number(editOptionsPrice.value) || 0
+    const quantity = Math.max(1, Number(editQuantity.value) || 1)
+    return (unitPrice + optionsPrice) * quantity
+})
+
+const editDiscountPreview = computed(() => {
+    if (!editSelectedDiscountId.value) return 0
+    const discount = customListsStore.activeDiscounts.find(
+        (item) => String(item.id) === String(editSelectedDiscountId.value)
+    )
+    return calculateLineDiscountAmount(discount, editLineSubtotalBeforeDiscount.value)
+})
 const selectedPlatformModeKey = computed(() => normalizePlatformKey(serviceMode.value))
 const matchesPlatformMode = computed(() => {
     return deliveryAgents.value.some((agent) => (
@@ -1304,16 +1443,24 @@ const deliveryAgentPlaceholder = computed(() => {
     return 'Aucun livreur'
 })
 
-const selectedDeliveryAgentId = computed({
-    get: () => cartStore.deliveryAgentId || '',
-    set: (value) => {
-        const selectedAgent = visibleDeliveryAgents.value.find((agent) => String(agent.id) === String(value))
-        cartStore.setDeliveryAgent(selectedAgent ? {
-            id: selectedAgent.id,
-            label: formatDeliveryAgentLabel(selectedAgent),
-            name: selectedAgent.name,
-        } : null)
-    },
+const deliveryAgentPickerTitle = computed(() => {
+    if (matchesPlatformMode.value && serviceMode.value) {
+        return `Choisir un livreur ${serviceMode.value}`
+    }
+
+    return 'Choisir un livreur'
+})
+
+const deliveryAgentEmptyMessage = computed(() => {
+    if (selectedServiceModeMeta.value.requires_delivery_agent) {
+        return 'Aucun livreur interne disponible.'
+    }
+
+    if (matchesPlatformMode.value) {
+        return `Aucun livreur ${serviceMode.value} disponible.`
+    }
+
+    return 'Aucun livreur disponible.'
 })
 
 const filteredCustomers = computed(() => {
@@ -1329,10 +1476,45 @@ const filteredCustomers = computed(() => {
         .slice(0, 20)
 })
 
+function setDeliveryAgentSelection(agent) {
+    cartStore.setDeliveryAgent(agent ? {
+        id: agent.id,
+        label: formatDeliveryAgentLabel(agent),
+        name: agent.name,
+    } : null)
+}
+
+function openDeliveryAgentPicker() {
+    showDeliveryAgentPicker.value = true
+}
+
+function selectDeliveryAgentFromPicker(agent) {
+    setDeliveryAgentSelection(agent)
+    showDeliveryAgentPicker.value = false
+}
+
+function goToAddDeliveryAgent() {
+    showDeliveryAgentPicker.value = false
+    router.push({ name: 'livreurs.create' })
+}
+
+async function selectServiceMode(modeValue) {
+    serviceMode.value = modeValue
+    await nextTick()
+
+    if (shouldShowDeliveryAgentSelect.value) {
+        openDeliveryAgentPicker()
+        return
+    }
+
+    showDeliveryAgentPicker.value = false
+}
+
 function clearActiveTicketSelection() {
     showSaveTicketModal.value = false
     showOpenTicketsModal.value = false
     showCustomerSelector.value = false
+    showDeliveryAgentPicker.value = false
     showPaymentModal.value = false
     ticketNotes.value = ''
     discountAmount.value = 0
@@ -1888,10 +2070,12 @@ async function resolveEditableArticle(item) {
 }
 
 async function openItemEditModal(index, item) {
+    await customListsStore.fetchList('remises', { force: true })
     editingCartIndex.value = index
     editingItem.value = item
     editQuantity.value = Number(item.quantity) || 1
     editItemComment.value = String(item.comment || '').trim()
+    editSelectedDiscountId.value = item.applied_discount?.id ?? ''
     editingArticle.value = await resolveEditableArticle(item)
     editSelectedVariantId.value = item.selected_variant?.id || null
     if (!editSelectedVariantId.value && Array.isArray(editingArticle.value?.variants)) {
@@ -1913,6 +2097,7 @@ function closeItemEditModal() {
     showItemEditModal.value = false
     editingItem.value = null
     editItemComment.value = ''
+    editSelectedDiscountId.value = ''
     editingArticle.value = null
     editSelectedVariantId.value = null
     editSelectedOptions.value = []
@@ -1956,7 +2141,12 @@ function applyItemEdit() {
         item.selected_options = normalizeSelectedOptions(editSelectedOptions.value)
         item.options_price = Number(editOptionsPrice.value) || 0
         item.comment = editItemComment.value || ''
-        item.total = getItemLineTotal(item)
+        const selectedDiscount = editSelectedDiscountId.value !== '' && editSelectedDiscountId.value != null
+            ? customListsStore.activeDiscounts.find(
+                (discount) => String(discount.id) === String(editSelectedDiscountId.value)
+            ) || null
+            : null
+        cartStore.setItemDiscount(editingCartIndex.value, selectedDiscount)
     }
     closeItemEditModal()
 }
@@ -2445,6 +2635,29 @@ function applyDiscount() {
     showDiscountModal.value = false
 }
 
+function openTotalDetailsModal() {
+    totalDetailsInitialDiscountIds.value = [...cartStore.appliedCartDiscountIds]
+
+    if (cartStore.appliedCartTaxIds.length > 0) {
+        totalDetailsInitialTaxIds.value = [...cartStore.appliedCartTaxIds]
+    } else if (customListsStore.defaultTaxes.length > 0) {
+        totalDetailsInitialTaxIds.value = customListsStore.defaultTaxes.map((tax) => tax.id)
+    } else if (settingsStore.taxEnabled && settingsStore.taxRate > 0) {
+        totalDetailsInitialTaxIds.value = [SETTINGS_TAX_ID]
+    } else {
+        totalDetailsInitialTaxIds.value = []
+    }
+
+    showTotalDetailsModal.value = true
+}
+
+function applyTotalDetails({ discountIds = [], taxIds = [], comment = '' } = {}) {
+    cartStore.setAppliedCartAdjustments({ discountIds, taxIds })
+    cartStore.setNotes(comment)
+    ticketNotes.value = comment
+    showTotalDetailsModal.value = false
+}
+
 function resetCart() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser le ticket?')) {
         clearActiveTicketSelection()
@@ -2517,6 +2730,7 @@ watch(useBottomSheetCart, (value) => {
 
 watch(serviceMode, () => {
     if (!shouldShowDeliveryAgentSelect.value) {
+        showDeliveryAgentPicker.value = false
         cartStore.setDeliveryAgent(null)
         return
     }
@@ -2662,7 +2876,11 @@ onMounted(async () => {
     document.addEventListener('fullscreenchange', handleFullscreenChange)
     handleFullscreenChange()
     await settingsStore.fetchSettings()
-    await customListsStore.fetchList('mode_de_service', { force: true })
+    await Promise.all([
+        customListsStore.fetchList('mode_de_service', { force: true }),
+        customListsStore.fetchList('remises', { force: true }),
+        customListsStore.fetchList('taxes', { force: true }),
+    ])
     ensureValidServiceModeSelection()
     await articlesStore.refresh()
     await fetchPosCustomers()

@@ -51,6 +51,7 @@ import HistoriqueAchatsList from '../views/achat/HistoriqueAchatsList.vue'
 import JournalCaisseList from '../views/finance/JournalCaisseList.vue'
 import DepensesList from '../views/finance/DepensesList.vue'
 import BilanView from '../views/finance/BilanView.vue'
+import HistoriqueTicketList from '../views/finance/HistoriqueTicketList.vue'
 
 // FOURNISSEURS Views
 import FournisseursList from '../views/fournisseurs/FournisseursList.vue'
@@ -302,6 +303,11 @@ const routes = [
                 path: 'bilan',
                 name: 'bilan',
                 component: BilanView
+            },
+            {
+                path: 'historique-ticket',
+                name: 'historique-ticket',
+                component: HistoriqueTicketList
             },
             // FOURNISSEURS Routes
             {

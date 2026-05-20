@@ -7,6 +7,7 @@ export const SERVICE_MODE_LIST_NAME = 'mode_de_service'
 export const PAYMENT_MODE_LIST_NAME = 'mode_de_paiement'
 export const TAX_LIST_NAME = 'taxes'
 export const DISCOUNT_LIST_NAME = 'remises'
+export const SETTINGS_TAX_ID = '__settings_tax__'
 export const EXPENSE_LIST_NAME = 'depenses'
 export const EXPENSE_CATEGORY_LIST_NAME = 'categories_depenses'
 
@@ -443,6 +444,59 @@ function normalizeDiscountItem(item, index) {
     }
 }
 
+export function calculateLineDiscountAmount(discount, lineSubtotal) {
+    const subtotal = Math.max(0, Number(lineSubtotal) || 0)
+    if (!discount || subtotal <= 0) return 0
+
+    let amount = 0
+    if (discount.discount_type === 'fixed') {
+        amount = Number(discount.discount_value) || 0
+    } else {
+        amount = subtotal * ((Number(discount.discount_value) || 0) / 100)
+    }
+
+    const limit = Number(discount.discount_limit) || 0
+    if (limit > 0) {
+        amount = Math.min(amount, limit)
+    }
+
+    amount = Math.min(amount, subtotal)
+    return Math.round(amount * 100) / 100
+}
+
+export function formatDiscountSummary(discount) {
+    if (!discount) return ''
+    if (discount.discount_type === 'fixed') {
+        return `${Number(discount.discount_value || 0).toFixed(2)} DH`
+    }
+    const suffix = Number(discount.discount_limit) > 0
+        ? ` (max ${Number(discount.discount_limit).toFixed(2)} DH)`
+        : ''
+    return `${Number(discount.discount_value || 0)}%${suffix}`
+}
+
+export function calculateTaxAmount(tax, baseAmount) {
+    const base = Math.max(0, Number(baseAmount) || 0)
+    if (!tax || base <= 0) return 0
+
+    let amount = 0
+    if (tax.tax_type === 'fixed') {
+        amount = Number(tax.tax_rate) || 0
+    } else {
+        amount = base * ((Number(tax.tax_rate) || 0) / 100)
+    }
+
+    return Math.round(amount * 100) / 100
+}
+
+export function formatTaxSummary(tax) {
+    if (!tax) return ''
+    if (tax.tax_type === 'fixed') {
+        return `${Number(tax.tax_rate || 0).toFixed(2)} DH`
+    }
+    return `${Number(tax.tax_rate || 0)}%`
+}
+
 function normalizeSimpleItem(item, index, prefix = 'item') {
     return {
         id: item?.id ?? `generated-${prefix}-${index}`,
@@ -551,7 +605,7 @@ function normalizeListPayload(list, name = list?.name) {
             name,
             is_active: base.is_active !== false,
             items: [...(base.items || [])]
-                .map((item, index) => normalizeSimpleItem(item, index, 'expense-category'))
+                .map((item, index) => normalizeDiscountItem(item, index))
                 .filter((item) => item.label)
                 .sort((a, b) => a.sort_order - b.sort_order),
         }
@@ -579,7 +633,7 @@ function normalizeListPayload(list, name = list?.name) {
             name,
             is_active: base.is_active !== false,
             items: [...(base.items || [])]
-                .map((item, index) => normalizeDiscountItem(item, index))
+                .map((item, index) => normalizeSimpleItem(item, index, 'expense-category'))
                 .filter((item) => item.label)
                 .sort((a, b) => a.sort_order - b.sort_order),
         }
@@ -754,6 +808,44 @@ export const useCustomListsStore = defineStore('customLists', () => {
         )
     })
 
+    const discountList = computed(() => {
+        return normalizeListPayload(
+            lists.value[DISCOUNT_LIST_NAME] || FALLBACK_DISCOUNT_LIST,
+            DISCOUNT_LIST_NAME
+        )
+    })
+
+    const discountEnabled = computed(() => discountList.value.is_active !== false)
+
+    const activeDiscounts = computed(() => {
+        if (!discountEnabled.value) {
+            return []
+        }
+
+        return discountList.value.items.filter((item) => item.is_active !== false)
+    })
+
+    const taxList = computed(() => {
+        return normalizeListPayload(
+            lists.value[TAX_LIST_NAME] || FALLBACK_TAX_LIST,
+            TAX_LIST_NAME
+        )
+    })
+
+    const taxEnabled = computed(() => taxList.value.is_active !== false)
+
+    const activeTaxes = computed(() => {
+        if (!taxEnabled.value) {
+            return []
+        }
+
+        return taxList.value.items.filter((item) => item.is_active !== false)
+    })
+
+    const defaultTaxes = computed(() => {
+        return activeTaxes.value.filter((item) => item.tax_is_default === true)
+    })
+
     const serviceModeEnabled = computed(() => serviceModeList.value.is_active !== false)
     const activeServiceModes = computed(() => {
         if (!serviceModeEnabled.value) {
@@ -859,6 +951,13 @@ export const useCustomListsStore = defineStore('customLists', () => {
         paymentModeList,
         expenseList,
         expenseCategoryList,
+        discountList,
+        discountEnabled,
+        activeDiscounts,
+        taxList,
+        taxEnabled,
+        activeTaxes,
+        defaultTaxes,
         serviceModeEnabled,
         activeServiceModes,
         activePaymentModes,

@@ -114,6 +114,7 @@ export const optionsApi = {
 export const salesApi = {
     list: (params = {}) => api.get('/sales', { params }),
     pending: () => api.get('/sales/pending'),
+    ticketStats: (params = {}) => api.get('/sales/ticket-stats', { params }),
     get: (id) => api.get(`/sales/${id}`),
     create: (data) => api.post('/sales', data),
     update: (id, data) => api.put(`/sales/${id}`, data),
@@ -122,7 +123,7 @@ export const salesApi = {
     returns: (id) => api.get(`/sales/${id}/returns`),
     addReturn: (id, data) => api.post(`/sales/${id}/returns`, data),
     complete: (id) => api.post(`/sales/${id}/complete`),
-    cancel: (id) => api.post(`/sales/${id}/cancel`),
+    cancel: (id, data = {}) => api.post(`/sales/${id}/cancel`, data),
     delete: (id) => api.delete(`/sales/${id}`),
     addPayment: (saleId, data) => api.post(`/sales/${saleId}/payments`, data),
 }

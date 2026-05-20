@@ -113,6 +113,14 @@ class SaleController extends Controller
             });
         }
 
+        if ($request->filled('ticket_group')) {
+            $query->where('ticket_group', $request->ticket_group);
+        }
+
+        if ($request->filled('ticket_status')) {
+            $this->applyTicketStatusFilter($query, $request->ticket_status);
+        }
+
         $sales = $query->latest()->paginate($request->get('per_page', 20));
         $sales->getCollection()->transform(fn (Sale $sale) => $this->paymentWorkflow->decorateSale($sale));
 
@@ -131,6 +139,39 @@ class SaleController extends Controller
         return response()->json($sales);
     }
 
+    public function ticketStats(Request $request): JsonResponse
+    {
+        $query = $this->buildTicketHistoryQuery($request);
+        $sales = $query->get(['id', 'status']);
+
+        $transferredIds = SaleLog::query()
+            ->whereIn('sale_id', $sales->pluck('id'))
+            ->where(function ($q) {
+                $q->where('action', 'like', '%transfer%')
+                    ->orWhere('comment', 'like', '%transf%');
+            })
+            ->pluck('sale_id')
+            ->unique();
+
+        $groups = Sale::query()
+            ->when($request->filled('from_date'), fn ($q) => $q->whereDate('created_at', '>=', $request->from_date))
+            ->when($request->filled('to_date'), fn ($q) => $q->whereDate('created_at', '<=', $request->to_date))
+            ->whereNotNull('ticket_group')
+            ->where('ticket_group', '!=', '')
+            ->distinct()
+            ->orderBy('ticket_group')
+            ->pluck('ticket_group');
+
+        return response()->json([
+            'total' => $sales->count(),
+            'registered' => $sales->where('status', 'completed')->count(),
+            'cancelled' => $sales->where('status', 'cancelled')->count(),
+            'refunded' => $sales->where('status', 'refunded')->count(),
+            'transferred' => $transferredIds->count(),
+            'locations' => $groups->values(),
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -145,6 +186,7 @@ class SaleController extends Controller
             'items.*.discount_amount' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
             'service_mode' => 'nullable|string|max:255',
             'delivery_mode' => 'nullable|string|max:255',
             'origin' => 'nullable|in:pos,menu_commande,livraison',
@@ -160,10 +202,9 @@ class SaleController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $taxRate = Setting::get('tax_rate', 0);
-        $taxEnabled = Setting::get('tax_enabled', false);
+        $taxRate = $this->resolveSaleTaxRate($validated);
 
-        return DB::transaction(function () use ($validated, $taxRate, $taxEnabled) {
+        return DB::transaction(function () use ($validated, $taxRate) {
             $resolvedServiceMode = $this->customListService->resolveServiceMode(
                 $validated['service_mode'] ?? null,
                 $validated['delivery_mode'] ?? null,
@@ -186,7 +227,7 @@ class SaleController extends Controller
                 'delivery_agent_id' => $validated['delivery_agent_id'] ?? null,
                 'discount_amount' => $validated['discount_amount'] ?? 0,
                 'discount_percent' => $validated['discount_percent'] ?? 0,
-                'tax_rate' => $taxEnabled ? $taxRate : 0,
+                'tax_rate' => $taxRate,
                 'delivery_mode' => $resolvedDeliveryMode,
                 'service_mode' => $resolvedServiceMode,
                 'origin' => $validated['origin'] ?? 'pos',
@@ -273,6 +314,7 @@ class SaleController extends Controller
             'items.*.discount_amount' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
             'service_mode' => 'nullable|string|max:255',
             'delivery_mode' => 'nullable|string|max:255',
             'origin' => 'nullable|in:pos,menu_commande,livraison',
@@ -316,6 +358,9 @@ class SaleController extends Controller
                 'delivery_agent_id' => $validated['delivery_agent_id'] ?? $sale->delivery_agent_id,
                 'discount_amount' => $validated['discount_amount'] ?? $sale->discount_amount,
                 'discount_percent' => $validated['discount_percent'] ?? $sale->discount_percent,
+                'tax_rate' => array_key_exists('tax_rate', $validated)
+                    ? (float) $validated['tax_rate']
+                    : $sale->tax_rate,
                 'delivery_mode' => $resolvedDeliveryMode,
                 'service_mode' => $resolvedServiceMode,
                 'origin' => $validated['origin'] ?? $sale->origin,
@@ -553,11 +598,16 @@ class SaleController extends Controller
         });
     }
 
-    public function cancel(Sale $sale): JsonResponse
+    public function cancel(Request $request, Sale $sale): JsonResponse
     {
         if ($sale->status === 'cancelled') {
             return response()->json(['message' => 'Sale is already cancelled'], 422);
         }
+
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:100',
+            'comment' => 'nullable|string|max:200',
+        ]);
 
         if ($sale->status === 'completed') {
             foreach ($sale->items as $item) {
@@ -579,7 +629,15 @@ class SaleController extends Controller
             'order_status' => 'annulee',
         ]);
 
-        $this->addLog($sale, 'commande_annulee', 'annulee', 'Commande annulée');
+        $logComment = 'Commande annulée';
+        if (! empty($validated['reason'])) {
+            $logComment .= ' - '.$validated['reason'];
+        }
+        if (! empty($validated['comment'])) {
+            $logComment .= ' : '.$validated['comment'];
+        }
+
+        $this->addLog($sale, 'commande_annulee', 'annulee', $logComment);
 
         return response()->json(
             $this->paymentWorkflow->decorateSale(
@@ -599,6 +657,19 @@ class SaleController extends Controller
         return response()->json(null, 204);
     }
 
+    private function resolveSaleTaxRate(array $validated): float
+    {
+        if (array_key_exists('tax_rate', $validated)) {
+            return max(0, (float) $validated['tax_rate']);
+        }
+
+        if (! Setting::get('tax_enabled', false)) {
+            return 0;
+        }
+
+        return max(0, (float) Setting::get('tax_rate', 0));
+    }
+
     private function addLog(Sale $sale, string $action, ?string $status = null, ?string $comment = null): void
     {
         SaleLog::create([
@@ -608,6 +679,53 @@ class SaleController extends Controller
             'action' => $action,
             'comment' => $comment,
         ]);
+    }
+
+    private function buildTicketHistoryQuery(Request $request)
+    {
+        $query = Sale::query();
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        if ($request->filled('ticket_group')) {
+            $query->where('ticket_group', $request->ticket_group);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('reference', 'like', "%{$search}%")
+                    ->orWhere('order_number', 'like', "%{$search}%")
+                    ->orWhere('ticket_name', 'like', "%{$search}%")
+                    ->orWhere('ticket_group', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    private function applyTicketStatusFilter($query, string $ticketStatus): void
+    {
+        match ($ticketStatus) {
+            'enregistre' => $query->where('status', 'completed'),
+            'annule' => $query->where('status', 'cancelled'),
+            'rembourse' => $query->where('status', 'refunded'),
+            'transfere' => $query->whereHas('logs', function ($q) {
+                $q->where('action', 'like', '%transfer%')
+                    ->orWhere('comment', 'like', '%transf%');
+            }),
+            default => null,
+        };
     }
 
     private function captureDeliveryCommissionIfNeeded(Sale $sale, bool $wasAlreadyDelivered = false): void

@@ -72,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sales
     Route::get('/sales/pending', [SaleController::class, 'pending']);
+    Route::get('/sales/ticket-stats', [SaleController::class, 'ticketStats']);
     Route::get('/sales/{sale}/journal', [SaleController::class, 'journal']);
     Route::get('/sales/{sale}/returns', [SaleController::class, 'returns']);
     Route::post('/sales/{sale}/returns', [SaleController::class, 'storeReturn']);
