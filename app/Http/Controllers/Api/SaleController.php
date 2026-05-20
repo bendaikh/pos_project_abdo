@@ -328,6 +328,7 @@ class SaleController extends Controller
             'delivery_address' => 'nullable|string',
             'order_status' => 'nullable|in:'.implode(',', self::ORDER_STATUSES),
             'notes' => 'nullable|string',
+            'user_id' => 'nullable|exists:users,id',
         ]);
 
         return DB::transaction(function () use ($sale, $validated) {
@@ -373,6 +374,9 @@ class SaleController extends Controller
                 'delivery_address' => $validated['delivery_address'] ?? $sale->delivery_address,
                 'order_status' => $validated['order_status'] ?? $sale->order_status,
                 'notes' => $validated['notes'] ?? $sale->notes,
+                'user_id' => array_key_exists('user_id', $validated)
+                    ? $validated['user_id']
+                    : $sale->user_id,
             ]);
 
             if (isset($validated['items'])) {

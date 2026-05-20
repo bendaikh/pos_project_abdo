@@ -209,12 +209,12 @@
                             >{{ cartStore.items.length }}</span>
                         </div>
 
-                        <!-- Right: total + state indicator -->
+                        <!-- Right: actions menu + state indicator -->
                         <div class="flex items-center gap-2">
-                            <span
-                                class="text-sm font-bold transition-colors duration-300"
-                                :class="isCartExpanded ? 'text-green-600' : 'text-white'"
-                            >{{ formatCurrency(cartStore.total) }}</span>
+                            <TicketActionsMenu
+                                :expanded="isCartExpanded"
+                                @action="handleTicketMenuAction"
+                            />
 
                             <!-- Chevron: up when collapsed, double-up when half, X when fullscreen -->
                             <div
@@ -849,6 +849,13 @@
             </div>
         </div>
 
+        <AssignUserModal
+            v-if="showAssignUserModal"
+            :current-user-id="cartStore.assignedUserId"
+            @close="showAssignUserModal = false"
+            @assigned="handleUserAssigned"
+        />
+
         <DeliveryAgentPickerModal
             v-if="showDeliveryAgentPicker"
             :agents="visibleDeliveryAgents"
@@ -990,6 +997,9 @@ import OptionsModal from '../components/pos/OptionsModal.vue'
 import SaveTicketModal from '../components/pos/SaveTicketModal.vue'
 import OpenTicketsModal from '../components/pos/OpenTicketsModal.vue'
 import DeliveryAgentPickerModal from '../components/pos/DeliveryAgentPickerModal.vue'
+import TicketActionsMenu from '../components/pos/TicketActionsMenu.vue'
+import AssignUserModal from '../components/pos/AssignUserModal.vue'
+import { buildSaleFromCart, openPrintWindowSafely, printTicketDocument } from '../utils/ticketPrint'
 import SelectOptionsModal from '../components/pos/SelectOptionsModal.vue'
 import SelectVariantsModal from '../components/pos/SelectVariantsModal.vue'
 import OptionFormContent from '../components/forms/OptionFormContent.vue'
@@ -1023,6 +1033,7 @@ const showSaveTicketModal = ref(false)
 const showOpenTicketsModal = ref(false)
 const showCustomerSelector = ref(false)
 const showDeliveryAgentPicker = ref(false)
+const showAssignUserModal = ref(false)
 const showNotesModal = ref(false)
 const showDiscountModal = ref(false)
 const showTotalDetailsModal = ref(false)
@@ -2661,6 +2672,122 @@ function applyTotalDetails({ discountIds = [], taxIds = [], comment = '' } = {})
 function resetCart() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser le ticket?')) {
         clearActiveTicketSelection()
+    }
+}
+
+function getTicketPrintMeta() {
+    return {
+        ticket_name: loadedTicketDetails.value?.ticket_name || activeSavedTicket.value?.ticket_name || 'Ticket',
+        ticket_group: loadedTicketDetails.value?.ticket_group || activeSavedTicket.value?.ticket_group || null,
+        order_number: activeSavedTicket.value?.order_number || null,
+        reference: activeSavedTicket.value?.reference || null,
+    }
+}
+
+function handleClearTicketArticles() {
+    if (!cartStore.items.length) {
+        alert('Le ticket est déjà vide.')
+        return
+    }
+
+    if (!confirm('Effacer tous les articles du ticket ?')) {
+        return
+    }
+
+    cartStore.clearItems()
+}
+
+async function handlePrintAddition() {
+    if (!cartStore.items.length) {
+        alert('Ajoutez des articles avant d\'imprimer l\'addition.')
+        return
+    }
+
+    const sale = buildSaleFromCart(cartStore, getTicketPrintMeta())
+    const printWindow = openPrintWindowSafely()
+    printTicketDocument(sale, {
+        mode: 'addition',
+        settingsStore,
+        customListsStore,
+        printTargetWindow: printWindow,
+    })
+}
+
+async function handleReprintKitchen() {
+    if (!cartStore.items.length) {
+        alert('Ajoutez des articles avant de réimprimer la cuisine.')
+        return
+    }
+
+    const sale = buildSaleFromCart(cartStore, getTicketPrintMeta())
+    const printWindow = openPrintWindowSafely()
+    printTicketDocument(sale, {
+        mode: 'kitchen',
+        settingsStore,
+        customListsStore,
+        printTargetWindow: printWindow,
+    })
+}
+
+function handleMoveTable() {
+    if (!cartStore.items.length) {
+        alert('Ajoutez des articles avant de déplacer le ticket vers une autre table.')
+        return
+    }
+
+    cartStore.setNotes(ticketNotes.value)
+    showSaveTicketModal.value = true
+    fetchSavedTickets()
+}
+
+function handleAssignUser() {
+    showAssignUserModal.value = true
+}
+
+async function handleUserAssigned({ user_id: userId, user_name: userName }) {
+    cartStore.setAssignedUser({ user_id: userId, name: userName })
+    showAssignUserModal.value = false
+
+    if (cartStore.currentSaleId) {
+        try {
+            await salesApi.update(cartStore.currentSaleId, { user_id: userId })
+            alert(`Ticket affecté à ${userName}.`)
+        } catch (error) {
+            console.error('Failed to assign user:', error)
+            alert(error.response?.data?.message || "Impossible d'affecter l'utilisateur.")
+        }
+        return
+    }
+
+    alert(`Utilisateur affecté: ${userName}.`)
+}
+
+function handleTicketHistory() {
+    router.push({ name: 'historique-ticket' })
+}
+
+function handleTicketMenuAction(actionId) {
+    switch (actionId) {
+    case 'clear':
+        handleClearTicketArticles()
+        break
+    case 'print-addition':
+        handlePrintAddition()
+        break
+    case 'reprint-kitchen':
+        handleReprintKitchen()
+        break
+    case 'move-table':
+        handleMoveTable()
+        break
+    case 'assign-user':
+        handleAssignUser()
+        break
+    case 'history':
+        handleTicketHistory()
+        break
+    default:
+        break
     }
 }
 

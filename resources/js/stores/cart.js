@@ -21,6 +21,8 @@ export const useCartStore = defineStore('cart', () => {
     const deliveryAgentLabel = ref('')
     const notes = ref('')
     const currentSaleId = ref(null)
+    const assignedUserId = ref(null)
+    const assignedUserName = ref('')
 
     const settingsStore = useSettingsStore()
 
@@ -316,6 +318,17 @@ export const useCartStore = defineStore('cart', () => {
             || ''
         notes.value = sale?.notes || ''
         currentSaleId.value = sale?.id || null
+        assignedUserId.value = sale?.user_id || sale?.user?.id || null
+        assignedUserName.value = sale?.user?.name || ''
+    }
+
+    function clearItems() {
+        items.value = []
+    }
+
+    function setAssignedUser(user = null) {
+        assignedUserId.value = user?.id || user?.user_id || null
+        assignedUserName.value = user?.name || user?.user_name || ''
     }
 
     function clearCart() {
@@ -331,6 +344,8 @@ export const useCartStore = defineStore('cart', () => {
         deliveryAgentLabel.value = ''
         notes.value = ''
         currentSaleId.value = null
+        assignedUserId.value = null
+        assignedUserName.value = ''
     }
 
     function getCartData() {
@@ -382,6 +397,8 @@ export const useCartStore = defineStore('cart', () => {
         deliveryAgentLabel,
         notes,
         currentSaleId,
+        assignedUserId,
+        assignedUserName,
         itemCount,
         subtotal,
         itemDiscountsTotal,
@@ -403,6 +420,8 @@ export const useCartStore = defineStore('cart', () => {
         setNotes,
         setSaleId,
         hydrateFromSale,
+        clearItems,
+        setAssignedUser,
         clearCart,
         getCartData
     }
