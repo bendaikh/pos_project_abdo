@@ -122,6 +122,7 @@ export const salesApi = {
     journal: (id) => api.get(`/sales/${id}/journal`),
     returns: (id) => api.get(`/sales/${id}/returns`),
     addReturn: (id, data) => api.post(`/sales/${id}/returns`, data),
+    refund: (id, data) => api.post(`/sales/${id}/refund`, data),
     complete: (id) => api.post(`/sales/${id}/complete`),
     cancel: (id, data = {}) => api.post(`/sales/${id}/cancel`, data),
     delete: (id) => api.delete(`/sales/${id}`),
@@ -222,6 +223,15 @@ export const settingsApi = {
     all: () => api.get('/settings'),
     byGroup: (group) => api.get(`/settings/${group}`),
     update: (settings) => api.put('/settings', { settings }),
+}
+
+export const printersApi = {
+    list: (params = {}) => api.get('/printers', { params }),
+    get: (id) => api.get(`/printers/${id}`),
+    create: (data) => api.post('/printers', data),
+    update: (id, data) => api.put(`/printers/${id}`, data),
+    delete: (id) => api.delete(`/printers/${id}`),
+    defaults: () => api.get('/printers/defaults'),
 }
 
 export const customListsApi = {

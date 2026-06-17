@@ -451,6 +451,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
     ArrowDownTrayIcon,
     ArrowPathIcon,
@@ -471,6 +472,7 @@ import { salesApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 
 const settingsStore = useSettingsStore()
+const router = useRouter()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
 const loading = ref(false)
@@ -691,6 +693,7 @@ function formatLogMessage(log) {
         statut_commande_modifie: 'Statut modifié',
         livraison: 'Commande livrée',
         retour: 'Retour enregistré',
+        remboursement: 'Remboursement enregistré',
         paiement: 'Paiement enregistré',
     }
     if (actionMap[log.action]) return actionMap[log.action]
@@ -769,7 +772,8 @@ function handleReprint() {
 
 function handleRefund() {
     showActionMenu.value = false
-    alert('Le remboursement sera disponible prochainement.')
+    if (!selectedTicket.value) return
+    router.push({ name: 'historique-ticket.refund', params: { id: selectedTicket.value.id } })
 }
 
 function exportTickets() {

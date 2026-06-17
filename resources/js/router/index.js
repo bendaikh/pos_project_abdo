@@ -29,6 +29,8 @@ import EmployeeDetail from '../views/employees/EmployeeDetail.vue'
 import PayrollList from '../views/employees/PayrollList.vue'
 import ReportsView from '../views/reports/ReportsView.vue'
 import SettingsView from '../views/settings/SettingsView.vue'
+import PrintersList from '../views/settings/PrintersList.vue'
+import PrinterForm from '../views/settings/PrinterForm.vue'
 
 // VENTE Views
 import DevisList from '../views/vente/DevisList.vue'
@@ -52,6 +54,7 @@ import JournalCaisseList from '../views/finance/JournalCaisseList.vue'
 import DepensesList from '../views/finance/DepensesList.vue'
 import BilanView from '../views/finance/BilanView.vue'
 import HistoriqueTicketList from '../views/finance/HistoriqueTicketList.vue'
+import TicketRefundView from '../views/finance/TicketRefundView.vue'
 
 // FOURNISSEURS Views
 import FournisseursList from '../views/fournisseurs/FournisseursList.vue'
@@ -216,6 +219,21 @@ const routes = [
                 name: 'settings',
                 component: SettingsView
             },
+            {
+                path: 'settings/imprimantes',
+                name: 'settings.printers',
+                component: PrintersList
+            },
+            {
+                path: 'settings/imprimantes/create',
+                name: 'settings.printers.create',
+                component: PrinterForm
+            },
+            {
+                path: 'settings/imprimantes/:id/edit',
+                name: 'settings.printers.edit',
+                component: PrinterForm
+            },
             // VENTE Routes
             {
                 path: 'devis',
@@ -308,6 +326,11 @@ const routes = [
                 path: 'historique-ticket',
                 name: 'historique-ticket',
                 component: HistoriqueTicketList
+            },
+            {
+                path: 'historique-ticket/:id/rembourser',
+                name: 'historique-ticket.refund',
+                component: TicketRefundView
             },
             // FOURNISSEURS Routes
             {

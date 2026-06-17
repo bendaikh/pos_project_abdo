@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\OptionVariantController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PaymentCollectionController;
 use App\Http\Controllers\Api\PayrollController;
+use App\Http\Controllers\Api\PrinterController;
 use App\Http\Controllers\Api\ProductionEntryController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
@@ -76,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales/{sale}/journal', [SaleController::class, 'journal']);
     Route::get('/sales/{sale}/returns', [SaleController::class, 'returns']);
     Route::post('/sales/{sale}/returns', [SaleController::class, 'storeReturn']);
+    Route::post('/sales/{sale}/refund', [SaleController::class, 'storeRefund']);
     Route::post('/sales/{sale}/status', [SaleController::class, 'updateOrderStatus']);
     Route::post('/sales/{sale}/complete', [SaleController::class, 'complete']);
     Route::post('/sales/{sale}/cancel', [SaleController::class, 'cancel']);
@@ -138,6 +140,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/settings', [SettingController::class, 'index']);
     Route::get('/settings/{group}', [SettingController::class, 'byGroup']);
     Route::put('/settings', [SettingController::class, 'update']);
+
+    // Printers
+    Route::get('/printers/defaults', [PrinterController::class, 'defaults']);
+    Route::apiResource('printers', PrinterController::class);
 
     // Custom Lists
     Route::get('/custom-lists', [CustomListController::class, 'index']);

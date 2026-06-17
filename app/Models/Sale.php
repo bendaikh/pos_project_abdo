@@ -145,6 +145,11 @@ class Sale extends Model
         return $this->hasMany(SaleItemReturn::class);
     }
 
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(SaleRefund::class);
+    }
+
     public function calculateTotals(): void
     {
         $this->subtotal = $this->items->sum('total');

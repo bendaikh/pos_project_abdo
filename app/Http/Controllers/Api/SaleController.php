@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\Payment;
 use App\Models\SaleItemReturn;
 use App\Models\SaleLog;
+use App\Models\SaleRefund;
 use App\Models\Setting;
 use App\Models\StockMovement;
 use App\Services\CustomListService;
@@ -556,6 +558,146 @@ class SaleController extends Controller
                 'returns' => $loadedReturns,
                 'sale' => $this->paymentWorkflow->decorateSale(
                     $sale->fresh()->load(['customer', 'items.article', 'payments', 'logs.user', 'returns.article'])
+                ),
+            ], 201);
+        });
+    }
+
+    public function storeRefund(Request $request, Sale $sale): JsonResponse
+    {
+        if ($sale->status !== 'completed') {
+            return response()->json(['message' => 'Seuls les tickets enregistrés peuvent être remboursés'], 422);
+        }
+
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.sale_item_id' => 'required|exists:sale_items,id',
+            'items.*.quantity' => 'required|numeric|min:0.001',
+            'payment_method' => 'required|in:cash,card,mobile,credit',
+            'reason' => 'nullable|string|max:100',
+            'note' => 'nullable|string|max:500',
+            'reintegrate_stock' => 'boolean',
+        ]);
+
+        return DB::transaction(function () use ($sale, $validated) {
+            $sale->load(['items.article', 'returns', 'payments']);
+            $reintegrateStock = (bool) ($validated['reintegrate_stock'] ?? true);
+            $refundSubtotal = 0.0;
+            $createdReturns = [];
+
+            foreach ($validated['items'] as $line) {
+                /** @var SaleItem|null $saleItem */
+                $saleItem = $sale->items->firstWhere('id', $line['sale_item_id']);
+
+                if (! $saleItem || (int) $saleItem->sale_id !== (int) $sale->id) {
+                    return response()->json(['message' => 'Article de ticket invalide'], 422);
+                }
+
+                $alreadyReturned = (float) $sale->returns
+                    ->where('sale_item_id', $saleItem->id)
+                    ->sum('quantity');
+
+                $remainingReturnable = (float) $saleItem->quantity - $alreadyReturned;
+                $returnQty = (float) $line['quantity'];
+
+                if ($returnQty > $remainingReturnable) {
+                    return response()->json([
+                        'message' => "Quantité remboursée invalide pour {$saleItem->article_name}",
+                    ], 422);
+                }
+
+                $lineSubtotal = ((float) $saleItem->total / max((float) $saleItem->quantity, 0.001)) * $returnQty;
+                $refundSubtotal += $lineSubtotal;
+
+                $return = SaleItemReturn::create([
+                    'sale_id' => $sale->id,
+                    'sale_item_id' => $saleItem->id,
+                    'article_id' => $saleItem->article_id,
+                    'user_id' => auth()->id(),
+                    'quantity' => $returnQty,
+                    'condition' => 'bon_etat',
+                    'reintegrate_stock' => $reintegrateStock,
+                    'note' => $validated['note'] ?? null,
+                ]);
+
+                if (
+                    $reintegrateStock
+                    && $saleItem->article
+                    && $saleItem->article->manage_stock
+                ) {
+                    StockMovement::record(
+                        $saleItem->article,
+                        'return',
+                        max(1, (int) round($returnQty)),
+                        'Remboursement ticket #'.($sale->order_number ?? $sale->reference),
+                        auth()->id(),
+                        $sale->id
+                    );
+                }
+
+                $createdReturns[] = $return;
+            }
+
+            $taxRate = (float) ($sale->tax_rate ?? 0);
+            $refundTax = round($refundSubtotal * ($taxRate / 100), 2);
+            $refundTotal = round($refundSubtotal + $refundTax, 2);
+
+            $paymentMethod = $this->paymentWorkflow->normalizePaymentType($validated['payment_method']);
+
+            $refund = SaleRefund::create([
+                'sale_id' => $sale->id,
+                'user_id' => auth()->id(),
+                'payment_method' => $paymentMethod,
+                'reason' => $validated['reason'] ?? null,
+                'note' => $validated['note'] ?? null,
+                'subtotal' => round($refundSubtotal, 2),
+                'tax_amount' => $refundTax,
+                'total_amount' => $refundTotal,
+            ]);
+
+            Payment::create(Payment::persistable([
+                'sale_id' => $sale->id,
+                'customer_id' => $sale->customer_id,
+                'payment_type' => $paymentMethod,
+                'amount' => -$refundTotal,
+                'received_amount' => $refundTotal,
+                'payment_status' => 'completed',
+                'paid_at' => now(),
+                'confirmed_at' => now(),
+                'created_by' => auth()->id(),
+                'validated_by' => auth()->id(),
+                'notes' => '[REFUND] Remboursement ticket - '.($validated['reason'] ?? 'sans motif'),
+            ]));
+
+            $sale->refresh()->load('returns');
+            $fullyRefunded = $sale->items->every(function (SaleItem $item) use ($sale) {
+                $returned = (float) $sale->returns->where('sale_item_id', $item->id)->sum('quantity');
+
+                return $returned >= (float) $item->quantity;
+            });
+
+            $sale->update([
+                'order_status' => $fullyRefunded ? 'retournee' : $sale->order_status,
+                'status' => $fullyRefunded ? 'refunded' : 'completed',
+            ]);
+
+            $logComment = 'Remboursement de '.number_format($refundTotal, 2, ',', ' ').' DH via '.$paymentMethod;
+            if (! empty($validated['reason'])) {
+                $logComment .= ' - '.$validated['reason'];
+            }
+            if (! empty($validated['note'])) {
+                $logComment .= ' : '.$validated['note'];
+            }
+
+            $this->addLog($sale, 'remboursement', $fullyRefunded ? 'refunded' : 'completed', $logComment);
+
+            return response()->json([
+                'refund' => $refund->load('user'),
+                'returns' => SaleItemReturn::with(['article', 'user', 'saleItem'])
+                    ->whereIn('id', collect($createdReturns)->pluck('id'))
+                    ->get(),
+                'sale' => $this->paymentWorkflow->decorateSale(
+                    $sale->fresh()->load(['customer', 'items.article', 'payments', 'logs.user', 'returns.article', 'refunds'])
                 ),
             ], 201);
         });

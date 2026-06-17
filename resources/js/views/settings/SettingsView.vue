@@ -64,6 +64,20 @@
                         <ComputerDesktopIcon class="w-5 h-5 mr-2 text-primary-500" />
                         Matériel
                     </h2>
+
+                    <div class="bg-primary-50 border border-primary-100 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                            <p class="font-medium text-gray-900">Gestion des imprimantes</p>
+                            <p class="text-sm text-gray-600 mt-1">Configurez vos imprimantes ticket client et cuisine (connexion, contenu, catégories).</p>
+                        </div>
+                        <router-link
+                            :to="{ name: 'settings.printers' }"
+                            class="inline-flex items-center justify-center px-4 py-2 bg-primary-500 text-gray-900 rounded-lg hover:bg-primary-600 font-medium whitespace-nowrap"
+                        >
+                            Gérer les imprimantes
+                        </router-link>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Imprimante</label>
@@ -1422,6 +1436,7 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '../../api'
 import { customListsApi, settingsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
@@ -1446,6 +1461,7 @@ import {
 
 const settingsStore = useSettingsStore()
 const customListsStore = useCustomListsStore()
+const route = useRoute()
 const saving = ref(false)
 const activeTab = ref('general')
 const savingCustomListTab = ref('')
@@ -3002,6 +3018,9 @@ async function saveIncidentAssignments() {
 }
 
 onMounted(async () => {
+    if (route.query.tab && typeof route.query.tab === 'string') {
+        activeTab.value = route.query.tab
+    }
     await Promise.all([
         loadSettings(),
         loadCustomLists(),
