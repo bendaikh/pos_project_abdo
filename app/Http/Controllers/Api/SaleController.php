@@ -573,7 +573,14 @@ class SaleController extends Controller
             'items' => 'required|array|min:1',
             'items.*.sale_item_id' => 'required|exists:sale_items,id',
             'items.*.quantity' => 'required|numeric|min:0.001',
-            'payment_method' => 'required|in:cash,card,mobile,credit',
+            'payment_method' => 'required|in:cash,card,mobile,credit,cheque,check,virement,other,simple_transfer,instant_transfer',
+            'transfer_mode' => 'nullable|in:simple,instant',
+            'transaction_number' => 'nullable|string|max:255',
+            'piece_number' => 'nullable|string|max:255',
+            'issue_date' => 'nullable|date',
+            'due_date' => 'nullable|date',
+            'bank_name' => 'nullable|string|max:255',
+            'payment_notes' => 'nullable|string',
             'reason' => 'nullable|string|max:100',
             'note' => 'nullable|string|max:500',
             'reintegrate_stock' => 'boolean',
@@ -643,6 +650,21 @@ class SaleController extends Controller
             $refundTotal = round($refundSubtotal + $refundTax, 2);
 
             $paymentMethod = $this->paymentWorkflow->normalizePaymentType($validated['payment_method']);
+            $transferMode = $this->paymentWorkflow->resolveTransferMode(
+                $paymentMethod,
+                $validated['transfer_mode'] ?? null,
+                $validated['payment_notes'] ?? null
+            );
+
+            $paymentNotes = $validated['payment_notes'] ?? null;
+            if ($paymentMethod === 'virement' && $transferMode) {
+                $modeTag = $transferMode === 'instant' ? '[VIREMENT_INSTANT]' : '[VIREMENT_SIMPLE]';
+                $paymentNotes = trim($modeTag.' '.($paymentNotes ?? ''));
+            }
+
+            $refundReason = $validated['reason'] ?? 'sans motif';
+            $refundPrefix = '[REFUND] Remboursement ticket - '.$refundReason;
+            $paymentNotes = $paymentNotes ? $refundPrefix.' '.$paymentNotes : $refundPrefix;
 
             $refund = SaleRefund::create([
                 'sale_id' => $sale->id,
@@ -659,14 +681,23 @@ class SaleController extends Controller
                 'sale_id' => $sale->id,
                 'customer_id' => $sale->customer_id,
                 'payment_type' => $paymentMethod,
+                'transfer_mode' => $transferMode,
                 'amount' => -$refundTotal,
                 'received_amount' => $refundTotal,
+                'reference' => $validated['transaction_number']
+                    ?? $validated['piece_number']
+                    ?? null,
+                'transaction_number' => $validated['transaction_number'] ?? null,
+                'piece_number' => $validated['piece_number'] ?? null,
+                'issue_date' => $validated['issue_date'] ?? null,
+                'due_date' => $validated['due_date'] ?? null,
+                'bank_name' => $validated['bank_name'] ?? null,
                 'payment_status' => 'completed',
                 'paid_at' => now(),
                 'confirmed_at' => now(),
                 'created_by' => auth()->id(),
                 'validated_by' => auth()->id(),
-                'notes' => '[REFUND] Remboursement ticket - '.($validated['reason'] ?? 'sans motif'),
+                'notes' => $paymentNotes,
             ]));
 
             $sale->refresh()->load('returns');

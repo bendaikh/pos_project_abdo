@@ -152,20 +152,110 @@
 
                         <div>
                             <p class="text-sm font-medium text-gray-700 mb-2">Mode de remboursement</p>
-                            <div class="grid grid-cols-4 gap-2">
+                            <div v-if="!paymentMethods.length" class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                                Aucun mode de paiement configuré. Ajoutez-en dans Paramètres &gt; Listes personnalisées &gt; Mode de paiement.
+                            </div>
+                            <div v-else class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                 <button
                                     v-for="method in paymentMethods"
-                                    :key="method.value"
+                                    :key="method.id"
                                     type="button"
-                                    class="flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition"
-                                    :class="refundForm.payment_method === method.value
-                                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                                        : 'border-gray-200 hover:border-gray-300 text-gray-600'"
-                                    @click="refundForm.payment_method = method.value"
+                                    class="w-full rounded-[16px] border px-3 py-3 text-left transition-all duration-150"
+                                    :class="selectedMethodId === method.id
+                                        ? 'border-sky-300 bg-sky-50 shadow-sm ring-2 ring-sky-100'
+                                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
+                                    @click="selectPaymentMethod(method)"
                                 >
-                                    <component :is="method.icon" class="w-6 h-6" />
-                                    <span class="text-xs font-medium">{{ method.label }}</span>
+                                    <div class="flex items-start gap-3">
+                                        <div
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
+                                            :class="selectedMethodId === method.id ? 'bg-white text-sky-700' : 'bg-gray-100 text-gray-700'"
+                                        >
+                                            {{ method.icon }}
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-sm font-semibold text-gray-900">{{ method.label }}</p>
+                                            <p class="mt-1 text-[11px] font-medium text-gray-500">{{ paymentTimingLabel(method) }}</p>
+                                            <p class="mt-1 hidden text-xs text-gray-400 sm:block">{{ method.description }}</p>
+                                        </div>
+                                    </div>
                                 </button>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedMethod" class="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-4">
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg shadow-sm">
+                                    {{ selectedMethod.icon }}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">{{ selectedMethod.label }}</p>
+                                    <p class="text-xs text-gray-500">{{ selectedMethod.description }}</p>
+                                </div>
+                            </div>
+
+                            <div v-if="hasVisibleExtraFields(selectedMethod)" class="rounded-xl border border-gray-200 bg-white p-4">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Informations du remboursement</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div v-if="selectedMethod.show_transaction_number">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ fieldLabels.transactionLabel }} *</label>
+                                        <input
+                                            v-model="paymentForm.transaction_number"
+                                            type="text"
+                                            :placeholder="fieldLabels.transactionPlaceholder"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-sky-300 focus:ring-2 focus:ring-sky-100 outline-none"
+                                        >
+                                    </div>
+                                    <div v-if="selectedMethod.show_piece_number">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ fieldLabels.pieceLabel }} *</label>
+                                        <input
+                                            v-model="paymentForm.piece_number"
+                                            type="text"
+                                            :placeholder="fieldLabels.piecePlaceholder"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-sky-300 focus:ring-2 focus:ring-sky-100 outline-none"
+                                        >
+                                    </div>
+                                    <div v-if="selectedMethod.show_issue_date">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Date d'émission *</label>
+                                        <input
+                                            v-model="paymentForm.issue_date"
+                                            type="date"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-sky-300 focus:ring-2 focus:ring-sky-100 outline-none"
+                                        >
+                                    </div>
+                                    <div v-if="selectedMethod.show_due_date">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Date d'échéance *</label>
+                                        <input
+                                            v-model="paymentForm.due_date"
+                                            type="date"
+                                            :min="paymentForm.issue_date || undefined"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-sky-300 focus:ring-2 focus:ring-sky-100 outline-none"
+                                        >
+                                    </div>
+                                    <div v-if="selectedMethod.show_bank_name" class="sm:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ fieldLabels.bankLabel }} *</label>
+                                        <input
+                                            v-model="paymentForm.bank_name"
+                                            type="text"
+                                            :placeholder="fieldLabels.bankPlaceholder"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-sky-300 focus:ring-2 focus:ring-sky-100 outline-none"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="selectedMethod.show_notes" class="rounded-xl border border-gray-200 bg-white p-4">
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Note</label>
+                                <textarea
+                                    v-model="paymentForm.notes"
+                                    placeholder="Remarques..."
+                                    rows="3"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100 outline-none"
+                                ></textarea>
+                            </div>
+
+                            <div v-if="selectedMethod.paymentTiming === 'deferred'" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                Ce mode de paiement est différé et sera suivi dans le module Encaissement.
                             </div>
                         </div>
 
@@ -178,11 +268,11 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Note</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
                                 <input
                                     v-model="refundForm.note"
                                     type="text"
-                                    placeholder="Commentaire optionnel"
+                                    placeholder="Commentaire optionnel sur le remboursement"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                 >
                             </div>
@@ -213,20 +303,29 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-    ArrowLeftIcon,
-    BanknotesIcon,
-    CheckIcon,
-    CreditCardIcon,
-    DevicePhoneMobileIcon,
-    TicketIcon,
-} from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, CheckIcon } from '@heroicons/vue/24/outline'
 import { salesApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
+import { useCustomListsStore, PAYMENT_MODE_LIST_NAME } from '../../stores/customLists'
+import {
+    encodePaymentModeLabel,
+    findMatchingPaymentMethod,
+    findPaymentMethodLabel,
+    getEmptyPaymentForm,
+    getPaymentFieldLabels,
+    hasVisibleExtraFields,
+    mapPaymentModeItem,
+    paymentTimingLabel,
+    prefillPaymentFormFromPayment,
+    resolveApiPaymentMethod,
+    resolveApiTransferMode,
+    validatePaymentMethodFields,
+} from '../../utils/paymentMethods'
 
 const route = useRoute()
 const router = useRouter()
 const settingsStore = useSettingsStore()
+const customListsStore = useCustomListsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 
 const loading = ref(true)
@@ -234,21 +333,27 @@ const submitting = ref(false)
 const ticket = ref(null)
 const existingReturns = ref([])
 const selectAll = ref(false)
+const selectedMethodId = ref(null)
 
 const articleLines = ref([])
 
 const refundForm = reactive({
-    payment_method: 'cash',
     reason: '',
     note: '',
 })
 
-const paymentMethods = [
-    { value: 'cash', label: 'Espèces', icon: BanknotesIcon },
-    { value: 'card', label: 'Carte', icon: CreditCardIcon },
-    { value: 'mobile', label: 'Mobile', icon: DevicePhoneMobileIcon },
-    { value: 'credit', label: 'Avoir client', icon: TicketIcon },
-]
+const paymentForm = reactive(getEmptyPaymentForm())
+const originalPayment = ref(null)
+
+const paymentMethods = computed(() => {
+    return customListsStore.activePaymentModes.map((item, index) => mapPaymentModeItem(item, index))
+})
+
+const selectedMethod = computed(() => {
+    return paymentMethods.value.find((method) => method.id === selectedMethodId.value) || null
+})
+
+const fieldLabels = computed(() => getPaymentFieldLabels(selectedMethod.value))
 
 const refundReasons = [
     { value: 'erreur_commande', label: 'Erreur de commande' },
@@ -284,7 +389,12 @@ const refundSummary = computed(() => {
     }
 })
 
-const canValidate = computed(() => refundedItems.value.length > 0 && refundSummary.value.total > 0)
+const canValidate = computed(() => {
+    return refundedItems.value.length > 0
+        && refundSummary.value.total > 0
+        && !!selectedMethod.value
+        && validatePaymentMethodFields(selectedMethod.value, paymentForm)
+})
 
 function formatTicketNumber(t) {
     if (!t) return ''
@@ -308,9 +418,57 @@ function formatLocation(t) {
 function formatPaymentMethod(t) {
     const payments = t?.payments || []
     if (!payments.length) return 'Non payé'
-    const type = payments.find((p) => Number(p.amount) > 0)?.payment_type || payments[0]?.payment_type
-    const map = { cash: 'Espèces', card: 'Carte', mobile: 'Mobile', credit: 'Avoir client', virement: 'Virement', cheque: 'Chèque' }
+
+    const payment = payments.find((p) => Number(p.amount) > 0) || payments[0]
+    const configuredLabel = findPaymentMethodLabel(
+        payment?.payment_type,
+        payment?.transfer_mode,
+        paymentMethods.value
+    )
+    if (configuredLabel) return configuredLabel
+
+    const type = payment?.payment_type
+    const map = {
+        cash: 'Espèces',
+        card: 'Carte',
+        mobile: 'Mobile',
+        credit: 'Avoir client',
+        virement: 'Virement',
+        cheque: 'Chèque',
+        other: 'Autre',
+    }
     return map[type] || type || 'Espèces'
+}
+
+function selectPaymentMethod(method) {
+    selectedMethodId.value = method.id
+    Object.assign(paymentForm, getEmptyPaymentForm())
+
+    if (originalPayment.value && findMatchingPaymentMethod(originalPayment.value, [method])) {
+        Object.assign(paymentForm, prefillPaymentFormFromPayment(originalPayment.value, method))
+    }
+}
+
+function selectDefaultPaymentMethod(sale) {
+    if (!paymentMethods.value.length) {
+        selectedMethodId.value = null
+        Object.assign(paymentForm, getEmptyPaymentForm())
+        return
+    }
+
+    originalPayment.value = sale?.payments?.find((p) => Number(p.amount) > 0) || sale?.payments?.[0] || null
+    const matchedMethod = findMatchingPaymentMethod(originalPayment.value, paymentMethods.value)
+    if (matchedMethod) {
+        selectPaymentMethod(matchedMethod)
+        return
+    }
+
+    const configuredDefault = paymentMethods.value.find((method) => method.isDefault)
+    const cashMethod = paymentMethods.value.find((method) => method.paymentType === 'cash')
+    const fallback = configuredDefault || cashMethod || paymentMethods.value[0]
+    if (fallback) {
+        selectPaymentMethod(fallback)
+    }
 }
 
 function alreadyReturnedQty(saleItemId) {
@@ -392,6 +550,7 @@ async function loadTicket() {
         const [{ data: sale }, { data: returns }] = await Promise.all([
             salesApi.get(id),
             salesApi.returns(id),
+            customListsStore.fetchList(PAYMENT_MODE_LIST_NAME, { force: true }),
         ])
         if (sale.status !== 'completed') {
             alert('Ce ticket ne peut pas être remboursé.')
@@ -401,10 +560,7 @@ async function loadTicket() {
         ticket.value = sale
         existingReturns.value = Array.isArray(returns) ? returns : []
         buildArticleLines()
-        const defaultPayment = sale.payments?.find((p) => Number(p.amount) > 0)?.payment_type
-        if (defaultPayment && ['cash', 'card', 'mobile', 'credit'].includes(defaultPayment)) {
-            refundForm.payment_method = defaultPayment
-        }
+        selectDefaultPaymentMethod(sale)
     } catch (error) {
         console.error(error)
         alert('Impossible de charger le ticket.')
@@ -415,16 +571,30 @@ async function loadTicket() {
 }
 
 async function validateRefund() {
-    if (!canValidate.value || !ticket.value) return
+    if (!canValidate.value || !ticket.value || !selectedMethod.value) return
     submitting.value = true
     try {
         const reasonLabel = refundReasons.find((r) => r.value === refundForm.reason)?.label
+        const transferMode = resolveApiTransferMode(selectedMethod.value)
+        const encodedPaymentNotes = encodePaymentModeLabel(
+            selectedMethod.value.label,
+            selectedMethod.value.paymentTiming,
+            paymentForm.notes
+        )
+
         await salesApi.refund(ticket.value.id, {
             items: refundedItems.value.map((item) => ({
                 sale_item_id: item.sale_item_id,
                 quantity: item.quantity,
             })),
-            payment_method: refundForm.payment_method,
+            payment_method: resolveApiPaymentMethod(selectedMethod.value),
+            transfer_mode: transferMode || undefined,
+            transaction_number: paymentForm.transaction_number.trim() || undefined,
+            piece_number: paymentForm.piece_number.trim() || undefined,
+            issue_date: paymentForm.issue_date || undefined,
+            due_date: paymentForm.due_date || undefined,
+            bank_name: paymentForm.bank_name.trim() || undefined,
+            payment_notes: encodedPaymentNotes || undefined,
             reason: reasonLabel || refundForm.reason || undefined,
             note: refundForm.note || undefined,
             reintegrate_stock: true,
