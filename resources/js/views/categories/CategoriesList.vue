@@ -213,7 +213,7 @@ const iconOptions = {
 const form = reactive({
     name: '',
     description: '',
-    color: '#ffb800',
+    color: '#06b6d4',
     icon: 'apple',
     photo: null,
 })

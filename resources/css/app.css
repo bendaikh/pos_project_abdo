@@ -7,59 +7,219 @@
 @source '../**/*.vue';
 
 @theme {
-    --font-sans: 'Figtree', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Sora', 'Figtree', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
-    
-    /* Primary - Bright Yellow from your design */
-    --color-primary-50: #fffbeb;
-    --color-primary-100: #fff4c6;
-    --color-primary-200: #ffe788;
-    --color-primary-300: #ffd84a;
-    --color-primary-400: #ffc620;
-    --color-primary-500: #ffb800;
-    --color-primary-600: #e69500;
-    --color-primary-700: #cc7a00;
-    --color-primary-800: #a35f00;
-    --color-primary-900: #7a4700;
-    --color-primary-950: #4d2d00;
 
-    /* Secondary - Cyan for accents */
-    --color-secondary-50: #ecfeff;
-    --color-secondary-100: #cffafe;
-    --color-secondary-200: #a5f3fc;
-    --color-secondary-300: #67e8f9;
-    --color-secondary-400: #22d3ee;
-    --color-secondary-500: #06b6d4;
-    --color-secondary-600: #0891b2;
-    --color-secondary-700: #0e7490;
-    --color-secondary-800: #155e75;
-    --color-secondary-900: #164e63;
-    --color-secondary-950: #083344;
+    /* Primary - Cyan gradient (login interface) */
+    --color-primary-50: #ecfeff;
+    --color-primary-100: #cffafe;
+    --color-primary-200: #a5f3fc;
+    --color-primary-300: #67e8f9;
+    --color-primary-400: #22d3ee;
+    --color-primary-500: #06b6d4;
+    --color-primary-600: #0891b2;
+    --color-primary-700: #0e7490;
+    --color-primary-800: #155e75;
+    --color-primary-900: #164e63;
+    --color-primary-950: #083344;
+
+    /* Secondary - Deep navy accents */
+    --color-secondary-50: #f8fafc;
+    --color-secondary-100: #f1f5f9;
+    --color-secondary-200: #e2e8f0;
+    --color-secondary-300: #cbd5e1;
+    --color-secondary-400: #94a3b8;
+    --color-secondary-500: #64748b;
+    --color-secondary-600: #475569;
+    --color-secondary-700: #334155;
+    --color-secondary-800: #1e293b;
+    --color-secondary-900: #0f172a;
+    --color-secondary-950: #020617;
 
     /* Backgrounds */
-    --color-bg-light: #f5f5f5;
+    --color-bg-light: #f0f9ff;
     --color-bg-card: #ffffff;
-    --color-bg-main: #fafafa;
-    
+    --color-bg-main: #f8fafc;
+
     /* Text colors */
-    --color-text-primary: #1f2937;
-    --color-text-secondary: #6b7280;
-    --color-text-muted: #9ca3af;
-    
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-text-muted: #94a3b8;
+
     /* Status colors */
     --color-success-light: #dcfce7;
     --color-success: #16a34a;
     --color-success-dark: #15803d;
-    
+
     --color-warning-light: #fff7ed;
     --color-warning: #f97316;
     --color-warning-dark: #ea580c;
-    
+
     --color-danger-light: #fef2f2;
     --color-danger: #ef4444;
     --color-danger-dark: #dc2626;
-    
-    --color-info-light: #eff6ff;
-    --color-info: #3b82f6;
-    --color-info-dark: #2563eb;
+
+    --color-info-light: #ecfeff;
+    --color-info: #06b6d4;
+    --color-info-dark: #0891b2;
+}
+
+@layer components {
+    .btn-primary {
+        @apply inline-flex items-center justify-center font-semibold text-slate-950 rounded-lg transition-all duration-200;
+        background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 50%, #0891b2 100%);
+        box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25);
+    }
+
+    .btn-primary:hover {
+        box-shadow: 0 6px 22px rgba(6, 182, 212, 0.35);
+        filter: brightness(1.03);
+    }
+
+    .surface-card {
+        @apply bg-white border border-slate-200/80 rounded-xl shadow-sm;
+    }
+
+    .text-gradient-primary {
+        background: linear-gradient(135deg, #ffffff 0%, #67e8f9 35%, #22d3ee 60%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .dashboard-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #164e63 45%, #0891b2 100%);
+    }
+
+    .stat-card {
+        @apply relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
+    }
+
+    .pos-header-gradient {
+        background: linear-gradient(135deg, #0f172a 0%, #155e75 40%, #0e7490 100%);
+        border-bottom: 1px solid rgba(34, 211, 238, 0.2);
+        box-shadow: 0 4px 24px rgba(6, 182, 212, 0.12);
+    }
+
+    .greenpos-green {
+        background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 45%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.25));
+    }
+
+    .greenpos-pos {
+        background: linear-gradient(135deg, #a5f3fc 0%, #22d3ee 35%, #06b6d4 65%, #0891b2 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.8)) drop-shadow(0 0 20px rgba(6, 182, 212, 0.4));
+        animation: greenpos-text-glow 3s ease-in-out infinite;
+    }
+
+    .greenpos-title--xs {
+        font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: 0.04em;
+    }
+
+    .pos-brand-icon {
+        background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
+        box-shadow: 0 4px 12px rgba(34, 211, 238, 0.35);
+    }
+
+    .btn-greenpos {
+        background: linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%);
+        border: 1px solid rgba(34, 211, 238, 0.45);
+        box-shadow: 0 4px 20px rgba(6, 182, 212, 0.25);
+        backdrop-filter: blur(8px);
+    }
+
+    .btn-greenpos:hover {
+        box-shadow: 0 6px 28px rgba(6, 182, 212, 0.4);
+        border-color: rgba(34, 211, 238, 0.65);
+    }
+
+    .feature-greenpos-brand {
+        font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1;
+    }
+
+    .btn-greenpos .greenpos-green,
+    .btn-greenpos .greenpos-pos,
+    .greenpos-title--xs .greenpos-green,
+    .greenpos-title--xs .greenpos-pos {
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: inline;
+    }
+
+    .btn-greenpos .greenpos-green,
+    .greenpos-title--xs .greenpos-green {
+        background-image: linear-gradient(180deg, #ffffff 0%, #e2e8f0 45%, #cbd5e1 100%);
+    }
+
+    .btn-greenpos .greenpos-pos,
+    .greenpos-title--xs .greenpos-pos {
+        background-image: linear-gradient(135deg, #a5f3fc 0%, #22d3ee 35%, #06b6d4 65%, #0891b2 100%);
+    }
+
+    .greenpos-mark {
+        font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: baseline;
+    }
+
+    .greenpos-mark .greenpos-green,
+    .greenpos-mark .greenpos-pos {
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: inline;
+    }
+
+    .greenpos-mark--xs { font-size: 0.625rem; }
+    .greenpos-mark--sm { font-size: 0.75rem; }
+    .greenpos-mark--md { font-size: 1rem; }
+    .greenpos-mark--lg { font-size: 1.35rem; }
+
+    .greenpos-icon-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #0f172a 0%, #164e63 100%);
+        border: 1px solid rgba(34, 211, 238, 0.35);
+        box-shadow: 0 0 16px rgba(34, 211, 238, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .greenpos-icon-box--nav {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+    }
+
+    .greenpos-icon-box--header {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+    }
+}
+
+@keyframes greenpos-text-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6)) drop-shadow(0 0 16px rgba(6, 182, 212, 0.3));
+    }
+    50% {
+        filter: drop-shadow(0 0 14px rgba(34, 211, 238, 1)) drop-shadow(0 0 28px rgba(6, 182, 212, 0.55));
+    }
 }

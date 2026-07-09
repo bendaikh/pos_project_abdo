@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen bg-[#fafafa] flex">
+    <div :class="rootLayoutClass">
         <!-- POS Overlay Sidebar -->
         <div
             v-if="isPosRoute && posSidebarOpen"
@@ -27,14 +27,14 @@
         
         <!-- Main Content -->
         <div
-            class="flex-1 flex flex-col min-w-0"
+            class="flex-1 flex flex-col min-w-0 min-h-0 h-full"
             :class="layoutOffsetClass"
         >
             <!-- Header -->
             <Header v-if="!isPosRoute" @toggle-sidebar="toggleSidebar" />
             
             <!-- Page Content -->
-            <main :class="isPosRoute ? 'flex-1 overflow-hidden' : 'flex-1 p-4 sm:p-6 overflow-auto min-w-0'">
+            <main :class="mainContentClass">
                 <router-view />
             </main>
         </div>
@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import Sidebar from './Sidebar.vue'
@@ -57,8 +57,25 @@ const uiStore = useUiStore()
 const { posSidebarOpen, appSidebarOpen } = storeToRefs(uiStore)
 const route = useRoute()
 const isPosRoute = computed(() => route.name === 'pos')
+const isDashboardRoute = computed(() => route.name === 'dashboard')
 const shouldShowAppSidebar = computed(() => {
     return appSidebarOpen.value
+})
+
+const contentInsetLeft = computed(() => {
+    if (isMobile.value || !appSidebarOpen.value) {
+        return 0
+    }
+    return sidebarCollapsed.value ? 80 : 256
+})
+
+provide('contentInsetLeft', contentInsetLeft)
+
+const rootLayoutClass = computed(() => {
+    if (isDashboardRoute.value) {
+        return 'h-screen bg-bg-main flex overflow-hidden'
+    }
+    return 'min-h-screen bg-bg-main flex'
 })
 const layoutOffsetClass = computed(() => {
     if (isMobile.value) {
@@ -71,6 +88,16 @@ const layoutOffsetClass = computed(() => {
         return 'ml-64'
     }
     return sidebarCollapsed.value ? 'ml-20' : 'ml-64'
+})
+
+const mainContentClass = computed(() => {
+    if (isPosRoute.value) {
+        return 'flex-1 overflow-hidden min-w-0'
+    }
+    if (isDashboardRoute.value) {
+        return 'flex-1 overflow-hidden min-w-0 min-h-0 h-full'
+    }
+    return 'flex-1 p-4 sm:p-6 overflow-auto min-w-0'
 })
 
 function toggleSidebar() {

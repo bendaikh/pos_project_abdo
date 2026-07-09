@@ -229,7 +229,7 @@ const monthlyData = ref([
 const depensesByCategory = ref([
     { name: 'Achats', amount: 45000, percentage: 55, color: 'bg-red-500' },
     { name: 'Loyer', amount: 15000, percentage: 18, color: 'bg-orange-500' },
-    { name: 'Salaires', amount: 12000, percentage: 15, color: 'bg-yellow-500' },
+    { name: 'Salaires', amount: 12000, percentage: 15, color: 'bg-primary-500' },
     { name: 'Utilities', amount: 5000, percentage: 6, color: 'bg-blue-500' },
     { name: 'Autres', amount: 5000, percentage: 6, color: 'bg-gray-500' },
 ])

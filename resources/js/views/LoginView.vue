@@ -172,7 +172,7 @@
 
                     <div class="mt-6 text-center space-y-2">
                         <p class="text-xs text-slate-500">
-                            Demo : superadmin@example.com / Admin@12345
+                            Demo : superadmin@example.com / password
                         </p>
                         <p v-if="!isOnline" class="text-xs text-orange-400/80 font-medium">
                             Mode hors ligne : connectez-vous une fois en ligne pour activer l'accès hors ligne
@@ -223,8 +223,8 @@ const authStore = useAuthStore()
 const offlineStore = useOfflineStore()
 
 const form = reactive({
-    email: '',
-    password: ''
+    email: 'superadmin@example.com',
+    password: 'password'
 })
 const error = ref('')
 const loading = ref(false)

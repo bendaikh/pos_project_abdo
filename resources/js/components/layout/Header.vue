@@ -36,8 +36,8 @@
                             {{ authStore.offlineGuestMode ? '🔒 Mode Hors ligne' : roleLabel }}
                         </p>
                     </div>
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="authStore.offlineGuestMode ? 'bg-orange-400' : 'bg-secondary-400'">
-                        <span class="text-white font-semibold text-sm">{{ userInitials }}</span>
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="authStore.offlineGuestMode ? 'bg-orange-400' : 'bg-primary-500'">
+                        <span class="font-semibold text-sm" :class="authStore.offlineGuestMode ? 'text-white' : 'text-slate-950'">{{ userInitials }}</span>
                     </div>
                 </button>
 

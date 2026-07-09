@@ -102,7 +102,7 @@
                                 type="text"
                                 placeholder="Scannez le code barre ici"
                                 @keyup.enter="focusNextField"
-                                class="w-full px-3 py-3 border border-yellow-300 rounded-2xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 font-mono h-12 mb-1"
+                                class="w-full px-3 py-3 border border-primary-300 rounded-2xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 font-mono h-12 mb-1"
                             >
                             <p class="text-xs text-gray-500">💡 Lecteur USB</p>
                         </div>

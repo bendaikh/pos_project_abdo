@@ -1,95 +1,60 @@
 <template>
-    <div class="space-y-6">
-        <!-- Page Header -->
-        <div>
-            <p class="text-gray-500">Bienvenue, voici le résumé de votre activité aujourd'hui.</p>
-        </div>
-
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Today's Sales -->
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div class="flex items-center justify-between">
-                    <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-                        <BanknotesIcon class="w-6 h-6 text-gray-900" />
+    <div class="dashboard-shell">
+        <div
+            ref="statsPanelRef"
+            class="dashboard-stats-panel"
+            :style="statsPanelStyle"
+        >
+            <div class="dashboard-stats-grid">
+                <div
+                    v-for="card in dashboardCards"
+                    :key="card.key"
+                    class="dashboard-glow-card"
+                    :class="card.theme"
+                >
+                    <div class="dashboard-glow-card__shine" aria-hidden="true"></div>
+                    <div class="relative z-10 flex items-center justify-between gap-2 min-w-0">
+                        <div class="dashboard-glow-card__icon">
+                            <component :is="card.icon" class="w-4 h-4" />
+                        </div>
+                        <span v-if="card.badge" class="dashboard-glow-card__badge">{{ card.badge }}</span>
                     </div>
-                    <span 
-                        v-if="stats.today_sales?.change_percent !== 0"
-                        class="text-sm font-medium px-2 py-1 rounded-full"
-                        :class="stats.today_sales?.change_percent > 0 ? 'bg-primary-100 text-gray-900' : 'bg-red-100 text-red-600'"
-                    >
-                        {{ stats.today_sales?.change_percent > 0 ? '+' : '' }}{{ stats.today_sales?.change_percent }}%
-                    </span>
-                </div>
-                <p class="mt-4 text-sm text-gray-500">Encaissements aujourd'hui</p>
-                <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(stats.today_sales?.amount || 0) }}</p>
-            </div>
-
-            <!-- Low Stock Alerts -->
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div class="flex items-center justify-between">
-                    <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <ExclamationTriangleIcon class="w-6 h-6 text-orange-600" />
+                    <div class="relative z-10 dashboard-glow-card__body">
+                        <p class="dashboard-glow-card__label">{{ card.label }}</p>
+                        <div class="dashboard-glow-card__value" :title="card.isCurrency ? formatCurrency(card.value) : String(card.value)">
+                            <template v-if="card.isCurrency">
+                                <span class="dashboard-glow-card__amount">{{ formatCardAmount(card.value) }}</span>
+                                <span class="dashboard-glow-card__currency">{{ currencySymbol }}</span>
+                            </template>
+                            <span v-else class="dashboard-glow-card__count">{{ formatCardCount(card.value) }}</span>
+                        </div>
                     </div>
-                    <span 
-                        class="text-sm font-medium px-2 py-1 rounded-full"
-                        :class="{
-                            'bg-red-100 text-red-600': stats.low_stock?.status === 'critical',
-                            'bg-orange-100 text-orange-600': stats.low_stock?.status === 'warning',
-                            'bg-primary-100 text-gray-900': stats.low_stock?.status === 'ok'
-                        }"
-                    >
-                        {{ stats.low_stock?.count || 0 }} articles
-                    </span>
                 </div>
-                <p class="mt-4 text-sm text-gray-500">Alertes Stock Bas</p>
-                <p class="text-2xl font-bold text-gray-900">
-                    {{ stats.low_stock?.status === 'critical' ? 'Alerte Critique' : (stats.low_stock?.status === 'warning' ? 'Attention' : 'OK') }}
-                </p>
-            </div>
-
-            <!-- Transactions -->
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div class="flex items-center justify-between">
-                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                        <ShoppingCartIcon class="w-6 h-6 text-blue-600" />
-                    </div>
-                    <span class="text-sm font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-600">
-                        {{ stats.transactions?.pending || 0 }} commandes
-                    </span>
-                </div>
-                <p class="mt-4 text-sm text-gray-500">Nombre de Transactions</p>
-                <p class="text-2xl font-bold text-gray-900">{{ stats.transactions?.total || 0 }} Total</p>
-            </div>
-
-            <!-- New Customers -->
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div class="flex items-center justify-between">
-                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <UsersIcon class="w-6 h-6 text-purple-600" />
-                    </div>
-                    <span class="text-sm font-medium px-2 py-1 rounded-full bg-primary-100 text-gray-900">
-                        Nouveaux
-                    </span>
-                </div>
-                <p class="mt-4 text-sm text-gray-500">Nouveaux Clients</p>
-                <p class="text-2xl font-bold text-gray-900">{{ stats.new_customers?.count || 0 }} Aujourd'hui</p>
             </div>
         </div>
 
+        <div
+            class="dashboard-content space-y-5"
+            :style="{ paddingTop: `${statsPanelHeight}px` }"
+        >
         <!-- Charts Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <!-- Sales Chart -->
-            <div class="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div class="lg:col-span-2 surface-card p-6">
                 <div class="flex items-center justify-between mb-6">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900">Tendances des Ventes</h3>
-                        <p class="text-sm text-gray-500">Semaine en cours vs semaine précédente</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary-50">
+                            <PresentationChartLineIcon class="w-5 h-5 text-primary-600" />
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-900">Tendances des Ventes</h3>
+                            <p class="text-sm text-slate-500">Semaine en cours vs semaine précédente</p>
+                        </div>
                     </div>
                     <select 
                         v-model="chartDays"
                         @change="fetchChartData"
-                        class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 bg-white"
                     >
                         <option :value="7">7 derniers jours</option>
                         <option :value="14">14 derniers jours</option>
@@ -102,37 +67,47 @@
             </div>
 
             <!-- Top Categories -->
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Catégories</h3>
-                <div class="space-y-4">
+            <div class="surface-card p-6">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-50">
+                        <TagIcon class="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900">Top Catégories</h3>
+                </div>
+                <div class="space-y-3">
                     <div 
                         v-for="category in topCategories" 
                         :key="category.id"
-                        class="flex items-center justify-between"
+                        class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors"
                     >
                         <div class="flex items-center space-x-3">
                             <div 
-                                class="w-10 h-10 rounded-lg flex items-center justify-center"
+                                class="w-10 h-10 rounded-xl flex items-center justify-center"
                                 :style="{ backgroundColor: category.color + '20' }"
                             >
                                 <span class="text-lg">{{ getCategoryIcon(category.icon) }}</span>
                             </div>
-                            <span class="text-sm font-medium text-gray-700">{{ category.name }}</span>
+                            <span class="text-sm font-medium text-slate-700">{{ category.name }}</span>
                         </div>
-                        <span class="text-sm font-semibold text-gray-900">{{ category.percentage }}%</span>
+                        <span class="text-sm font-bold text-primary-600">{{ category.percentage }}%</span>
                     </div>
                 </div>
-                <button class="w-full mt-4 py-2 text-sm font-medium text-gray-900 bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors">
+                <button class="btn-primary w-full mt-5 py-2.5 text-sm">
                     Voir tous les détails
                 </button>
             </div>
         </div>
 
         <!-- Recent Transactions -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-900">Transactions Récentes</h3>
-                <router-link to="/reports" class="px-4 py-2 text-sm font-medium text-gray-900 bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors">
+        <div class="surface-card overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-sky-50">
+                        <ReceiptPercentIcon class="w-5 h-5 text-sky-600" />
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900">Transactions Récentes</h3>
+                </div>
+                <router-link to="/reports" class="btn-primary px-4 py-2 text-sm">
                     Voir tout
                 </router-link>
             </div>
@@ -190,11 +165,12 @@
                 </table>
             </div>
         </div>
+        </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, inject, watch, nextTick } from 'vue'
 import { Line } from 'vue-chartjs'
 import {
     Chart as ChartJS,
@@ -210,12 +186,16 @@ import {
 import { dashboardApi } from '../api'
 import { useSettingsStore } from '../stores/settings'
 import {
-    BanknotesIcon,
-    ExclamationTriangleIcon,
-    ShoppingCartIcon,
-    UsersIcon,
+    RectangleStackIcon,
+    BoltIcon,
+    ClockIcon,
+    XCircleIcon,
+    BriefcaseIcon,
     UserIcon,
-    EyeIcon
+    EyeIcon,
+    PresentationChartLineIcon,
+    TagIcon,
+    ReceiptPercentIcon,
 } from '@heroicons/vue/24/outline'
 
 ChartJS.register(
@@ -231,6 +211,36 @@ ChartJS.register(
 
 const settingsStore = useSettingsStore()
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
+const currencySymbol = computed(() => settingsStore.currencySymbol)
+
+const contentInsetLeft = inject('contentInsetLeft', ref(0))
+const statsPanelRef = ref(null)
+const statsPanelHeight = ref(236)
+
+const statsPanelStyle = computed(() => ({
+    left: `${contentInsetLeft.value}px`,
+}))
+
+let statsPanelObserver = null
+
+function updateStatsPanelHeight() {
+    if (statsPanelRef.value) {
+        statsPanelHeight.value = statsPanelRef.value.offsetHeight
+    }
+}
+
+watch(contentInsetLeft, async () => {
+    await nextTick()
+    updateStatsPanelHeight()
+})
+
+function formatCardCount(value) {
+    return Number(value || 0).toLocaleString('fr-FR')
+}
+
+function formatCardAmount(value) {
+    return Number(value || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
 
 const stats = ref({})
 const chartDays = ref(7)
@@ -238,6 +248,74 @@ const chartData = ref(null)
 const topCategories = ref([])
 const recentSales = ref([])
 const loading = ref(true)
+
+const projectRevenueThemes = [
+  'dashboard-glow-card--project-a',
+  'dashboard-glow-card--project-b',
+  'dashboard-glow-card--project-c',
+  'dashboard-glow-card--project-d',
+]
+
+const dashboardCards = computed(() => {
+    const projects = stats.value.projects || {}
+    const revenues = stats.value.project_revenues || []
+
+    const summaryCards = [
+        {
+            key: 'total',
+            label: 'Nbrs Projets',
+            value: projects.total || 0,
+            icon: RectangleStackIcon,
+            theme: 'dashboard-glow-card--cyan',
+            badge: 'Total',
+            isCurrency: false,
+        },
+        {
+            key: 'active',
+            label: 'Projets Actifs',
+            value: projects.active || 0,
+            icon: BoltIcon,
+            theme: 'dashboard-glow-card--emerald',
+            badge: 'En cours',
+            isCurrency: false,
+        },
+        {
+            key: 'pending',
+            label: 'Projets En Attente',
+            value: projects.pending || 0,
+            icon: ClockIcon,
+            theme: 'dashboard-glow-card--amber',
+            badge: 'Attente',
+            isCurrency: false,
+        },
+        {
+            key: 'cancelled',
+            label: 'Projets Annulées',
+            value: projects.cancelled || 0,
+            icon: XCircleIcon,
+            theme: 'dashboard-glow-card--rose',
+            badge: 'Annulés',
+            isCurrency: false,
+        },
+    ]
+
+    const revenueCards = (revenues.length ? revenues : [
+        { name: 'Projet A', revenue: 0 },
+        { name: 'Projet B', revenue: 0 },
+        { name: 'Projet C', revenue: 0 },
+        { name: 'Projet D', revenue: 0 },
+    ]).map((project, index) => ({
+        key: `project-${index}`,
+        label: project.name,
+        value: project.revenue || 0,
+        icon: BriefcaseIcon,
+        theme: projectRevenueThemes[index],
+        badge: 'CA',
+        isCurrency: true,
+    }))
+
+    return [...summaryCards, ...revenueCards]
+})
 
 const chartOptions = {
     responsive: true,
@@ -313,8 +391,8 @@ async function fetchChartData() {
                 {
                     label: data.datasets[0].label,
                     data: data.datasets[0].data,
-                    borderColor: '#ffb800',
-                    backgroundColor: 'rgba(255, 184, 0, 0.1)',
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
                     fill: true,
                     tension: 0.4,
                 },
@@ -353,6 +431,17 @@ async function fetchRecentSales() {
 
 onMounted(async () => {
     loading.value = true
+
+    if (statsPanelRef.value) {
+        statsPanelObserver = new ResizeObserver(() => {
+            updateStatsPanelHeight()
+        })
+        statsPanelObserver.observe(statsPanelRef.value)
+        updateStatsPanelHeight()
+    }
+
+    window.addEventListener('resize', updateStatsPanelHeight)
+
     await Promise.all([
         fetchStats(),
         fetchChartData(),
@@ -360,5 +449,207 @@ onMounted(async () => {
         fetchRecentSales(),
     ])
     loading.value = false
+
+    updateStatsPanelHeight()
+})
+
+onUnmounted(() => {
+    statsPanelObserver?.disconnect()
+    window.removeEventListener('resize', updateStatsPanelHeight)
 })
 </script>
+
+<style scoped>
+.dashboard-shell {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.dashboard-stats-panel {
+    position: fixed;
+    top: 4rem;
+    right: 0;
+    z-index: 30;
+    padding: 1rem 1.5rem 0.75rem;
+    background: var(--color-bg-main, #f8fafc);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    transition: left 0.3s ease;
+}
+
+.dashboard-content {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-bottom: 1.5rem;
+    box-sizing: border-box;
+}
+
+@media (max-width: 639px) {
+    .dashboard-stats-panel {
+        padding: 1rem 1rem 0.75rem;
+    }
+
+    .dashboard-content {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-bottom: 1rem;
+    }
+}
+
+.dashboard-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    overflow: hidden;
+}
+
+@media (max-width: 1023px) {
+    .dashboard-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 639px) {
+    .dashboard-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.dashboard-glow-card {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+    height: 6.25rem;
+    border-radius: 0.875rem;
+    padding: 0.7rem 0.8rem;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
+}
+
+.dashboard-glow-card__body {
+    min-width: 0;
+    margin-top: 0.35rem;
+}
+
+.dashboard-glow-card__label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-glow-card__value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    min-width: 0;
+    margin-top: 0.15rem;
+    line-height: 1;
+}
+
+.dashboard-glow-card__amount,
+.dashboard-glow-card__count {
+    font-size: clamp(0.9rem, 1.35vw, 1.05rem);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-glow-card__currency {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.88);
+    flex-shrink: 0;
+}
+
+.dashboard-glow-card__shine {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.28) 0%, transparent 55%);
+    pointer-events: none;
+}
+
+.dashboard-glow-card__icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.625rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.dashboard-glow-card__badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.45rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    flex-shrink: 0;
+}
+
+.dashboard-glow-card--cyan {
+    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 45%, #22d3ee 100%);
+    box-shadow: 0 8px 20px rgba(6, 182, 212, 0.28);
+}
+
+.dashboard-glow-card--emerald {
+    background: linear-gradient(135deg, #047857 0%, #10b981 50%, #34d399 100%);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.28);
+}
+
+.dashboard-glow-card--amber {
+    background: linear-gradient(135deg, #b45309 0%, #f59e0b 50%, #fbbf24 100%);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.28);
+}
+
+.dashboard-glow-card--rose {
+    background: linear-gradient(135deg, #be123c 0%, #f43f5e 50%, #fb7185 100%);
+    box-shadow: 0 8px 20px rgba(244, 63, 94, 0.28);
+}
+
+.dashboard-glow-card--project-a {
+    background: linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #818cf8 100%);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.28);
+}
+
+.dashboard-glow-card--project-b {
+    background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 50%, #a78bfa 100%);
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.28);
+}
+
+.dashboard-glow-card--project-c {
+    background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 50%, #38bdf8 100%);
+    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.28);
+}
+
+.dashboard-glow-card--project-d {
+    background: linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #2dd4bf 100%);
+    box-shadow: 0 8px 20px rgba(20, 184, 166, 0.28);
+}
+</style>

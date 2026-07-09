@@ -1,20 +1,22 @@
 <template>
-    <div ref="posRoot" class="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#f4f3ef]">
-        <header class="flex gap-3 bg-gray-900 text-white" :class="headerClass">
+    <div ref="posRoot" class="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-slate-50">
+        <header class="pos-header-gradient flex gap-3 text-white" :class="headerClass">
             <div class="flex items-center" :class="headerInfoWrapClass">
                 <button
                     @click="toggleAppSidebar"
-                    class="bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    class="bg-white/10 rounded-xl hover:bg-white/20 transition-all border border-white/10"
                     :class="headerMenuButtonClass"
                     type="button"
                     title="Afficher/Masquer le menu"
                 >
                     <Bars3Icon :class="headerMenuIconClass" />
                 </button>
-                <div class="min-w-0">
-                    <p class="uppercase text-gray-400" :class="headerKickerClass">Catégorie active</p>
-                    <p class="truncate font-semibold" :class="headerTitleClass">{{ selectedCategoryName }}</p>
-                    <p class="text-gray-400" :class="headerCountClass">{{ totalArticles }} articles</p>
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="min-w-0">
+                        <p class="uppercase text-cyan-300/80 font-medium tracking-wider" :class="headerKickerClass">Point de Vente</p>
+                        <p class="truncate font-semibold text-white" :class="headerTitleClass">{{ selectedCategoryName }}</p>
+                        <p class="text-slate-400" :class="headerCountClass">{{ totalArticles }} articles</p>
+                    </div>
                 </div>
             </div>
             <div class="flex-1 min-w-0" :class="headerSearchWrapClass">
@@ -25,16 +27,16 @@
                         type="text"
                         autofocus
                         placeholder="Rechercher par nom ou code-barres"
-                        class="w-full border border-gray-700 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        class="w-full border border-white/15 bg-white/10 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:bg-white/15 backdrop-blur-sm"
                         :class="headerSearchInputClass"
                     >
-                    <MagnifyingGlassIcon class="text-gray-400 absolute top-1/2 -translate-y-1/2" :class="headerSearchIconClass" />
+                    <MagnifyingGlassIcon class="text-slate-400 absolute top-1/2 -translate-y-1/2" :class="headerSearchIconClass" />
                 </div>
             </div>
-            <div class="flex items-center justify-between" :class="headerActionsWrapClass">
+            <div class="flex items-center justify-between gap-2" :class="headerActionsWrapClass">
                 <button
                     @click="toggleMobileCart"
-                    class="items-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    class="items-center rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/10"
                     :class="[headerCartButtonClass, useBottomSheetCart ? 'flex' : 'hidden']"
                     type="button"
                 >
@@ -43,12 +45,13 @@
                 </button>
                 <button
                     @click="toggleFullscreen"
-                    class="rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                    class="rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/10"
                     :class="headerIconButtonClass"
                     type="button"
                     :title="isFullscreen ? 'Quitter le plein écran' : 'Plein écran'"
                 >
-                    <span class="leading-none" :class="headerFullscreenIconClass">⛶</span>
+                    <ArrowsPointingOutIcon v-if="!isFullscreen" :class="headerFullscreenIconClass" />
+                    <ArrowsPointingInIcon v-else :class="headerFullscreenIconClass" />
                 </button>
             </div>
         </header>
@@ -75,7 +78,7 @@
                             @click="selectCategory(button.id)"
                             type="button"
                             class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors"
-                            :class="selectedCategoryId === button.id ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-100'"
+                            :class="selectedCategoryId === button.id ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/25' : 'bg-white text-gray-700 hover:bg-slate-50 border border-gray-100'"
                         >
                             <span class="text-2xl">{{ button.icon }}</span>
                             <span class="flex-1 text-left truncate">{{ button.label }}</span>
@@ -94,7 +97,7 @@
                             type="button"
                             class="flex items-center gap-1 rounded-md border transition-colors shrink-0"
                             :class="[
-                                selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
+                                selectedCategoryId === button.id ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm' : 'border-gray-200 bg-white text-gray-600 hover:bg-slate-50',
                                 isTablet && isLandscape ? 'px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider whitespace-nowrap' : 'px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap'
                             ]"
                         >
@@ -1008,6 +1011,8 @@ import {
     Bars3Icon,
     MagnifyingGlassIcon,
     ShoppingCartIcon,
+    ArrowsPointingOutIcon,
+    ArrowsPointingInIcon,
     MinusIcon,
     PlusIcon,
     TrashIcon,
@@ -1195,7 +1200,7 @@ const headerActionTextClass = computed(() => {
     return isPhoneLandscape.value ? 'text-[11px]' : 'text-xs'
 })
 const headerFullscreenIconClass = computed(() => {
-    return isPhoneLandscape.value ? 'text-base' : 'text-lg'
+    return isPhoneLandscape.value ? 'w-4 h-4' : 'w-5 h-5'
 })
 const contentPaddingClass = computed(() => {
     if (!useBottomSheetCart.value) return ''
