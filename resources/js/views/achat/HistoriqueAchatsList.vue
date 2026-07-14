@@ -3,8 +3,8 @@
         <!-- Header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Historique d'Achats</h1>
-                <p class="text-gray-500">Consultez l'historique complet de vos achats et commandes</p>
+                <h1 class="text-2xl font-bold text-gray-900">Balance</h1>
+                <p class="text-gray-500">Consultez la balance et l'historique de vos achats</p>
             </div>
             <button @click="exportData()" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
                 <ArrowDownTrayIcon class="w-5 h-5 mr-2" />

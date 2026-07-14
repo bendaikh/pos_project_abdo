@@ -7,11 +7,11 @@
                 Accueil
             </router-link>
             <ChevronRightIcon class="w-4 h-4 text-gray-500" />
-            <router-link to="/bon-commande" class="text-primary-400 hover:text-primary-300">
+            <router-link to="/bon-achat" class="text-primary-400 hover:text-primary-300">
                 Achats
             </router-link>
             <ChevronRightIcon class="w-4 h-4 text-gray-500" />
-            <span class="text-gray-400">Bon de commande</span>
+            <span class="text-gray-400">Bon Achat</span>
         </div>
 
         <!-- Main Card -->
@@ -20,7 +20,7 @@
             <div class="bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <ClipboardDocumentListIcon class="w-8 h-8 text-primary-400" />
-                    <h1 class="text-2xl font-bold text-primary-400">Bon de commande</h1>
+                    <h1 class="text-2xl font-bold text-primary-400">Bon Achat</h1>
                 </div>
                 <div class="flex space-x-3">
                     <button @click="printBonCommande" class="px-4 py-2 bg-gray-700 text-white font-medium rounded-lg hover:bg-gray-600 flex items-center border border-gray-600">
@@ -235,12 +235,12 @@ function sendToSupplier() {
 }
 
 function cancelBonCommande() {
-    router.push('/bon-commande')
+    router.push('/bon-achat')
 }
 
 function sendBonCommande() {
-    alert('Bon de commande envoyé avec succès!')
-    router.push('/bon-commande')
+    alert('Bon d\'achat envoyé avec succès!')
+    router.push('/bon-achat')
 }
 
 onMounted(() => {

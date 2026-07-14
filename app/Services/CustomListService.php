@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CustomList;
 use App\Models\CustomListItem;
 use App\Models\DeliveryAgent;
+use App\Support\StoreContext;
 use Illuminate\Support\Str;
 
 class CustomListService
@@ -401,9 +402,13 @@ class CustomListService
     private function ensureList(string $name): CustomList
     {
         $defaults = self::DEFAULT_LISTS[$name] ?? ['is_active' => true, 'items' => []];
+        $storeId = StoreContext::id();
 
         $list = CustomList::firstOrCreate(
-            ['name' => $name],
+            [
+                'name' => $name,
+                'store_id' => $storeId,
+            ],
             ['is_active' => $defaults['is_active']]
         );
 
@@ -695,6 +700,7 @@ class CustomListService
 
         $serviceModeList = CustomList::query()
             ->where('name', self::SERVICE_MODE_LIST)
+            ->when(StoreContext::id(), fn ($q) => $q->where('store_id', StoreContext::id()))
             ->with('items')
             ->first();
 

@@ -188,6 +188,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useSettingsStore } from '../../stores/settings'
 import { useCustomListsStore } from '../../stores/customLists'
+import { expensesApi } from '../../api'
 import { 
     PlusIcon, 
     PencilIcon, 
@@ -242,12 +243,27 @@ const form = reactive({
     notes: ''
 })
 
+function mapExpense(row) {
+    return {
+        id: row.id,
+        description: row.label || row.designation || '',
+        montant: Number(row.amount || 0),
+        date: row.expense_date?.slice?.(0, 10) || row.expense_date,
+        categorie: row.category || row.expense_category || '',
+        fournisseur: '',
+        reference: row.payment_method || '',
+        notes: row.notes || '',
+        statut: 'payee',
+        raw: row,
+    }
+}
+
 const filteredDepenses = computed(() => {
     let result = depensesList.value
     if (search.value) {
         const query = search.value.toLowerCase()
         result = result.filter(d => 
-            d.description.toLowerCase().includes(query) ||
+            d.description?.toLowerCase().includes(query) ||
             d.fournisseur?.toLowerCase().includes(query)
         )
     }
@@ -332,37 +348,53 @@ function markAsPaid(depense) {
     }
 }
 
+async function loadDepenses() {
+    try {
+        const { data } = await expensesApi.list({ per_page: 100 })
+        const rows = data.data || data || []
+        depensesList.value = rows.map(mapExpense)
+    } catch (error) {
+        console.error('Failed to load expenses:', error)
+        depensesList.value = []
+    }
+}
+
 async function saveDepense() {
     saving.value = true
     try {
-        const newDepense = {
-            id: editingDepense.value?.id || Date.now(),
-            description: form.description,
-            montant: form.montant,
-            date: form.date,
-            categorie: form.categorie,
-            fournisseur: form.fournisseur,
-            reference: form.reference,
-            notes: form.notes,
-            statut: editingDepense.value?.statut || 'en_attente'
+        const payload = {
+            label: form.description,
+            amount: form.montant,
+            expense_date: form.date,
+            category: form.categorie || null,
+            payment_method: form.reference || null,
+            notes: [form.notes, form.fournisseur ? `Fournisseur: ${form.fournisseur}` : ''].filter(Boolean).join('\n') || null,
+            expense_type: 'variable',
         }
 
-        if (editingDepense.value) {
-            const index = depensesList.value.findIndex(d => d.id === editingDepense.value.id)
-            if (index > -1) depensesList.value[index] = newDepense
+        if (editingDepense.value?.id) {
+            await expensesApi.update(editingDepense.value.id, payload)
         } else {
-            depensesList.value.unshift(newDepense)
+            await expensesApi.create(payload)
         }
         showForm.value = false
+        await loadDepenses()
     } catch (error) {
-        alert('Erreur: ' + error.message)
+        alert(error.response?.data?.message || error.message || 'Erreur')
     } finally {
         saving.value = false
     }
 }
 
-function deleteDepense() {
-    depensesList.value = depensesList.value.filter(d => d.id !== depenseToDelete.value.id)
+async function deleteDepense() {
+    try {
+        if (depenseToDelete.value?.id) {
+            await expensesApi.delete(depenseToDelete.value.id)
+        }
+        await loadDepenses()
+    } catch (error) {
+        alert(error.response?.data?.message || 'Suppression impossible')
+    }
     showDeleteModal.value = false
 }
 
@@ -370,17 +402,9 @@ onMounted(() => {
     Promise.all([
         customListsStore.fetchList('depenses'),
         customListsStore.fetchList('categories_depenses'),
+        loadDepenses(),
     ]).catch((error) => {
-        console.error('Failed to load expense custom lists:', error)
+        console.error('Failed to load expenses UI:', error)
     })
-
-    // Demo data
-    depensesList.value = [
-        { id: 1, description: 'Loyer mensuel', montant: 15000, date: '2026-02-01', categorie: 'Loyer', fournisseur: 'Propriétaire', reference: 'LOY-202602', statut: 'payee' },
-        { id: 2, description: 'Facture électricité', montant: 2500, date: '2026-02-05', categorie: 'Électricité', fournisseur: 'ONE', reference: 'ELEC-202602', statut: 'payee' },
-        { id: 3, description: 'Fournitures de bureau', montant: 800, date: '2026-02-07', categorie: 'Fournitures', fournisseur: 'Office Pro', reference: 'FB-2026-045', statut: 'en_attente' },
-        { id: 4, description: 'Internet et téléphone', montant: 1200, date: '2026-02-08', categorie: 'Internet/Téléphone', fournisseur: 'Maroc Telecom', reference: 'INT-202602', statut: 'en_attente' },
-        { id: 5, description: 'Maintenance climatisation', montant: 3500, date: '2026-02-06', categorie: 'Maintenance', fournisseur: 'ClimService', reference: 'MAINT-2026-012', statut: 'payee' },
-    ]
 })
 </script>

@@ -35,15 +35,34 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        $user->load(['defaultStore:id,name,code', 'ownedStores:id,name,code,owner_id', 'stores:id,name,code']);
+
+        $currentStore = \App\Support\StoreContext::resolveForUser($user);
+
         return response()->json([
             'user' => $user,
             'token' => $token,
+            'current_store' => $currentStore,
+            'needs_store_setup' => $user->role === 'owner' && ! $user->ownedStores()->exists(),
         ]);
     }
 
     public function user(Request $request): JsonResponse
     {
-        return response()->json($request->user());
+        $user = $request->user()->load([
+            'defaultStore:id,name,code',
+            'ownedStores:id,name,code,owner_id',
+            'stores:id,name,code',
+        ]);
+
+        $currentStore = $request->attributes->get('current_store')
+            ?? \App\Support\StoreContext::resolveForUser($user);
+
+        return response()->json([
+            'user' => $user,
+            'current_store' => $currentStore,
+            'needs_store_setup' => $user->role === 'owner' && ! $user->ownedStores()->exists(),
+        ]);
     }
 
     public function logout(Request $request): JsonResponse

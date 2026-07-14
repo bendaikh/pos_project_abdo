@@ -43,18 +43,18 @@
             <div class="lg:col-span-2 surface-card p-6">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary-50">
-                            <PresentationChartLineIcon class="w-5 h-5 text-primary-600" />
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary-500/15">
+                            <PresentationChartLineIcon class="w-5 h-5 text-primary-400" />
                         </div>
                         <div>
-                            <h3 class="text-lg font-semibold text-slate-900">Tendances des Ventes</h3>
-                            <p class="text-sm text-slate-500">Semaine en cours vs semaine précédente</p>
+                            <h3 class="text-lg font-semibold text-white">Tendances des Ventes</h3>
+                            <p class="text-sm text-text-secondary">Semaine en cours vs semaine précédente</p>
                         </div>
                     </div>
                     <select 
                         v-model="chartDays"
                         @change="fetchChartData"
-                        class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 bg-white"
+                        class="px-3 py-2 border border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 bg-secondary-700 text-white"
                     >
                         <option :value="7">7 derniers jours</option>
                         <option :value="14">14 derniers jours</option>
@@ -69,16 +69,16 @@
             <!-- Top Categories -->
             <div class="surface-card p-6">
                 <div class="flex items-center gap-3 mb-5">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-50">
-                        <TagIcon class="w-5 h-5 text-emerald-600" />
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-accent-500/15">
+                        <TagIcon class="w-5 h-5 text-accent-400" />
                     </div>
-                    <h3 class="text-lg font-semibold text-slate-900">Top Catégories</h3>
+                    <h3 class="text-lg font-semibold text-white">Top Catégories</h3>
                 </div>
                 <div class="space-y-3">
                     <div 
                         v-for="category in topCategories" 
                         :key="category.id"
-                        class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors"
+                        class="flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-colors"
                     >
                         <div class="flex items-center space-x-3">
                             <div 
@@ -87,9 +87,9 @@
                             >
                                 <span class="text-lg">{{ getCategoryIcon(category.icon) }}</span>
                             </div>
-                            <span class="text-sm font-medium text-slate-700">{{ category.name }}</span>
+                            <span class="text-sm font-medium text-text-secondary">{{ category.name }}</span>
                         </div>
-                        <span class="text-sm font-bold text-primary-600">{{ category.percentage }}%</span>
+                        <span class="text-sm font-bold text-primary-400">{{ category.percentage }}%</span>
                     </div>
                 </div>
                 <button class="btn-primary w-full mt-5 py-2.5 text-sm">
@@ -100,12 +100,12 @@
 
         <!-- Recent Transactions -->
         <div class="surface-card overflow-hidden">
-            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div class="p-6 border-b border-white/10 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-sky-50">
-                        <ReceiptPercentIcon class="w-5 h-5 text-sky-600" />
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary-500/15">
+                        <ReceiptPercentIcon class="w-5 h-5 text-primary-400" />
                     </div>
-                    <h3 class="text-lg font-semibold text-slate-900">Transactions Récentes</h3>
+                    <h3 class="text-lg font-semibold text-white">Transactions Récentes</h3>
                 </div>
                 <router-link to="/reports" class="btn-primary px-4 py-2 text-sm">
                     Voir tout
@@ -113,33 +113,33 @@
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
-                    <thead class="bg-gray-50">
+                    <thead class="bg-secondary-700/60">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Transaction</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Heure</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">ID Transaction</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Client</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Date & Heure</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Total</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Statut</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        <tr v-for="sale in recentSales" :key="sale.id" class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tbody class="divide-y divide-white/5">
+                        <tr v-for="sale in recentSales" :key="sale.id" class="hover:bg-white/5">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
                                 #{{ sale.reference }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                                        <UserIcon class="w-4 h-4 text-gray-500" />
+                                    <div class="w-8 h-8 bg-secondary-700 rounded-full flex items-center justify-center">
+                                        <UserIcon class="w-4 h-4 text-text-secondary" />
                                     </div>
-                                    <span class="text-sm text-gray-700">{{ sale.customer }}</span>
+                                    <span class="text-sm text-text-secondary">{{ sale.customer }}</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
                                 {{ sale.date_formatted }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-secondary-600">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-primary-400">
                                 {{ formatCurrency(sale.total) }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -151,13 +151,13 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <button class="text-gray-400 hover:text-gray-600">
+                                <button class="text-text-muted hover:text-white">
                                     <EyeIcon class="w-5 h-5" />
                                 </button>
                             </td>
                         </tr>
                         <tr v-if="recentSales.length === 0">
-                            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                            <td colspan="6" class="px-6 py-8 text-center text-text-secondary">
                                 Aucune transaction récente
                             </td>
                         </tr>
@@ -323,18 +323,27 @@ const chartOptions = {
     plugins: {
         legend: {
             position: 'bottom',
+            labels: {
+                color: '#aeb0b4',
+            },
         },
     },
     scales: {
         y: {
             beginAtZero: true,
             grid: {
-                color: '#f3f4f6',
+                color: 'rgba(255, 255, 255, 0.06)',
+            },
+            ticks: {
+                color: '#aeb0b4',
             },
         },
         x: {
             grid: {
                 display: false,
+            },
+            ticks: {
+                color: '#aeb0b4',
             },
         },
     },
@@ -355,11 +364,11 @@ function getCategoryIcon(icon) {
 
 function getStatusClass(status) {
     const classes = {
-        completed: 'bg-primary-100 text-gray-900',
-        pending: 'bg-yellow-100 text-yellow-700',
-        cancelled: 'bg-red-100 text-red-700',
+        completed: 'bg-primary-500/20 text-primary-300',
+        pending: 'bg-accent-500/20 text-accent-300',
+        cancelled: 'bg-danger/20 text-danger',
     }
-    return classes[status] || 'bg-gray-100 text-gray-700'
+    return classes[status] || 'bg-white/10 text-text-secondary'
 }
 
 function getStatusLabel(status) {
@@ -391,15 +400,15 @@ async function fetchChartData() {
                 {
                     label: data.datasets[0].label,
                     data: data.datasets[0].data,
-                    borderColor: '#06b6d4',
-                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                    borderColor: '#00d7d7',
+                    backgroundColor: 'rgba(0, 215, 215, 0.12)',
                     fill: true,
                     tension: 0.4,
                 },
                 {
                     label: data.datasets[1].label,
                     data: data.datasets[1].data,
-                    borderColor: '#9ca3af',
+                    borderColor: '#00d7d7',
                     backgroundColor: 'transparent',
                     borderDash: [5, 5],
                     tension: 0.4,
@@ -469,13 +478,13 @@ onUnmounted(() => {
 
 .dashboard-stats-panel {
     position: fixed;
-    top: 4rem;
+    top: 7.25rem;
     right: 0;
     z-index: 30;
     padding: 1rem 1.5rem 0.75rem;
-    background: var(--color-bg-main, #f8fafc);
-    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    background: #0f0f12;
+    border-bottom: 1px solid rgba(0, 215, 215, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     transition: left 0.3s ease;
 }
 
@@ -614,42 +623,46 @@ onUnmounted(() => {
 }
 
 .dashboard-glow-card--cyan {
-    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 45%, #22d3ee 100%);
-    box-shadow: 0 8px 20px rgba(6, 182, 212, 0.28);
+    background: linear-gradient(135deg, #008a8a 0%, #00d7d7 55%, #1aefe8 100%);
+    box-shadow: 0 8px 20px rgba(0, 215, 215, 0.32);
 }
 
 .dashboard-glow-card--emerald {
-    background: linear-gradient(135deg, #047857 0%, #10b981 50%, #34d399 100%);
-    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.28);
+    background: linear-gradient(135deg, #12122b 0%, #1e1e3f 55%, #2563eb 160%);
+    border-color: rgba(0, 215, 215, 0.45);
+    box-shadow: 0 8px 20px rgba(0, 215, 215, 0.22);
 }
 
 .dashboard-glow-card--amber {
-    background: linear-gradient(135deg, #b45309 0%, #f59e0b 50%, #fbbf24 100%);
-    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.28);
+    background: linear-gradient(135deg, #9a4a12 0%, #ff6633 50%, #fdba74 100%);
+    box-shadow: 0 8px 20px rgba(255, 102, 51, 0.32);
 }
 
 .dashboard-glow-card--rose {
-    background: linear-gradient(135deg, #be123c 0%, #f43f5e 50%, #fb7185 100%);
-    box-shadow: 0 8px 20px rgba(244, 63, 94, 0.28);
+    background: linear-gradient(135deg, #12122b 0%, #1e1e3f 50%, #00d7d7 150%);
+    border-color: rgba(0, 215, 215, 0.35);
+    box-shadow: 0 8px 20px rgba(0, 215, 215, 0.2);
 }
 
 .dashboard-glow-card--project-a {
-    background: linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #818cf8 100%);
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.28);
+    background: linear-gradient(135deg, #008a8a 0%, #00d7d7 50%, #1aefe8 100%);
+    box-shadow: 0 8px 20px rgba(0, 215, 215, 0.3);
 }
 
 .dashboard-glow-card--project-b {
-    background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 50%, #a78bfa 100%);
-    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.28);
+    background: linear-gradient(135deg, #9a4a12 0%, #ff6633 50%, #fdba74 100%);
+    box-shadow: 0 8px 20px rgba(255, 102, 51, 0.28);
 }
 
 .dashboard-glow-card--project-c {
-    background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 50%, #38bdf8 100%);
-    box-shadow: 0 8px 20px rgba(14, 165, 233, 0.28);
+    background: linear-gradient(135deg, #12122b 0%, #12122b 45%, #00d7d7 160%);
+    border-color: rgba(0, 215, 215, 0.4);
+    box-shadow: 0 8px 20px rgba(0, 215, 215, 0.22);
 }
 
 .dashboard-glow-card--project-d {
-    background: linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #2dd4bf 100%);
-    box-shadow: 0 8px 20px rgba(20, 184, 166, 0.28);
+    background: linear-gradient(135deg, #1e1e3f 0%, #2a313c 40%, #00d7d7 160%);
+    border-color: rgba(0, 215, 215, 0.35);
+    box-shadow: 0 8px 20px rgba(0, 215, 215, 0.2);
 }
 </style>

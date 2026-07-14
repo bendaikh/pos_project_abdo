@@ -805,65 +805,51 @@ function confirmDelete(fournisseur) {
 async function saveFournisseur() {
     saving.value = true
     try {
-        const fullName = `${form.nom} ${form.prenom}`.trim()
-        const photoUrl = supplierPhotoPreview.value || editingFournisseur.value?.photo_url || ''
-        const isPhotoUpdated = supplierPhotoTouched.value
-        const newFournisseur = {
-            id: editingFournisseur.value?.id || Date.now(),
-            fournisseur_id: editingFournisseur.value?.fournisseur_id || `FRN-${String(Date.now()).slice(-4)}`,
-            name: fullName || editingFournisseur.value?.name || 'Fournisseur',
-            nom: form.nom,
-            prenom: form.prenom,
-            raison_sociale: form.raison_sociale,
-            activite: form.activite,
-            type: form.type,
-            statut: form.statut,
-            prefere: form.prefere,
-            telephone: form.phone,
-            email: form.email,
-            adresse: form.address,
-            ville: form.city,
-            site_web: form.site_web,
-            contact_principal: form.contact_principal,
-            country: form.country,
-            ice: form.ice,
-            reg_commercial: form.reg_commercial || editingFournisseur.value?.reg_commercial || '',
-            tva: form.tva || editingFournisseur.value?.tva || '',
-            note: form.note,
-            observations: form.note,
-            is_active: form.is_active,
-            photo_url: photoUrl,
-            logo: photoUrl,
-            photo_cache_key: isPhotoUpdated ? Date.now() : (editingFournisseur.value?.photo_cache_key || 0),
-            banque: form.banque,
-            iban: form.iban,
-            contract_file: form.contract_file || editingFournisseur.value?.contract_file || null,
-            rib_file: form.rib_file || editingFournisseur.value?.rib_file || null,
-            orders_count: editingFournisseur.value?.orders_count || 0,
-            total_purchases: editingFournisseur.value?.total_purchases || 0,
-            last_order_date: editingFournisseur.value?.last_order_date || null
+        const fullName = `${form.nom} ${form.prenom}`.trim() || form.raison_sociale || 'Fournisseur'
+        const payload = {
+            name: fullName,
+            contact_name: form.contact_principal || null,
+            email: form.email || null,
+            phone: form.phone || null,
+            address: form.address || null,
+            city: form.city || null,
+            country: form.country || null,
+            ice: form.ice || null,
+            notes: form.note || null,
+            is_active: form.is_active !== false,
         }
 
-        if (editingFournisseur.value) {
-            const index = fournisseurs.value.findIndex(f => f.id === editingFournisseur.value.id)
-            if (index > -1) fournisseurs.value[index] = newFournisseur
+        let saved
+        if (editingFournisseur.value?.id && Number(editingFournisseur.value.id) < 1e12) {
+            const { data } = await fournisseursApi.update(editingFournisseur.value.id, payload)
+            saved = data
         } else {
-            fournisseurs.value.unshift(newFournisseur)
+            const { data } = await fournisseursApi.create(payload)
+            saved = data
         }
-        
-        // Save to localStorage
-        saveFournisseursLocally()
+
+        await loadFournisseurs()
         showForm.value = false
+        resetFournisseurForm()
+        return saved
     } catch (error) {
-        alert('Erreur: ' + error.message)
+        alert(error.response?.data?.message || error.message || 'Erreur lors de l\'enregistrement')
     } finally {
         saving.value = false
     }
 }
 
-function deleteFournisseur() {
-    fournisseurs.value = fournisseurs.value.filter(f => f.id !== fournisseurToDelete.value.id)
-    saveFournisseursLocally()
+async function deleteFournisseur() {
+    try {
+        if (fournisseurToDelete.value?.id) {
+            await fournisseursApi.delete(fournisseurToDelete.value.id)
+        }
+        await loadFournisseurs()
+    } catch (error) {
+        // Fallback local if API unavailable
+        fournisseurs.value = fournisseurs.value.filter(f => f.id !== fournisseurToDelete.value.id)
+        saveFournisseursLocally()
+    }
     showDeleteModal.value = false
 }
 

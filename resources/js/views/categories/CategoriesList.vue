@@ -3,12 +3,12 @@
         <!-- Header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Catégories</h1>
-                <p class="text-gray-500">Gérez les catégories de vos articles</p>
+                <h1 class="text-2xl font-bold text-gray-900">Famille Produit</h1>
+                <p class="text-gray-500">Gérez les familles de vos produits</p>
             </div>
             <button @click="openForm()" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
                 <PlusIcon class="w-5 h-5 mr-2" />
-                Nouvelle Catégorie
+                Nouvelle famille
             </button>
         </div>
 
@@ -48,8 +48,8 @@
         <!-- Empty State -->
         <div v-if="categories.length === 0" class="text-center py-12">
             <FolderIcon class="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 class="text-lg font-medium text-gray-900">Aucune catégorie</h3>
-            <p class="text-gray-500">Commencez par créer une catégorie pour organiser vos articles.</p>
+            <h3 class="text-lg font-medium text-gray-900">Aucune famille</h3>
+            <p class="text-gray-500">Commencez par créer une famille pour organiser vos produits.</p>
         </div>
 
         <!-- Category Form Modal -->
@@ -57,7 +57,7 @@
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showForm = false"></div>
             <div class="relative bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl z-10">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    {{ editingCategory ? 'Modifier la catégorie' : 'Nouvelle catégorie' }}
+                    {{ editingCategory ? 'Modifier la famille' : 'Nouvelle famille' }}
                 </h3>
                 
                 <form @submit.prevent="saveCategory" class="space-y-4">
@@ -166,7 +166,7 @@
         <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
             <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showDeleteModal = false"></div>
             <div class="relative bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl z-10">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Supprimer la catégorie</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Supprimer la famille</h3>
                 <p class="text-gray-500 mb-4">Êtes-vous sûr de vouloir supprimer "{{ categoryToDelete?.name }}" ?</p>
                 <div class="flex space-x-3">
                     <button @click="showDeleteModal = false" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">

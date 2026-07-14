@@ -7,7 +7,7 @@
         <div class="flex items-center justify-between h-16 px-4 border-b border-white/10">
             <div class="flex items-center space-x-3">
                 <div class="logo-badge w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                             d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
@@ -79,147 +79,161 @@
                 </router-link>
             </template>
 
+            <!-- Administration -->
+            <div class="nav-section nav-section--featured" :class="{ 'nav-section--open': expandedSections.administration && !collapsed }">
+                <button @click="toggleSection('administration')" class="nav-section-btn nav-section-btn--admin">
+                    <div class="flex items-center min-w-0 gap-2.5">
+                        <span class="nav-section-icon nav-section-icon--admin"><ShieldCheckIcon class="w-4 h-4" /></span>
+                        <span v-if="!collapsed" class="nav-section-title">Administration</span>
+                    </div>
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.administration }" />
+                </button>
+                <div v-show="expandedSections.administration && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/fiche-pdv" :class="tileClass('/fiche-pdv', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><BuildingStorefrontIcon class="w-4 h-4" /></span><span class="nav-tile-label">Fiche PDV</span></router-link>
+                    <router-link to="/etat-paiement-pdv" :class="tileClass('/etat-paiement-pdv', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><BanknotesIcon class="w-4 h-4" /></span><span class="nav-tile-label">État paiement PDV</span></router-link>
+                    <router-link to="/menu-pdv" :class="tileClass('/menu-pdv', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><Squares2X2Icon class="w-4 h-4" /></span><span class="nav-tile-label">Menu PDV</span></router-link>
+                    <router-link to="/balance-pdv" :class="tileClass('/balance-pdv', 'lime')"><span class="nav-tile-icon nav-tile-icon--lime"><ScaleIcon class="w-4 h-4" /></span><span class="nav-tile-label">Balance PDV</span></router-link>
+                </div>
+            </div>
+
             <!-- Gestion Achats -->
-            <div class="nav-section">
+            <div class="nav-section nav-section--featured nav-section--amber" :class="{ 'nav-section--open': expandedSections.achats && !collapsed }">
                 <button @click="toggleSection('achats')" class="nav-section-btn">
                     <div class="flex items-center min-w-0 gap-2.5">
                         <span class="nav-section-icon nav-section-icon--amber"><ShoppingCartIcon class="w-4 h-4" /></span>
-                        <span v-if="!collapsed" class="text-xs font-semibold uppercase tracking-wider text-slate-300 whitespace-nowrap">Gestion Achats</span>
+                        <span v-if="!collapsed" class="nav-section-title">Gestion Achats</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.achats }" />
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.achats }" />
                 </button>
-                <div v-show="expandedSections.achats && !collapsed" class="nav-submenu">
-                    <router-link to="/fournisseurs" :class="subLinkClass('/fournisseurs', 'amber')"><BuildingOfficeIcon class="w-4 h-4" /><span>Fournisseurs</span></router-link>
-                    <router-link to="/bon-commande" :class="subLinkClass('/bon-commande', 'amber')"><ClipboardDocumentListIcon class="w-4 h-4" /><span>Bon de commande</span></router-link>
-                    <router-link to="/reception-marchandise" :class="subLinkClass('/reception-marchandise', 'amber')"><InboxArrowDownIcon class="w-4 h-4" /><span>Réception de Marchandise</span></router-link>
-                    <router-link to="/facture-fournisseur" :class="subLinkClass('/facture-fournisseur', 'amber')"><DocumentIcon class="w-4 h-4" /><span>Facture fournisseur</span></router-link>
-                    <router-link to="/historique-achats" :class="subLinkClass('/historique-achats', 'amber')"><ClockIcon class="w-4 h-4" /><span>Historique d'achats</span></router-link>
+                <div v-show="expandedSections.achats && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/fournisseurs" :class="tileClass('/fournisseurs', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><BuildingOfficeIcon class="w-4 h-4" /></span><span class="nav-tile-label">Fournisseurs</span></router-link>
+                    <router-link to="/bon-achat" :class="tileClass('/bon-achat', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><ClipboardDocumentListIcon class="w-4 h-4" /></span><span class="nav-tile-label">Bon Achat</span></router-link>
+                    <router-link to="/reglement-frns" :class="tileClass('/reglement-frns', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><BanknotesIcon class="w-4 h-4" /></span><span class="nav-tile-label">Règlement Frns</span></router-link>
+                    <router-link to="/stock" :class="tileClass('/stock', 'lime')"><span class="nav-tile-icon nav-tile-icon--lime"><ArchiveBoxIcon class="w-4 h-4" /></span><span class="nav-tile-label">Stock</span></router-link>
+                    <router-link to="/etat-sortie" :class="tileClass('/etat-sortie', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><InboxArrowDownIcon class="w-4 h-4" /></span><span class="nav-tile-label">État Sortie</span></router-link>
+                    <router-link to="/facture-fournisseur" :class="tileClass('/facture-fournisseur', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><DocumentIcon class="w-4 h-4" /></span><span class="nav-tile-label">Facture fournisseur</span></router-link>
+                    <router-link to="/balance-achats" :class="tileClass('/balance-achats', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><ScaleIcon class="w-4 h-4" /></span><span class="nav-tile-label">Balance</span></router-link>
                 </div>
             </div>
 
             <!-- Gestion de Stock -->
-            <div class="nav-section">
+            <div class="nav-section nav-section--featured nav-section--green" :class="{ 'nav-section--open': expandedSections.stock && !collapsed }">
                 <button @click="toggleSection('stock')" class="nav-section-btn">
                     <div class="flex items-center min-w-0 gap-2.5">
                         <span class="nav-section-icon nav-section-icon--cyan"><ArchiveBoxIcon class="w-4 h-4" /></span>
-                        <span v-if="!collapsed" class="text-xs font-semibold uppercase tracking-wider text-slate-300 whitespace-nowrap">Gestion de Stock</span>
+                        <span v-if="!collapsed" class="nav-section-title">Gestion de Stock</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.stock }" />
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.stock }" />
                 </button>
-                <div v-show="expandedSections.stock && !collapsed" class="nav-submenu">
-                    <router-link to="/stock" :class="subLinkClass('/stock', 'cyan')"><ArchiveBoxIcon class="w-4 h-4" /><span>Stock</span></router-link>
-                    <router-link to="/articles" :class="subLinkClass('/articles', 'cyan')"><ClipboardDocumentListIcon class="w-4 h-4" /><span>Articles</span></router-link>
-                    <router-link to="/categories" :class="subLinkClass('/categories', 'cyan')"><FolderIcon class="w-4 h-4" /><span>Catégories</span></router-link>
-                    <router-link to="/options" :class="subLinkClass('/options', 'cyan')"><AdjustmentsHorizontalIcon class="w-4 h-4" /><span class="whitespace-nowrap">Options & Variantes</span></router-link>
+                <div v-show="expandedSections.stock && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/fiche-produit" :class="tileClass('/fiche-produit', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><ClipboardDocumentListIcon class="w-4 h-4" /></span><span class="nav-tile-label">Fiche produit</span></router-link>
+                    <router-link to="/famille-produit" :class="tileClass('/famille-produit', 'lime')"><span class="nav-tile-icon nav-tile-icon--lime"><FolderIcon class="w-4 h-4" /></span><span class="nav-tile-label">Famille Produit</span></router-link>
+                    <router-link to="/unites-mesure" :class="tileClass('/unites-mesure', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><ScaleIcon class="w-4 h-4" /></span><span class="nav-tile-label">Unités Mesure</span></router-link>
+                    <router-link to="/options" :class="tileClass('/options', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><AdjustmentsHorizontalIcon class="w-4 h-4" /></span><span class="nav-tile-label">Options & Variantes</span></router-link>
                 </div>
             </div>
 
             <!-- Production -->
-            <div class="nav-section">
+            <div class="nav-section nav-section--featured nav-section--blue" :class="{ 'nav-section--open': expandedSections.production && !collapsed }">
                 <button @click="toggleSection('production')" class="nav-section-btn">
                     <div class="flex items-center min-w-0 gap-2.5">
                         <span class="nav-section-icon nav-section-icon--indigo"><WrenchScrewdriverIcon class="w-4 h-4" /></span>
-                        <span v-if="!collapsed" class="text-xs font-semibold uppercase tracking-wider text-slate-300 whitespace-nowrap">Production</span>
+                        <span v-if="!collapsed" class="nav-section-title">Production</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.production }" />
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.production }" />
                 </button>
-                <div v-show="expandedSections.production && !collapsed" class="nav-submenu">
-                    <router-link to="/production" :class="subLinkClass('/production', 'indigo', true)"><ClipboardDocumentListIcon class="w-4 h-4" /><span>Entrée production</span></router-link>
-                    <router-link to="/production/consumption" :class="subLinkClass('/production/consumption', 'indigo')"><BeakerIcon class="w-4 h-4" /><span>Consommation MP</span></router-link>
-                    <router-link to="/production/history" :class="subLinkClass('/production/history', 'indigo')"><ChartBarIcon class="w-4 h-4" /><span>Historique</span></router-link>
-                    <router-link to="/production/costs" :class="subLinkClass('/production/costs', 'indigo')"><PresentationChartLineIcon class="w-4 h-4" /><span>Coût de production</span></router-link>
-                    <div class="nav-subgroup">
-                        <p class="nav-subgroup-label">Gestion de perte</p>
-                        <router-link to="/losses" :class="subLinkClass('/losses', 'rose', true)"><ClipboardDocumentCheckIcon class="w-4 h-4" /><span>Déclaration de perte</span></router-link>
-                        <router-link to="/losses/history" :class="subLinkClass('/losses/history', 'rose')"><ClockIcon class="w-4 h-4" /><span>Historique des pertes</span></router-link>
-                    </div>
+                <div v-show="expandedSections.production && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/production" :class="tileClass('/production', 'blue', true)"><span class="nav-tile-icon nav-tile-icon--blue"><ClipboardDocumentListIcon class="w-4 h-4" /></span><span class="nav-tile-label">Entrée production</span></router-link>
+                    <router-link to="/production/consumption" :class="tileClass('/production/consumption', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><BeakerIcon class="w-4 h-4" /></span><span class="nav-tile-label">Consommation MP</span></router-link>
+                    <router-link to="/production/history" :class="tileClass('/production/history', 'lime')"><span class="nav-tile-icon nav-tile-icon--lime"><ChartBarIcon class="w-4 h-4" /></span><span class="nav-tile-label">Historique</span></router-link>
+                    <router-link to="/production/costs" :class="tileClass('/production/costs', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><PresentationChartLineIcon class="w-4 h-4" /></span><span class="nav-tile-label">Coût de production</span></router-link>
+                    <p class="nav-tile-group-label">Gestion de perte</p>
+                    <router-link to="/losses" :class="tileClass('/losses', 'rose', true)"><span class="nav-tile-icon nav-tile-icon--rose"><ClipboardDocumentCheckIcon class="w-4 h-4" /></span><span class="nav-tile-label">Déclaration de perte</span></router-link>
+                    <router-link to="/losses/history" :class="tileClass('/losses/history', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><ClockIcon class="w-4 h-4" /></span><span class="nav-tile-label">Historique des pertes</span></router-link>
                 </div>
             </div>
 
             <!-- Ventes & Clients -->
-            <div class="nav-section">
+            <div class="nav-section nav-section--featured nav-section--green" :class="{ 'nav-section--open': expandedSections.ventesClients && !collapsed }">
                 <button @click="toggleSection('ventesClients')" class="nav-section-btn">
                     <div class="flex items-center min-w-0 gap-2.5">
                         <span class="nav-section-icon nav-section-icon--emerald"><CurrencyDollarIcon class="w-4 h-4" /></span>
-                        <span v-if="!collapsed" class="text-xs font-semibold uppercase tracking-wider text-slate-300 whitespace-nowrap">Ventes & Clients</span>
+                        <span v-if="!collapsed" class="nav-section-title">Ventes & Clients</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.ventesClients }" />
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.ventesClients }" />
                 </button>
-                <div v-show="expandedSections.ventesClients && !collapsed" class="nav-submenu">
-                    <router-link to="/commandes" :class="subLinkClass('/commandes', 'emerald')"><ClipboardDocumentListIcon class="w-4 h-4" /><span>Commandes clients</span></router-link>
-                    <router-link to="/devis" :class="subLinkClass('/devis', 'emerald')"><DocumentTextIcon class="w-4 h-4" /><span>Devis</span></router-link>
-                    <router-link to="/bon-livraison" :class="subLinkClass('/bon-livraison', 'emerald')"><TruckIcon class="w-4 h-4" /><span>Bon de livraison</span></router-link>
-                    <router-link to="/livreurs" :class="subLinkClass('/livreurs', 'emerald')"><UserIcon class="w-4 h-4" /><span>Livreurs</span></router-link>
-                    <router-link to="/facture" :class="subLinkClass('/facture', 'emerald')"><DocumentIcon class="w-4 h-4" /><span>Facture</span></router-link>
-                    <router-link to="/customers" :class="subLinkClass('/customers', 'emerald')"><UserGroupIcon class="w-4 h-4" /><span>Clients</span></router-link>
+                <div v-show="expandedSections.ventesClients && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/commandes" :class="tileClass('/commandes', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><ClipboardDocumentListIcon class="w-4 h-4" /></span><span class="nav-tile-label">Commandes clients</span></router-link>
+                    <router-link to="/devis" :class="tileClass('/devis', 'lime')"><span class="nav-tile-icon nav-tile-icon--lime"><DocumentTextIcon class="w-4 h-4" /></span><span class="nav-tile-label">Devis</span></router-link>
+                    <router-link to="/bon-livraison" :class="tileClass('/bon-livraison', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><TruckIcon class="w-4 h-4" /></span><span class="nav-tile-label">Bon de livraison</span></router-link>
+                    <router-link to="/livreurs" :class="tileClass('/livreurs', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><UserIcon class="w-4 h-4" /></span><span class="nav-tile-label">Livreurs</span></router-link>
+                    <router-link to="/facture" :class="tileClass('/facture', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><DocumentIcon class="w-4 h-4" /></span><span class="nav-tile-label">Facture</span></router-link>
+                    <router-link to="/customers" :class="tileClass('/customers', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><UserGroupIcon class="w-4 h-4" /></span><span class="nav-tile-label">Clients</span></router-link>
                 </div>
             </div>
 
             <!-- Gestion Financière -->
-            <div class="nav-section">
+            <div class="nav-section nav-section--featured nav-section--blue" :class="{ 'nav-section--open': expandedSections.finance && !collapsed }">
                 <button @click="toggleSection('finance')" class="nav-section-btn">
                     <div class="flex items-center min-w-0 gap-2.5">
                         <span class="nav-section-icon nav-section-icon--sky"><BanknotesIcon class="w-4 h-4" /></span>
-                        <span v-if="!collapsed" class="text-xs font-semibold uppercase tracking-wider text-slate-300 whitespace-nowrap">Gestion Financière</span>
+                        <span v-if="!collapsed" class="nav-section-title">Gestion Financière</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.finance }" />
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.finance }" />
                 </button>
-                <div v-show="expandedSections.finance && !collapsed" class="nav-submenu">
-                    <router-link to="/journal-caisse" :class="subLinkClass('/journal-caisse', 'sky')"><BookOpenIcon class="w-4 h-4" /><span>Journal de caisse</span></router-link>
-                    <router-link to="/depenses" :class="subLinkClass('/depenses', 'sky')"><CreditCardIcon class="w-4 h-4" /><span>Dépenses</span></router-link>
-                    <router-link to="/bilan" :class="subLinkClass('/bilan', 'sky')"><PresentationChartLineIcon class="w-4 h-4" /><span>Bilan</span></router-link>
-                    <router-link to="/suivi-encaissement" :class="subLinkClass('/suivi-encaissement', 'sky')"><BanknotesIcon class="w-4 h-4" /><span>Suivi Encaissement</span></router-link>
-                    <router-link to="/historique-ticket" :class="subLinkClass('/historique-ticket', 'sky')"><ReceiptPercentIcon class="w-4 h-4" /><span>Historique ticket</span></router-link>
+                <div v-show="expandedSections.finance && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/journal-caisse" :class="tileClass('/journal-caisse', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><BookOpenIcon class="w-4 h-4" /></span><span class="nav-tile-label">Journal de caisse</span></router-link>
+                    <router-link to="/depenses" :class="tileClass('/depenses', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><CreditCardIcon class="w-4 h-4" /></span><span class="nav-tile-label">Dépenses</span></router-link>
+                    <router-link to="/bilan" :class="tileClass('/bilan', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><PresentationChartLineIcon class="w-4 h-4" /></span><span class="nav-tile-label">Bilan</span></router-link>
+                    <router-link to="/suivi-encaissement" :class="tileClass('/suivi-encaissement', 'lime')"><span class="nav-tile-icon nav-tile-icon--lime"><BanknotesIcon class="w-4 h-4" /></span><span class="nav-tile-label">Suivi Encaissement</span></router-link>
+                    <router-link to="/historique-ticket" :class="tileClass('/historique-ticket', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><ReceiptPercentIcon class="w-4 h-4" /></span><span class="nav-tile-label">Historique ticket</span></router-link>
                 </div>
             </div>
 
             <!-- Agenda -->
-            <div class="nav-section">
+            <div class="nav-section nav-section--featured nav-section--blue" :class="{ 'nav-section--open': expandedSections.agenda && !collapsed }">
                 <button @click="toggleSection('agenda')" class="nav-section-btn">
                     <div class="flex items-center min-w-0 gap-2.5">
                         <span class="nav-section-icon nav-section-icon--blue"><CalendarDaysIcon class="w-4 h-4" /></span>
-                        <span v-if="!collapsed" class="text-xs font-semibold uppercase tracking-wider text-slate-300 whitespace-nowrap">Agenda</span>
+                        <span v-if="!collapsed" class="nav-section-title">Agenda</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.agenda }" />
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.agenda }" />
                 </button>
-                <div v-show="expandedSections.agenda && !collapsed" class="nav-submenu">
-                    <router-link to="/agenda" :class="subLinkClass('/agenda', 'blue')"><CalendarDaysIcon class="w-4 h-4" /><span>Calendrier</span></router-link>
-                    <router-link to="/agenda/appointments" :class="subLinkClass('/agenda/appointments', 'blue')"><CalendarIcon class="w-4 h-4" /><span>Rendez-vous</span></router-link>
-                    <router-link to="/agenda/tasks" :class="subLinkClass('/agenda/tasks', 'blue')"><CheckCircleIcon class="w-4 h-4" /><span>Tâches</span></router-link>
-                    <router-link to="/agenda/incidents" :class="subLinkClass('/agenda/incidents', 'blue')"><TicketIcon class="w-4 h-4" /><span>Tickets Incidents</span></router-link>
+                <div v-show="expandedSections.agenda && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/agenda" :class="tileClass('/agenda', 'blue', true)"><span class="nav-tile-icon nav-tile-icon--blue"><CalendarDaysIcon class="w-4 h-4" /></span><span class="nav-tile-label">Calendrier</span></router-link>
+                    <router-link to="/agenda/appointments" :class="tileClass('/agenda/appointments', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><CalendarIcon class="w-4 h-4" /></span><span class="nav-tile-label">Rendez-vous</span></router-link>
+                    <router-link to="/agenda/tasks" :class="tileClass('/agenda/tasks', 'lime')"><span class="nav-tile-icon nav-tile-icon--lime"><CheckCircleIcon class="w-4 h-4" /></span><span class="nav-tile-label">Tâches</span></router-link>
+                    <router-link to="/agenda/incidents" :class="tileClass('/agenda/incidents', 'orange')"><span class="nav-tile-icon nav-tile-icon--orange"><TicketIcon class="w-4 h-4" /></span><span class="nav-tile-label">Tickets Incidents</span></router-link>
                 </div>
             </div>
 
             <!-- Employés -->
-            <div class="nav-section">
+            <div class="nav-section nav-section--featured nav-section--amber" :class="{ 'nav-section--open': expandedSections.employees && !collapsed }">
                 <button @click="toggleSection('employees')" class="nav-section-btn">
                     <div class="flex items-center min-w-0 gap-2.5">
                         <span class="nav-section-icon nav-section-icon--violet"><UsersIcon class="w-4 h-4" /></span>
-                        <span v-if="!collapsed" class="text-xs font-semibold uppercase tracking-wider text-slate-300 whitespace-nowrap">Employés</span>
+                        <span v-if="!collapsed" class="nav-section-title">Employés</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.employees }" />
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.employees }" />
                 </button>
-                <div v-show="expandedSections.employees && !collapsed" class="nav-submenu">
-                    <router-link to="/employees" :class="subLinkClass('/employees', 'violet', true)"><UsersIcon class="w-4 h-4" /><span>Gestion des employés</span></router-link>
-                    <router-link to="/employees/payroll" :class="subLinkClass('/employees/payroll', 'violet')"><CreditCardIcon class="w-4 h-4" /><span>Paie</span></router-link>
+                <div v-show="expandedSections.employees && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/employees" :class="tileClass('/employees', 'orange', true)"><span class="nav-tile-icon nav-tile-icon--orange"><UsersIcon class="w-4 h-4" /></span><span class="nav-tile-label">Gestion des employés</span></router-link>
+                    <router-link to="/employees/payroll" :class="tileClass('/employees/payroll', 'green')"><span class="nav-tile-icon nav-tile-icon--green"><CreditCardIcon class="w-4 h-4" /></span><span class="nav-tile-label">Paie</span></router-link>
                 </div>
             </div>
 
             <!-- Paramètres -->
-            <div class="nav-section">
+            <div class="nav-section nav-section--featured nav-section--slate" :class="{ 'nav-section--open': expandedSections.parametres && !collapsed }">
                 <button @click="toggleSection('parametres')" class="nav-section-btn">
                     <div class="flex items-center min-w-0 gap-2.5">
                         <span class="nav-section-icon nav-section-icon--slate"><Cog6ToothIcon class="w-4 h-4" /></span>
-                        <span v-if="!collapsed" class="text-xs font-semibold uppercase tracking-wider text-slate-300 whitespace-nowrap">Paramètres</span>
+                        <span v-if="!collapsed" class="nav-section-title">Paramètres</span>
                     </div>
-                    <ChevronDownIcon v-if="!collapsed" class="w-4 h-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180': expandedSections.parametres }" />
+                    <ChevronDownIcon v-if="!collapsed" class="nav-chevron" :class="{ 'rotate-180': expandedSections.parametres }" />
                 </button>
-                <div v-show="expandedSections.parametres && !collapsed" class="nav-submenu">
-                    <router-link to="/settings" :class="subLinkClass('/settings', 'slate', true)"><Cog6ToothIcon class="w-4 h-4" /><span>Général</span></router-link>
-                    <router-link to="/users" :class="subLinkClass('/users', 'slate')"><KeyIcon class="w-4 h-4" /><span>Utilisateurs</span></router-link>
-                    <router-link to="/magasins" :class="subLinkClass('/magasins', 'slate')"><BuildingStorefrontIcon class="w-4 h-4" /><span>Magasins</span></router-link>
-                    <router-link to="/assistance" :class="subLinkClass('/assistance', 'slate')"><LifebuoyIcon class="w-4 h-4" /><span>Assistance</span></router-link>
-                    <router-link to="/settings/imprimantes" :class="subLinkClass('/settings/imprimantes', 'slate')"><PrinterIcon class="w-4 h-4" /><span>Billetterie</span></router-link>
+                <div v-show="expandedSections.parametres && !collapsed" class="nav-submenu nav-submenu--tiles">
+                    <router-link to="/settings" :class="tileClass('/settings', 'slate', true)"><span class="nav-tile-icon nav-tile-icon--slate"><Cog6ToothIcon class="w-4 h-4" /></span><span class="nav-tile-label">Général</span></router-link>
+                    <router-link to="/settings/imprimantes" :class="tileClass('/settings/imprimantes', 'blue')"><span class="nav-tile-icon nav-tile-icon--blue"><PrinterIcon class="w-4 h-4" /></span><span class="nav-tile-label">Billetterie</span></router-link>
                 </div>
             </div>
 
@@ -276,6 +290,9 @@ import {
     ReceiptPercentIcon,
     LifebuoyIcon,
     PrinterIcon,
+    ShieldCheckIcon,
+    Squares2X2Icon,
+    ScaleIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -293,7 +310,7 @@ const authStore = useAuthStore()
 const sidebarClasses = computed(() => {
     const widthClass = props.isMobile
         ? 'w-72 max-w-[85vw]'
-        : (props.collapsed ? 'w-20' : 'w-64')
+        : (props.collapsed ? 'w-20' : 'w-72')
     const translateClass = props.isMobile
         ? (props.mobileOpen ? 'translate-x-0' : '-translate-x-full')
         : 'translate-x-0'
@@ -301,6 +318,7 @@ const sidebarClasses = computed(() => {
 })
 
 const expandedSections = reactive({
+    administration: false,
     stock: false,
     production: false,
     ventesClients: false,
@@ -312,6 +330,7 @@ const expandedSections = reactive({
 })
 
 const subLinkThemes = {
+    admin:   { active: 'nav-sublink--admin-active',   idle: 'nav-sublink--idle' },
     cyan:    { active: 'nav-sublink--cyan-active',    idle: 'nav-sublink--idle' },
     indigo:  { active: 'nav-sublink--indigo-active',  idle: 'nav-sublink--idle' },
     emerald: { active: 'nav-sublink--emerald-active', idle: 'nav-sublink--idle' },
@@ -334,6 +353,12 @@ function isActive(path, { exact = false } = {}) {
     return route.path === path || route.path.startsWith(path + '/')
 }
 
+function tileClass(path, color = 'green', exact = false) {
+    return isActive(path, { exact })
+        ? `nav-tile nav-tile--active-${color}`
+        : 'nav-tile'
+}
+
 function subLinkClass(path, theme, exact = false) {
     const t = subLinkThemes[theme] || subLinkThemes.cyan
     const base = 'nav-sublink'
@@ -348,49 +373,52 @@ async function handleLogout() {
 
 <style scoped>
 .sidebar-shell {
-    background: linear-gradient(180deg, #0f172a 0%, #0c1524 55%, #0a101c 100%);
-    border-right: 1px solid rgba(34, 211, 238, 0.12);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+    background:
+        radial-gradient(ellipse 100% 55% at 0% 0%, rgba(124, 58, 237, 0.14), transparent 55%),
+        radial-gradient(ellipse 90% 50% at 100% 100%, rgba(34, 211, 238, 0.1), transparent 50%),
+        linear-gradient(180deg, #181b2a 0%, #141625 55%, #0c0d16 100%);
+    border-right: 1px solid rgba(148, 163, 184, 0.12);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
 }
 
 .logo-badge {
-    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 50%, #0891b2 100%);
-    box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+    background: #1E2132;
+    border: 1.5px solid #FB923C;
+    color: #FB923C;
+    box-shadow: 0 0 16px rgba(251, 146, 60, 0.35);
 }
 
 .sidebar-scroll::-webkit-scrollbar { width: 4px; }
-.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 4px; }
+.sidebar-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #22D3EE, #FB923C);
+    border-radius: 4px;
+}
 
-/* Featured nav cards */
 .nav-feature {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
+    padding: 11px 12px;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(148, 163, 184, 0.12);
     transition: all 0.25s ease;
     text-decoration: none;
 }
-
-.nav-feature--idle {
-    background: rgba(255, 255, 255, 0.03);
-}
+.nav-feature--idle { background: rgba(30, 33, 50, 0.7); }
 .nav-feature--idle:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(34, 211, 238, 0.1);
+    border-color: rgba(34, 211, 238, 0.35);
+    transform: translateX(2px);
 }
-
 .nav-feature--dashboard-active {
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.18) 0%, rgba(6, 182, 212, 0.08) 100%);
-    border-color: rgba(34, 211, 238, 0.35);
-    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.15);
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.18) 0%, rgba(30, 33, 50, 0.9) 100%);
+    border-color: rgba(34, 211, 238, 0.45);
+    box-shadow: 0 6px 20px rgba(34, 211, 238, 0.15);
 }
-
 .nav-feature--pos-active {
-    background: linear-gradient(135deg, rgba(34, 211, 238, 0.18) 0%, rgba(6, 182, 212, 0.08) 100%);
-    border-color: rgba(34, 211, 238, 0.35);
-    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.15);
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.18) 0%, rgba(30, 33, 50, 0.9) 100%);
+    border-color: rgba(251, 146, 60, 0.45);
+    box-shadow: 0 6px 20px rgba(251, 146, 60, 0.15);
 }
 
 .nav-feature-icon {
@@ -402,17 +430,13 @@ async function handleLogout() {
     justify-content: center;
     flex-shrink: 0;
 }
-
 .nav-feature-icon--dashboard {
-    background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
-    color: #0f172a;
-    box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
+    background: rgba(34, 211, 238, 0.12);
+    color: #22D3EE;
 }
-
 .nav-feature-icon--pos {
-    background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
-    color: #0f172a;
-    box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
+    background: rgba(251, 146, 60, 0.14);
+    color: #FB923C;
 }
 
 .nav-icon-only {
@@ -421,99 +445,163 @@ async function handleLogout() {
     justify-content: center;
     width: 100%;
     padding: 10px;
-    border-radius: 10px;
-    color: #94a3b8;
+    border-radius: 12px;
+    color: #94A3B8;
     transition: all 0.2s;
 }
-.nav-icon-only:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
-.nav-icon-only--dashboard { background: rgba(34,211,238,0.15); color: #22d3ee; }
-.nav-icon-only--pos { background: rgba(34,211,238,0.15); color: #22d3ee; }
+.nav-icon-only:hover { background: rgba(34,211,238,0.12); color: #FFFFFF; }
+.nav-icon-only--dashboard { background: rgba(34,211,238,0.16); color: #22D3EE; }
+.nav-icon-only--pos { background: rgba(251,146,60,0.16); color: #FB923C; }
 
-/* Section headers */
-.nav-section { margin-top: 6px; }
+.nav-section { margin-top: 8px; }
+
+.nav-section--featured {
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+.nav-section--featured.nav-section--open {
+    background: rgba(30, 33, 50, 0.65);
+    border-color: rgba(148, 163, 184, 0.14);
+}
+.nav-section--amber.nav-section--open { border-color: rgba(251, 146, 60, 0.3); }
+.nav-section--green.nav-section--open { border-color: rgba(34, 211, 238, 0.28); }
+.nav-section--blue.nav-section--open { border-color: rgba(34, 211, 238, 0.28); }
+.nav-section--slate.nav-section--open { border-color: rgba(148, 163, 184, 0.2); }
 
 .nav-section-btn {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 8px 10px;
-    border-radius: 10px;
-    transition: background 0.2s;
+    padding: 9px 10px;
+    border-radius: 12px;
+    transition: all 0.2s;
 }
-.nav-section-btn:hover { background: rgba(255, 255, 255, 0.05); }
+.nav-section-btn:hover { background: rgba(255, 255, 255, 0.04); }
+.nav-section-btn--admin:hover { background: rgba(34, 211, 238, 0.1); }
+
+.nav-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #FFFFFF;
+    white-space: nowrap;
+}
+
+.nav-chevron {
+    width: 1rem;
+    height: 1rem;
+    color: #64748b;
+    transition: transform 0.25s ease, color 0.2s;
+}
+.nav-section-btn:hover .nav-chevron { color: #22D3EE; }
 
 .nav-section-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.nav-section-icon--cyan    { background: rgba(34, 211, 238, 0.14); color: #22D3EE; }
+.nav-section-icon--indigo  { background: rgba(34, 211, 238, 0.14); color: #22D3EE; }
+.nav-section-icon--emerald { background: rgba(34, 211, 238, 0.14); color: #22D3EE; }
+.nav-section-icon--amber   { background: rgba(251, 146, 60, 0.16); color: #FB923C; }
+.nav-section-icon--sky     { background: rgba(34, 211, 238, 0.14); color: #22D3EE; }
+.nav-section-icon--blue    { background: rgba(34, 211, 238, 0.14); color: #22D3EE; }
+.nav-section-icon--violet  { background: rgba(251, 146, 60, 0.14); color: #FB923C; }
+.nav-section-icon--slate   { background: rgba(148, 163, 184, 0.12); color: #94A3B8; }
+.nav-section-icon--admin   {
+    background: #1E2132;
+    border: 1px solid #FB923C;
+    color: #FB923C;
+    box-shadow: 0 0 12px rgba(251, 146, 60, 0.25);
+}
+
+.nav-submenu--tiles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 2px;
+    border-left: none;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.nav-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 10px 12px;
+    border-radius: 12px;
+    text-decoration: none;
+    background: #1E2132;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    transition: all 0.22s ease;
+}
+.nav-tile:hover {
+    transform: translateY(-2px);
+    border-color: rgba(34, 211, 238, 0.35);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+.nav-tile-label {
+    font-size: 0.7rem;
+    font-weight: 650;
+    line-height: 1.25;
+    color: #FFFFFF;
+}
+.nav-tile-icon {
     width: 28px;
     height: 28px;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
 }
-.nav-section-icon--cyan    { background: rgba(34, 211, 238, 0.12); color: #22d3ee; }
-.nav-section-icon--indigo  { background: rgba(129, 140, 248, 0.12); color: #818cf8; }
-.nav-section-icon--emerald { background: rgba(52, 211, 153, 0.12); color: #34d399; }
-.nav-section-icon--amber   { background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
-.nav-section-icon--sky     { background: rgba(56, 189, 248, 0.12); color: #38bdf8; }
-.nav-section-icon--blue    { background: rgba(96, 165, 250, 0.12); color: #60a5fa; }
-.nav-section-icon--violet  { background: rgba(167, 139, 250, 0.12); color: #a78bfa; }
-.nav-section-icon--slate   { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+.nav-tile-icon--green  { background: rgba(34, 211, 238, 0.12); color: #22D3EE; }
+.nav-tile-icon--orange { background: rgba(251, 146, 60, 0.14); color: #FB923C; }
+.nav-tile-icon--blue   { background: rgba(34, 211, 238, 0.12); color: #22D3EE; }
+.nav-tile-icon--lime   { background: rgba(34, 211, 238, 0.12); color: #22D3EE; }
+.nav-tile-icon--rose   { background: rgba(244, 63, 94, 0.16); color: #fb7185; }
+.nav-tile-icon--slate  { background: rgba(148, 163, 184, 0.12); color: #94A3B8; }
 
-/* Submenu links */
-.nav-submenu {
-    margin-top: 4px;
-    margin-left: 8px;
-    padding-left: 12px;
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+.nav-tile--active-green,
+.nav-tile--active-blue,
+.nav-tile--active-lime {
+    border-color: rgba(34, 211, 238, 0.55);
+    background: linear-gradient(160deg, rgba(34, 211, 238, 0.16), rgba(30, 33, 50, 0.95));
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.15);
 }
-
-.nav-sublink {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 10px;
-    border-radius: 8px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    transition: all 0.2s;
-    text-decoration: none;
+.nav-tile--active-orange {
+    border-color: rgba(251, 146, 60, 0.55);
+    background: linear-gradient(160deg, rgba(251, 146, 60, 0.16), rgba(30, 33, 50, 0.95));
+}
+.nav-tile--active-rose {
+    border-color: rgba(244, 63, 94, 0.5);
+    background: rgba(244, 63, 94, 0.12);
+}
+.nav-tile--active-slate {
+    border-color: rgba(148, 163, 184, 0.4);
+    background: rgba(148, 163, 184, 0.1);
 }
 
-.nav-sublink--idle {
-    color: #94a3b8;
-}
-.nav-sublink--idle:hover {
-    color: #e2e8f0;
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.nav-sublink--cyan-active    { color: #67e8f9; background: rgba(34, 211, 238, 0.12); box-shadow: inset 3px 0 0 #22d3ee; }
-.nav-sublink--indigo-active  { color: #a5b4fc; background: rgba(129, 140, 248, 0.12); box-shadow: inset 3px 0 0 #818cf8; }
-.nav-sublink--emerald-active { color: #6ee7b7; background: rgba(52, 211, 153, 0.12); box-shadow: inset 3px 0 0 #34d399; }
-.nav-sublink--amber-active   { color: #fcd34d; background: rgba(251, 191, 36, 0.12); box-shadow: inset 3px 0 0 #fbbf24; }
-.nav-sublink--sky-active     { color: #7dd3fc; background: rgba(56, 189, 248, 0.12); box-shadow: inset 3px 0 0 #38bdf8; }
-.nav-sublink--blue-active    { color: #93c5fd; background: rgba(96, 165, 250, 0.12); box-shadow: inset 3px 0 0 #60a5fa; }
-.nav-sublink--violet-active  { color: #c4b5fd; background: rgba(167, 139, 250, 0.12); box-shadow: inset 3px 0 0 #a78bfa; }
-.nav-sublink--slate-active   { color: #cbd5e1; background: rgba(148, 163, 184, 0.12); box-shadow: inset 3px 0 0 #94a3b8; }
-.nav-sublink--rose-active    { color: #fda4af; background: rgba(251, 113, 133, 0.12); box-shadow: inset 3px 0 0 #fb7185; }
-
-.nav-subgroup {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-.nav-subgroup-label {
-    padding: 0 10px 4px;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.15em;
+.nav-tile-group-label {
+    grid-column: 1 / -1;
+    margin: 4px 2px 0;
+    padding: 6px 4px 2px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #64748b;
+    color: #94A3B8;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .nav-logout {
@@ -521,14 +609,16 @@ async function handleLogout() {
     align-items: center;
     width: 100%;
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 0.875rem;
     font-weight: 500;
-    color: #f87171;
+    color: #fb7185;
+    border: 1px solid transparent;
     transition: all 0.2s;
 }
 .nav-logout:hover {
-    background: rgba(248, 113, 113, 0.1);
-    color: #fca5a5;
+    background: rgba(244, 63, 94, 0.12);
+    border-color: rgba(244, 63, 94, 0.3);
+    color: #fda4af;
 }
 </style>

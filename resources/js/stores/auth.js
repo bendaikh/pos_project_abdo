@@ -7,6 +7,8 @@ import { useOfflineStore } from './offline'
 export const useAuthStore = defineStore('auth', () => {
     const user = ref(null)
     const token = ref(null)
+    const currentStore = ref(null)
+    const needsStoreSetup = ref(false)
     const loading = ref(false)
     const offlineGuestMode = ref(false)
     const initialized = ref(false)
@@ -22,7 +24,34 @@ export const useAuthStore = defineStore('auth', () => {
         return user.value?.role || ''
     })
     const isSuperAdmin = computed(() => user.value?.role === 'superadmin')
-    const isAdmin = computed(() => ['superadmin', 'admin'].includes(user.value?.role))
+    const isOwner = computed(() => user.value?.role === 'owner' || !!user.value?.owned_stores?.length)
+    const isAdmin = computed(() => ['superadmin', 'owner', 'admin'].includes(user.value?.role))
+    const canManageUsers = computed(() => ['superadmin', 'owner', 'admin'].includes(user.value?.role))
+    const canCreateStore = computed(() => !!user.value?.can_create_store || isSuperAdmin.value || user.value?.role === 'owner')
+
+    function applyAuthPayload(payload) {
+        const nextUser = payload?.user || payload
+        user.value = nextUser
+        currentStore.value = payload?.current_store || nextUser?.default_store || null
+        needsStoreSetup.value = !!payload?.needs_store_setup
+
+        if (currentStore.value?.id) {
+            localStorage.setItem('current_store_id', String(currentStore.value.id))
+        }
+
+        localStorage.setItem('auth_user', JSON.stringify(nextUser))
+    }
+
+    function setCurrentStore(store) {
+        currentStore.value = store
+        if (store?.id) {
+            localStorage.setItem('current_store_id', String(store.id))
+            if (user.value) {
+                user.value = { ...user.value, default_store_id: store.id }
+                localStorage.setItem('auth_user', JSON.stringify(user.value))
+            }
+        }
+    }
 
     async function initAuth() {
         if (initialized.value) return
@@ -32,8 +61,8 @@ export const useAuthStore = defineStore('auth', () => {
             const storedToken = localStorage.getItem('auth_token')
             const storedUser = localStorage.getItem('auth_user')
             const storedOfflineMode = localStorage.getItem('offline_guest_mode')
-            
-            // Check for offline guest mode FIRST - this takes priority
+            const storedStoreId = localStorage.getItem('current_store_id')
+
             if (storedOfflineMode === 'true') {
                 offlineGuestMode.value = true
                 token.value = storedToken || 'offline_guest_' + Date.now()
@@ -43,35 +72,29 @@ export const useAuthStore = defineStore('auth', () => {
                     email: 'offline@local',
                     role: 'cashier'
                 }
-                console.log('Offline guest mode restored')
                 return
             }
-            
+
             if (storedToken && storedUser) {
                 token.value = storedToken
                 user.value = JSON.parse(storedUser)
-                
-                // Skip verification for offline tokens
+                if (storedStoreId) {
+                    currentStore.value = { id: Number(storedStoreId) }
+                }
+
                 if (storedToken.startsWith('offline_')) {
-                    console.log('Offline token detected, skipping verification')
                     return
                 }
-                
+
                 const offlineStore = useOfflineStore()
-                
-                // Verify token is still valid (only if online)
+
                 if (offlineStore.isOnline) {
                     try {
                         const response = await authApi.user()
-                        user.value = response.data
-                        localStorage.setItem('auth_user', JSON.stringify(response.data))
+                        applyAuthPayload(response.data)
                     } catch (error) {
-                        // If verification fails and we're online, logout
                         logout()
                     }
-                } else {
-                    // If offline, keep using cached credentials
-                    console.log('Offline mode: Using cached credentials')
                 }
             }
         })()
@@ -87,42 +110,37 @@ export const useAuthStore = defineStore('auth', () => {
     async function login(credentials) {
         loading.value = true
         const offlineStore = useOfflineStore()
-        
+
         try {
-            // Try online login first
             const response = await authApi.login(credentials)
             token.value = response.data.token
-            user.value = response.data.user
-            
             localStorage.setItem('auth_token', response.data.token)
-            localStorage.setItem('auth_user', JSON.stringify(response.data.user))
-            
-            // Cache credentials for offline login (hash password for security)
+            applyAuthPayload(response.data)
+
             await cacheCredentials(credentials.email, credentials.password, response.data.user)
-            
-            return { success: true }
+
+            return {
+                success: true,
+                needs_store_setup: needsStoreSetup.value,
+            }
         } catch (error) {
-            // If offline or connection failed, try offline login
             if (!offlineStore.isOnline || error.message === 'Network Error') {
-                console.log('Online login failed, trying offline login...')
                 return await offlineLogin(credentials)
             }
-            
-            return { 
-                success: false, 
+
+            return {
+                success: false,
                 message: error.response?.data?.message || 'Erreur de connexion'
             }
         } finally {
             loading.value = false
         }
     }
-    
-    // Cache credentials for offline login
+
     async function cacheCredentials(email, password, userData) {
         try {
-            // Simple hash for password (in production, use better hashing)
-            const hashedPassword = btoa(password) // Base64 encode
-            
+            const hashedPassword = btoa(password)
+
             await putItem(STORES.SETTINGS, {
                 key: 'cached_credentials',
                 value: {
@@ -132,46 +150,41 @@ export const useAuthStore = defineStore('auth', () => {
                     cached_at: new Date().toISOString()
                 }
             })
-            console.log('Credentials cached for offline login')
         } catch (error) {
             console.error('Error caching credentials:', error)
         }
     }
-    
-    // Offline login using cached credentials
+
     async function offlineLogin(credentials) {
         try {
             const cached = await getItem(STORES.SETTINGS, 'cached_credentials')
-            
+
             if (!cached || !cached.value) {
                 return {
                     success: false,
                     message: 'Aucune connexion hors ligne disponible. Connectez-vous en ligne au moins une fois.'
                 }
             }
-            
-            // Verify credentials match
+
             const hashedPassword = btoa(credentials.password)
-            
+
             if (cached.value.email === credentials.email && cached.value.password === hashedPassword) {
-                // Login successful with cached credentials
                 token.value = 'offline_token_' + Date.now()
                 user.value = cached.value.user
-                
+
                 localStorage.setItem('auth_token', token.value)
                 localStorage.setItem('auth_user', JSON.stringify(user.value))
-                
-                console.log('Offline login successful')
-                return { 
-                    success: true, 
+
+                return {
+                    success: true,
                     offline: true,
                     message: 'Connexion hors ligne réussie'
                 }
-            } else {
-                return {
-                    success: false,
-                    message: 'Email ou mot de passe incorrect'
-                }
+            }
+
+            return {
+                success: false,
+                message: 'Email ou mot de passe incorrect'
             }
         } catch (error) {
             console.error('Offline login error:', error)
@@ -192,9 +205,8 @@ export const useAuthStore = defineStore('auth', () => {
             role: 'cashier'
         }
         localStorage.setItem('offline_guest_mode', 'true')
-        console.log('Offline guest mode activated')
     }
-    
+
     function clearOfflineGuestMode() {
         offlineGuestMode.value = false
         localStorage.removeItem('offline_guest_mode')
@@ -202,9 +214,8 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function logout() {
         const offlineStore = useOfflineStore()
-        
+
         try {
-            // Only call API if online and not in guest mode
             if (offlineStore.isOnline && !offlineGuestMode.value) {
                 await authApi.logout()
             }
@@ -213,9 +224,12 @@ export const useAuthStore = defineStore('auth', () => {
         } finally {
             token.value = null
             user.value = null
+            currentStore.value = null
+            needsStoreSetup.value = false
             offlineGuestMode.value = false
             localStorage.removeItem('auth_token')
             localStorage.removeItem('auth_user')
+            localStorage.removeItem('current_store_id')
             localStorage.removeItem('offline_guest_mode')
         }
     }
@@ -223,16 +237,23 @@ export const useAuthStore = defineStore('auth', () => {
     return {
         user,
         token,
+        currentStore,
+        needsStoreSetup,
         loading,
         offlineGuestMode,
         isAuthenticated,
         userName,
         userRole,
         isSuperAdmin,
+        isOwner,
         isAdmin,
+        canManageUsers,
+        canCreateStore,
         initAuth,
         login,
         logout,
+        setCurrentStore,
+        applyAuthPayload,
         setOfflineGuestMode,
         clearOfflineGuestMode,
         initialized

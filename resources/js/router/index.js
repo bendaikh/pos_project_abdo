@@ -12,6 +12,7 @@ import PosView from '../views/PosView.vue'
 import ArticlesList from '../views/articles/ArticlesList.vue'
 import ArticleForm from '../views/articles/ArticleForm.vue'
 import CategoriesList from '../views/categories/CategoriesList.vue'
+import UnitesMesureList from '../views/unites/UnitesMesureList.vue'
 import OptionsList from '../views/options/OptionsList.vue'
 import OptionForm from '../views/options/OptionForm.vue'
 import OptionVariants from '../views/optionsVariants/OptionVariants.vue'
@@ -48,6 +49,7 @@ import BonCommandeDetail from '../views/achat/BonCommandeDetail.vue'
 import ReceptionMarchandiseList from '../views/achat/ReceptionMarchandiseList.vue'
 import FactureFournisseurList from '../views/achat/FactureFournisseurList.vue'
 import HistoriqueAchatsList from '../views/achat/HistoriqueAchatsList.vue'
+import ReglementFrnsList from '../views/achat/ReglementFrnsList.vue'
 
 // FINANCE Views
 import JournalCaisseList from '../views/finance/JournalCaisseList.vue'
@@ -63,6 +65,7 @@ import FournisseurEdit from '../views/fournisseurs/FournisseurEdit.vue'
 
 // UTILISATEURS Views
 import UtilisateursList from '../views/utilisateurs/UtilisateursList.vue'
+import StoreSetupView from '../views/stores/StoreSetupView.vue'
 
 // ACTIVITES Views
 import ActivitiesList from '../views/activites/ActivitiesList.vue'
@@ -78,9 +81,9 @@ import SuiviEncaissement from '../views/SuiviEncaissement.vue'
 
 // MAGASINS Views
 import MagasinsList from '../views/magasins/MagasinsList.vue'
-
-// ASSISTANCE Views
-import AssistanceList from '../views/assistance/AssistanceList.vue'
+import EtatPaiementPdv from '../views/magasins/EtatPaiementPdv.vue'
+import MenuPdv from '../views/magasins/MenuPdv.vue'
+import BalancePdv from '../views/magasins/BalancePdv.vue'
 
 const routes = [
     {
@@ -104,30 +107,57 @@ const routes = [
                 component: DashboardView
             },
             {
+                path: 'store-setup',
+                name: 'store-setup',
+                component: StoreSetupView,
+                meta: { storeSetup: true }
+            },
+            {
                 path: 'pos',
                 name: 'pos',
                 component: PosView,
                 meta: { allowOfflineAccess: true }
             },
             {
-                path: 'articles',
-                name: 'articles',
+                path: 'fiche-produit',
+                name: 'fiche-produit',
                 component: ArticlesList
             },
             {
-                path: 'articles/create',
-                name: 'articles.create',
+                path: 'fiche-produit/create',
+                name: 'fiche-produit.create',
                 component: ArticleForm
+            },
+            {
+                path: 'fiche-produit/:id/edit',
+                name: 'fiche-produit.edit',
+                component: ArticleForm
+            },
+            {
+                path: 'articles',
+                redirect: '/fiche-produit'
+            },
+            {
+                path: 'articles/create',
+                redirect: '/fiche-produit/create'
             },
             {
                 path: 'articles/:id/edit',
-                name: 'articles.edit',
-                component: ArticleForm
+                redirect: (to) => `/fiche-produit/${to.params.id}/edit`
+            },
+            {
+                path: 'famille-produit',
+                name: 'famille-produit',
+                component: CategoriesList
             },
             {
                 path: 'categories',
-                name: 'categories',
-                component: CategoriesList
+                redirect: '/famille-produit'
+            },
+            {
+                path: 'unites-mesure',
+                name: 'unites-mesure',
+                component: UnitesMesureList
             },
             {
                 path: 'options',
@@ -282,19 +312,36 @@ const routes = [
             },
             // ACHAT Routes
             {
-                path: 'bon-commande',
-                name: 'bon-commande',
+                path: 'bon-achat',
+                name: 'bon-achat',
                 component: BonCommandeList
             },
             {
-                path: 'bon-commande/:id',
-                name: 'bon-commande.detail',
+                path: 'bon-achat/:id',
+                name: 'bon-achat.detail',
                 component: BonCommandeDetail
             },
             {
-                path: 'reception-marchandise',
-                name: 'reception-marchandise',
+                path: 'bon-commande',
+                redirect: '/bon-achat'
+            },
+            {
+                path: 'bon-commande/:id',
+                redirect: to => `/bon-achat/${to.params.id}`
+            },
+            {
+                path: 'reglement-frns',
+                name: 'reglement-frns',
+                component: ReglementFrnsList
+            },
+            {
+                path: 'etat-sortie',
+                name: 'etat-sortie',
                 component: ReceptionMarchandiseList
+            },
+            {
+                path: 'reception-marchandise',
+                redirect: '/etat-sortie'
             },
             {
                 path: 'facture-fournisseur',
@@ -302,9 +349,13 @@ const routes = [
                 component: FactureFournisseurList
             },
             {
-                path: 'historique-achats',
-                name: 'historique-achats',
+                path: 'balance-achats',
+                name: 'balance-achats',
                 component: HistoriqueAchatsList
+            },
+            {
+                path: 'historique-achats',
+                redirect: '/balance-achats'
             },
             // FINANCE Routes
             {
@@ -388,18 +439,37 @@ const routes = [
                 name: 'suivi-encaissement',
                 component: SuiviEncaissement
             },
-            // MAGASINS Routes
+            // MAGASINS / PDV Routes
+            {
+                path: 'fiche-pdv',
+                name: 'fiche-pdv',
+                component: MagasinsList
+            },
+            {
+                path: 'etat-paiement-pdv',
+                name: 'etat-paiement-pdv',
+                component: EtatPaiementPdv
+            },
+            {
+                path: 'menu-pdv',
+                name: 'menu-pdv',
+                component: MenuPdv
+            },
+            {
+                path: 'balance-pdv',
+                name: 'balance-pdv',
+                component: BalancePdv
+            },
             {
                 path: 'magasins',
                 name: 'magasins',
-                component: MagasinsList
+                redirect: '/fiche-pdv'
             },
-            // ASSISTANCE Routes
             {
                 path: 'assistance',
                 name: 'assistance',
                 alias: 'tickets',
-                component: AssistanceList
+                redirect: '/etat-paiement-pdv'
             }
         ]
     }
@@ -434,11 +504,26 @@ router.beforeEach(async (to, from, next) => {
     
     if (to.meta.requiresAuth && !isAuth) {
         next('/login')
-    } else if (to.meta.guest && isAuth) {
-        next('/dashboard')
-    } else {
-        next()
+        return
     }
+
+    if (to.meta.guest && isAuth) {
+        next(authStore.needsStoreSetup ? '/store-setup' : '/dashboard')
+        return
+    }
+
+    // Owner without PDV must complete setup first
+    if (isAuth && authStore.needsStoreSetup && to.name !== 'store-setup' && to.name !== 'login') {
+        next({ name: 'store-setup' })
+        return
+    }
+
+    if (isAuth && !authStore.needsStoreSetup && to.name === 'store-setup') {
+        next('/dashboard')
+        return
+    }
+
+    next()
 })
 
 export default router

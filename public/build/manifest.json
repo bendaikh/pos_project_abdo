@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-B18rEdHM.css",
+    "file": "assets/app-BTVUlquz.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,19 +9,19 @@
     ]
   },
   "resources/images/login-bg.png": {
-    "file": "assets/login-bg-Be-Cl83Z.png",
+    "file": "assets/login-bg-BGx0rYHh.png",
     "src": "resources/images/login-bg.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BHSKAJ4M.js",
+    "file": "assets/app-JKg96Th5.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "css": [
-      "assets/app-CbY4dw2l.css"
+      "assets/app-BBFVjEK-.css"
     ],
     "assets": [
-      "assets/login-bg-Be-Cl83Z.png"
+      "assets/login-bg-BGx0rYHh.png"
     ]
   }
 }

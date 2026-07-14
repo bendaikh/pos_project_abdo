@@ -15,8 +15,22 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700|sora:400,500,600,700,800&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script>
+        // Force refresh stale PWA caches after multi-PDV deploy
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((regs) => {
+                regs.forEach((reg) => reg.update());
+            });
+            if (caches && caches.keys) {
+                caches.keys().then((keys) => {
+                    keys.filter((k) => k.startsWith('greenpos-') && k !== 'greenpos-v7-unites-mesure')
+                        .forEach((k) => caches.delete(k));
+                });
+            }
+        }
+    </script>
 </head>
-<body class="antialiased">
+<body class="antialiased bg-bg-main text-white">
     <div id="app"></div>
 </body>
 </html>

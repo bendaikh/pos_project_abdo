@@ -8,12 +8,16 @@ const api = axios.create({
     }
 })
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token + current PDV
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('auth_token')
         if (token) {
             config.headers.Authorization = `Bearer ${token}`
+        }
+        const storeId = localStorage.getItem('current_store_id')
+        if (storeId) {
+            config.headers['X-Store-Id'] = storeId
         }
         return config
     },
@@ -68,6 +72,15 @@ export const categoriesApi = {
     create: (data) => api.post('/categories', data),
     update: (id, data) => api.put(`/categories/${id}`, data),
     delete: (id) => api.delete(`/categories/${id}`),
+}
+
+// Measure units API
+export const measureUnitsApi = {
+    list: (params = {}) => api.get('/measure-units', { params }),
+    get: (id) => api.get(`/measure-units/${id}`),
+    create: (data) => api.post('/measure-units', data),
+    update: (id, data) => api.put(`/measure-units/${id}`, data),
+    delete: (id) => api.delete(`/measure-units/${id}`),
 }
 
 // Subcategories API
@@ -256,4 +269,33 @@ export const fournisseursApi = {
     create: (data) => api.post('/fournisseurs', data),
     update: (id, data) => api.put(`/fournisseurs/${id}`, data),
     delete: (id) => api.delete(`/fournisseurs/${id}`),
+}
+
+// Multi-PDV stores
+export const storesApi = {
+    list: (params = {}) => api.get('/stores', { params }),
+    current: () => api.get('/stores/current'),
+    nextCode: () => api.get('/stores/next-code'),
+    select: (storeId) => api.post('/stores/select', { store_id: storeId }),
+    get: (id) => api.get(`/stores/${id}`),
+    create: (data) => api.post('/stores', data),
+    update: (id, data) => api.put(`/stores/${id}`, data),
+    delete: (id) => api.delete(`/stores/${id}`),
+}
+
+// Users (superadmin → propriétaires PDV ; owner → équipe)
+export const usersApi = {
+    list: (params = {}) => api.get('/users', { params }),
+    get: (id) => api.get(`/users/${id}`),
+    create: (data) => api.post('/users', data),
+    update: (id, data) => api.put(`/users/${id}`, data),
+    delete: (id) => api.delete(`/users/${id}`),
+}
+
+// Charges / dépenses par PDV
+export const expensesApi = {
+    list: (params = {}) => api.get('/expenses', { params }),
+    create: (data) => api.post('/expenses', data),
+    update: (id, data) => api.put(`/expenses/${id}`, data),
+    delete: (id) => api.delete(`/expenses/${id}`),
 }

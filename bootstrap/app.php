@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'store.context' => \App\Http\Middleware\SetStoreContext::class,
+            'role' => \App\Http\Middleware\EnsureRole::class,
         ]);
         
         $middleware->statefulApi();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToStore;
 use App\Services\SalePaymentWorkflowService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,9 +12,10 @@ use Illuminate\Support\Facades\Schema;
 
 class Sale extends Model
 {
-    use HasFactory;
+    use BelongsToStore, HasFactory;
 
     protected $fillable = [
+        'store_id',
         'reference',
         'order_number',
         'user_id',

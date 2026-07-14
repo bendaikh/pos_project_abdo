@@ -3,16 +3,16 @@
         <!-- Header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Gestion des Articles</h1>
-                <p class="text-gray-500">Gérez vos articles et leur inventaire</p>
+                <h1 class="text-2xl font-bold text-gray-900">Fiche produit</h1>
+                <p class="text-gray-500">Gérez vos produits et leur inventaire</p>
             </div>
             <div class="flex space-x-3">
-                <router-link to="/categories" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                    Catégories
+                <router-link to="/famille-produit" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    Famille Produit
                 </router-link>
-                <router-link to="/articles/create" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
+                <router-link to="/fiche-produit/create" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
                     <PlusIcon class="w-5 h-5 mr-2" />
-                    Nouvel Article
+                    Nouveau produit
                 </router-link>
             </div>
         </div>
@@ -96,7 +96,7 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end space-x-2">
-                                <router-link :to="`/articles/${article.id}/edit`" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                                <router-link :to="`/fiche-produit/${article.id}/edit`" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
                                     <PencilIcon class="w-5 h-5" />
                                 </router-link>
                                 <button @click="confirmDelete(article)" class="p-2 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50">

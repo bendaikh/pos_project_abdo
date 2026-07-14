@@ -1,5 +1,5 @@
 // Service Worker for offline functionality
-const CACHE_NAME = 'greenpos-v2';
+const CACHE_NAME = 'greenpos-v7-unites-mesure';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache
@@ -86,7 +86,23 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Static assets - stale-while-revalidate
+    // Built Vite assets must always be network-first (hashed filenames + SW must not serve stale JS)
+    if (event.request.url.includes('/build/')) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (response && response.status === 200) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
+    // Other static assets - stale-while-revalidate
     event.respondWith(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.match(event.request).then((cachedResponse) => {

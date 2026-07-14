@@ -4,11 +4,13 @@ use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\MeasureUnitController;
 use App\Http\Controllers\Api\CustomListController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeliveryAgentController;
 use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\OptionController;
 use App\Http\Controllers\Api\OptionVariantController;
 use App\Http\Controllers\Api\PaymentController;
@@ -20,7 +22,10 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\StockController;
+use App\Http\Controllers\Api\StoreController;
 use App\Http\Controllers\Api\SubcategoryController;
+use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\MaterialConsumptionController;
 use App\Http\Controllers\Api\LossController;
 use App\Http\Controllers\Api\AutomationRuleController;
@@ -34,10 +39,26 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 
 // Protected routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'store.context'])->group(function () {
     // Auth
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Multi-PDV
+    Route::get('/stores/current', [StoreController::class, 'current']);
+    Route::post('/stores/select', [StoreController::class, 'select']);
+    Route::get('/stores/next-code', [StoreController::class, 'nextCode']);
+    Route::apiResource('stores', StoreController::class);
+
+    // Users (superadmin crée des propriétaires; owner crée son équipe)
+    Route::middleware('role:superadmin,owner,admin')->group(function () {
+        Route::apiResource('users', UserController::class);
+    });
+
+    // Fournisseurs & Charges (isolés par PDV)
+    Route::apiResource('suppliers', SupplierController::class);
+    Route::apiResource('fournisseurs', SupplierController::class);
+    Route::apiResource('expenses', ExpenseController::class);
 
     // Dashboard
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
@@ -48,6 +69,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Categories
     Route::apiResource('categories', CategoryController::class);
+
+    // Measure units
+    Route::apiResource('measure-units', MeasureUnitController::class);
 
     // Subcategories
     Route::apiResource('subcategories', SubcategoryController::class);

@@ -6,7 +6,7 @@
                 <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Modifier l\'Article' : 'Nouvel Article' }}</h1>
                 <p class="text-gray-500">{{ isEdit ? 'Modifiez les informations de l\'article' : 'Ajoutez un nouveau produit à votre inventaire' }}</p>
             </div>
-            <router-link to="/articles" class="text-gray-500 hover:text-gray-700">
+            <router-link to="/fiche-produit" class="text-gray-500 hover:text-gray-700">
                 <XMarkIcon class="w-6 h-6" />
             </router-link>
         </div>
@@ -149,7 +149,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             <span>Catégorie</span>
-                            <router-link to="/categories" class="ml-2 text-xs text-primary-600 hover:text-primary-700">
+                            <router-link to="/famille-produit" class="ml-2 text-xs text-primary-600 hover:text-primary-700">
                                 Gérer
                             </router-link>
                         </label>
@@ -176,12 +176,9 @@
                             v-model="form.unit"
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
-                            <option value="piece">Pièce</option>
-                            <option value="kg">Kilogramme (kg)</option>
-                            <option value="g">Gramme (g)</option>
-                            <option value="l">Litre (L)</option>
-                            <option value="ml">Millilitre (ml)</option>
-                            <option value="m">Mètre (M)</option>
+                            <option v-for="unit in unitOptions" :key="unit.value" :value="unit.value">
+                                {{ unit.label }}
+                            </option>
                         </select>
                     </div>
                 </div>
@@ -853,7 +850,7 @@
 
             <!-- Actions -->
             <div class="flex justify-end space-x-3">
-                <router-link to="/articles" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                <router-link to="/fiche-produit" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                     Annuler
                 </router-link>
                 <button 
@@ -946,7 +943,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { articlesApi, categoriesApi, optionsApi } from '../../api'
+import { articlesApi, categoriesApi, optionsApi, measureUnitsApi } from '../../api'
 import { useSettingsStore } from '../../stores/settings'
 import { useArticlesStore } from '../../stores/articles'
 import { XMarkIcon } from '@heroicons/vue/24/outline'
@@ -1035,14 +1032,28 @@ const marginPercentage = computed(() => {
     return margin.toFixed(2)
 })
 
-const unitOptions = [
+const unitOptions = ref([
     { value: 'piece', label: 'Pièce' },
     { value: 'kg', label: 'Kilogramme (kg)' },
     { value: 'g', label: 'Gramme (g)' },
     { value: 'l', label: 'Litre (L)' },
     { value: 'ml', label: 'Millilitre (ml)' },
     { value: 'm', label: 'Mètre (M)' },
-]
+])
+
+async function loadMeasureUnits() {
+    try {
+        const { data } = await measureUnitsApi.list({ active: 1 })
+        if (Array.isArray(data) && data.length > 0) {
+            unitOptions.value = data.map((u) => ({
+                value: u.code,
+                label: u.symbol ? `${u.name} (${u.symbol})` : u.name,
+            }))
+        }
+    } catch (e) {
+        console.warn('Impossible de charger les unités de mesure', e)
+    }
+}
 
 const bomTotalCost = computed(() => {
     return bomItems.value.reduce((sum, item) => sum + getBomLineTotal(item), 0)
@@ -1403,7 +1414,7 @@ async function fetchArticle() {
         }
     } catch (error) {
         console.error('Failed to fetch article:', error)
-        router.push('/articles')
+        router.push('/fiche-produit')
     }
 }
 
@@ -1484,7 +1495,7 @@ async function handleSubmit() {
         // Refresh articles in store to update POS cache
         await articlesStore.refresh()
         
-        router.push('/articles')
+        router.push('/fiche-produit')
     } catch (error) {
         console.error('Failed to save article:', error)
 
@@ -1626,8 +1637,7 @@ watch(
 
 onMounted(async () => {
     variantTemplatesStore.loadTemplates()
-    await fetchCategories()
-    await fetchOptions()
+    await Promise.all([fetchCategories(), fetchOptions(), loadMeasureUnits()])
     await fetchArticle()
 })
 </script>

@@ -3,12 +3,12 @@
         <!-- Header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Bons de Commande</h1>
-                <p class="text-gray-500">Gérez vos commandes fournisseurs</p>
+                <h1 class="text-2xl font-bold text-gray-900">Bons d'Achat</h1>
+                <p class="text-gray-500">Gérez vos bons d'achat fournisseurs</p>
             </div>
             <button @click="openForm()" class="px-4 py-2 bg-primary-500 text-gray-900 font-medium rounded-lg hover:bg-primary-600 flex items-center">
                 <PlusIcon class="w-5 h-5 mr-2" />
-                Nouvelle Commande
+                Nouveau Bon Achat
             </button>
         </div>
 
@@ -84,7 +84,7 @@
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end space-x-2">
-                                <router-link :to="`/bon-commande/${commande.id}`" class="p-2 text-blue-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" title="Voir détails">
+                                <router-link :to="`/bon-achat/${commande.id}`" class="p-2 text-blue-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" title="Voir détails">
                                     <EyeIcon class="w-5 h-5" />
                                 </router-link>
                                 <button @click="openForm(commande)" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title="Modifier">
